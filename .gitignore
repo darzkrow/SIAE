@@ -422,7 +422,7 @@ pyrightconfig.json
 /docs-tecnico/
 /docs-tecnico/*
 /docs-tecnico/*/
-
+docs-tecnico/
 node_modules
 
 *.sublime*
