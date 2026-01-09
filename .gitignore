@@ -418,6 +418,10 @@ pyrightconfig.json
 .DS_*
 **/*.backup.*
 **/*.back.*
+/docs-tecnico
+/docs-tecnico/
+/docs-tecnico/*
+/docs-tecnico/*/
 
 node_modules
 
