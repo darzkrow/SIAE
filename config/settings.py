@@ -3,9 +3,21 @@ import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.environ.get('DJANGO_SECRET', 'dev-placeholder-secret-key')
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+
+# DEBUG mode - read from environment
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 't')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# Generate a new one with: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG or os.environ.get('DJANGO_PRODUCTION'):
+        raise ValueError('DJANGO_SECRET_KEY environment variable must be set in production!')
+    # Only use this default in development
+    SECRET_KEY = 'django-insecure-dev-key-CHANGE-IN-PRODUCTION-f8k2m9x7w4q1p6n3v5h8j0'
+    print('WARNING: Using insecure development SECRET_KEY. Set DJANGO_SECRET_KEY in production!')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -13,10 +25,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third party
     'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
     'django_filters',
+    'drf_spectacular',
+    # Project apps
     'accounts',
     'inventario',
 ]
@@ -52,11 +67,18 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# Database Configuration
+# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+import dj_database_url
+
+# Default to SQLite for development, but allow override with DATABASE_URL env var
+# In production, use: DATABASE_URL=postgresql://user:password@host:port/dbname
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = []
@@ -84,24 +106,90 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@gsih.com')
 # Stock Alert Configuration
 STOCK_ALERT_EMAILS = os.environ.get('STOCK_ALERT_EMAILS', '').split(',') if os.environ.get('STOCK_ALERT_EMAILS') else []
 
-# CORS
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS Configuration
+# https://github.com/adamchainz/django-cors-headers
+# SECURITY: Never use CORS_ALLOW_ALL_ORIGINS = True in production!
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all origins in development
+
+if not DEBUG:
+    # In production, specify exact allowed origins
+    CORS_ALLOWED_ORIGINS = os.environ.get(
+        'CORS_ALLOWED_ORIGINS', 
+        'http://localhost:5173,http://localhost:3000'
+    ).split(',')
+else:
+    # In development, allow localhost variations
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:3000',
+    ]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # REST Framework
 REST_FRAMEWORK = {
+    # Authentication
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
+    # Permissions
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    # Filtering and Searching
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.OrderingFilter',
         'rest_framework.filters.SearchFilter',
     ],
+    # Pagination
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    # Throttling (Rate Limiting)
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',  # Anonymous users: 100 requests per hour
+        'user': '1000/hour',  # Authenticated users: 1000 requests per hour
+        'login': '5/minute',  # Login endpoint: 5 attempts per minute
+    },
+    # API Documentation with drf-spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Render formats
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
 }
+
+# drf-spectacular settings for OpenAPI/Swagger documentation
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'GSIH Inventario API',
+    'DESCRIPTION': 'API del Sistema de Gestión de Inventario de Activos Hidrológicos',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Development server'},
+        {'url': 'http://localhost', 'description': 'Production server (via Nginx)'},
+    ],
+}
+
 

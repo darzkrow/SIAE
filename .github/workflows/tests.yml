@@ -40,18 +40,21 @@ jobs:
         pip install coverage pytest-django pytest-cov
     
     - name: Run migrations
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_inventario
+        DJANGO_SECRET_KEY: test-secret-key-for-ci-only
+        DEBUG: True
       run: |
         python manage.py migrate
     
-    - name: Generate test data
+    - name: Run tests with pytest and coverage
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_inventario
+        DJANGO_SECRET_KEY: test-secret-key-for-ci-only
+        DEBUG: True
       run: |
-        python manage.py seed_test_data
+        pytest --cov=inventario --cov=accounts --cov-report=xml --cov-report=term-missing --cov-fail-under=70
     
-    - name: Run tests with coverage
-      run: |
-        coverage run --source='inventario' manage.py test inventario
-        coverage report
-        coverage xml
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
@@ -61,10 +64,6 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
     
-    - name: Run pytest
-      run: |
-        pytest --cov=inventario --cov-report=xml
-    
     - name: Archive test results
       if: always()
       uses: actions/upload-artifact@v2
@@ -73,3 +72,5 @@ jobs:
         path: |
           htmlcov/
           .coverage
+          coverage.xml
+
