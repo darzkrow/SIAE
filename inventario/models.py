@@ -1,421 +1,952 @@
+"""
+Modelos refactorizados para Sistema de Inventario de Agua Potable y Saneamiento.
+Usa Abstract Base Classes para herencia óptima de rendimiento.
+"""
 from django.db import models, transaction
-from django.core.validators import MinValueValidator
-from django.db.models import F, Q
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from decimal import Decimal
+import uuid
 
+
+# ============================================================================
+# MODELOS ORGANIZACIONALES (Mantener compatibilidad)
+# ============================================================================
 
 class OrganizacionCentral(models.Model):
+    """Organización central que agrupa sucursales."""
     nombre = models.CharField(max_length=200, unique=True)
-    rif = models.CharField(max_length=30, blank=True)
+    rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
 
     class Meta:
         verbose_name = 'Organización Central'
         verbose_name_plural = 'Organizaciones Centrales'
+        ordering = ['nombre']
+
     def __str__(self):
-        return f"{self.nombre}"
+        return self.nombre
+
 
 class Sucursal(models.Model):
+    """Sucursal operativa de la organización."""
     nombre = models.CharField(max_length=200, unique=True)
     organizacion_central = models.ForeignKey(
-        OrganizacionCentral, on_delete=models.PROTECT, related_name='sucursales'
+        OrganizacionCentral,
+        on_delete=models.PROTECT,
+        related_name='sucursales'
     )
+    codigo = models.CharField(max_length=10, unique=True, blank=True)
+    direccion = models.TextField(blank=True)
+    telefono = models.CharField(max_length=50, blank=True)
 
     class Meta:
         verbose_name = 'Sucursal'
         verbose_name_plural = 'Sucursales'
+        ordering = ['nombre']
 
     def __str__(self):
         return f"{self.nombre} ({self.organizacion_central.nombre})"
 
 
 class Acueducto(models.Model):
+    """Acueducto o sistema de agua potable."""
     nombre = models.CharField(max_length=200)
     sucursal = models.ForeignKey(
-        Sucursal, on_delete=models.CASCADE, related_name='acueductos'
+        Sucursal,
+        on_delete=models.CASCADE,
+        related_name='acueductos'
     )
+    codigo = models.CharField(max_length=10, blank=True)
+    ubicacion = models.CharField(max_length=255, blank=True)
 
     class Meta:
         verbose_name = 'Acueducto'
         verbose_name_plural = 'Acueductos'
         unique_together = ('nombre', 'sucursal')
+        ordering = ['sucursal', 'nombre']
 
     def __str__(self):
         return f"{self.nombre} - {self.sucursal.nombre}"
 
 
-class Categoria(models.Model):
+# ============================================================================
+# MODELOS AUXILIARES DEL NUEVO SISTEMA
+# ============================================================================
+
+class Category(models.Model):
+    """Categorías de productos para clasificación."""
     nombre = models.CharField(max_length=150, unique=True)
+    codigo = models.CharField(
+        max_length=10,
+        unique=True,
+        help_text='Código para generar SKU (ej: QUI, TUB, BOM)'
+    )
+    descripcion = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
+    orden = models.IntegerField(default=0, help_text='Orden de visualización')
 
     class Meta:
         verbose_name = 'Categoría'
         verbose_name_plural = 'Categorías'
+        ordering = ['orden', 'nombre']
+        indexes = [
+            models.Index(fields=['activo']),
+        ]
 
     def __str__(self):
         return self.nombre
 
 
-class ArticuloBase(models.Model):
+class UnitOfMeasure(models.Model):
+    """Unidades de medida normalizadas."""
+    
+    class TipoUnidad(models.TextChoices):
+        LONGITUD = 'LONGITUD', 'Longitud'
+        VOLUMEN = 'VOLUMEN', 'Volumen'
+        PESO = 'PESO', 'Peso'
+        UNIDAD = 'UNIDAD', 'Unidad'
+        AREA = 'AREA', 'Área'
+
+    nombre = models.CharField(max_length=50, unique=True)
+    simbolo = models.CharField(max_length=10, unique=True)
+    tipo = models.CharField(max_length=20, choices=TipoUnidad.choices)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Unidad de Medida'
+        verbose_name_plural = 'Unidades de Medida'
+        ordering = ['tipo', 'nombre']
+
+    def __str__(self):
+        return f"{self.nombre} ({self.simbolo})"
+
+
+class Supplier(models.Model):
+    """Proveedores de productos."""
+    nombre = models.CharField(max_length=200, unique=True)
+    rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
+    codigo = models.CharField(max_length=20, unique=True, blank=True)
+    contacto_nombre = models.CharField(max_length=150, blank=True)
+    telefono = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True)
+    direccion = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Proveedor'
+        verbose_name_plural = 'Proveedores'
+        ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['activo']),
+        ]
+
+    def __str__(self):
+        return self.nombre
+
+
+# ============================================================================
+# MODELO BASE ABSTRACTO
+# ============================================================================
+
+class ProductBase(models.Model):
+    """
+    Modelo base abstracto para todos los productos.
+    Contiene campos comunes a todos los tipos de productos.
+    """
+    # Identificación
+    sku = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name='SKU',
+        help_text='Código único de producto (se genera automáticamente)'
+    )
     nombre = models.CharField(max_length=250)
     descripcion = models.TextField(blank=True)
+    
+    # Clasificación
     categoria = models.ForeignKey(
-        Categoria, on_delete=models.PROTECT, related_name='%(class)s_items'
+        Category,
+        on_delete=models.PROTECT,
+        related_name='%(class)s_productos'
     )
+    unidad_medida = models.ForeignKey(
+        UnitOfMeasure,
+        on_delete=models.PROTECT,
+        related_name='%(class)s_productos'
+    )
+    
+    # Stock y Precio
+    stock_actual = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal('0.000'),
+        validators=[MinValueValidator(Decimal('0.000'))],
+        help_text='Stock actual disponible'
+    )
+    stock_minimo = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal('0.000'),
+        validators=[MinValueValidator(Decimal('0.000'))],
+        help_text='Stock mínimo de seguridad'
+    )
+    precio_unitario = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text='Precio por unidad de medida'
+    )
+    
+    # Proveedor
+    proveedor = models.ForeignKey(
+        Supplier,
+        on_delete=models.PROTECT,
+        related_name='%(class)s_productos'
+    )
+    
+    # Estado y Fechas
+    activo = models.BooleanField(default=True)
+    fecha_entrada = models.DateField(
+        default=timezone.now,
+        help_text='Fecha de primera entrada al inventario'
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    # Notas
+    notas = models.TextField(blank=True, help_text='Notas adicionales')
 
     class Meta:
         abstract = True
+        ordering = ['sku']
 
     def __str__(self):
-        return self.nombre
+        return f"{self.sku} - {self.nombre}"
+
+    def clean(self):
+        """Validaciones personalizadas."""
+        if self.stock_minimo > self.stock_actual:
+            # Solo advertencia, no error
+            pass
+        
+        if self.precio_unitario < 0:
+            raise ValidationError('El precio unitario no puede ser negativo')
+
+    def save(self, *args, **kwargs):
+        # Generar SKU si no existe
+        if not self.sku:
+            self.sku = self.generate_sku()
+        
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def generate_sku(self):
+        """
+        Genera un SKU único basado en categoría y correlativo.
+        Formato: {CATEGORIA_CODE}-{TIPO}-{CORRELATIVO}
+        """
+        categoria_code = self.categoria.codigo if self.categoria else 'GEN'
+        tipo_code = self.__class__.__name__[:3].upper()
+        
+        # Buscar último correlativo para esta categoría
+        model_class = self.__class__
+        last_product = model_class.objects.filter(
+            sku__startswith=f"{categoria_code}-{tipo_code}-"
+        ).order_by('-sku').first()
+        
+        if last_product:
+            try:
+                last_number = int(last_product.sku.split('-')[-1])
+                new_number = last_number + 1
+            except (ValueError, IndexError):
+                new_number = 1
+        else:
+            new_number = 1
+        
+        return f"{categoria_code}-{tipo_code}-{new_number:04d}"
+
+    def get_stock_status(self):
+        """
+        Devuelve el estado del stock.
+        Returns:
+            str: 'AGOTADO', 'CRITICO', 'BAJO', 'NORMAL'
+        """
+        if self.stock_actual <= 0:
+            return 'AGOTADO'
+        elif self.stock_actual <= self.stock_minimo:
+            return 'CRITICO'
+        elif self.stock_actual <= self.stock_minimo * Decimal('1.5'):
+            return 'BAJO'
+        return 'NORMAL'
+
+    def is_below_minimum(self):
+        """Verifica si el stock está por debajo del mínimo."""
+        return self.stock_actual <= self.stock_minimo
+
+    def get_stock_percentage(self):
+        """Calcula el porcentaje de stock vs mínimo."""
+        if self.stock_minimo > 0:
+            return float((self.stock_actual / self.stock_minimo) * 100)
+        return 100.0
 
 
-class Tuberia(ArticuloBase):
-    MATERIAL_PVC = 'PVC'
-    MATERIAL_HIERRO = 'HIERRO'
-    MATERIAL_CEMENTO = 'CEMENTO'
-    MATERIAL_OTRO = 'OTRO'
+# ============================================================================
+# MODELOS ESPECÍFICOS DE PRODUCTOS
+# ============================================================================
 
-    MATERIAL_CHOICES = [
-        (MATERIAL_PVC, 'PVC'),
-        (MATERIAL_HIERRO, 'Hierro Dúctil'),
-        (MATERIAL_CEMENTO, 'Cemento'),
-        (MATERIAL_OTRO, 'Otro'),
-    ]
+class ChemicalProduct(ProductBase):
+    """Productos químicos para tratamiento de agua."""
+    
+    class NivelPeligrosidad(models.TextChoices):
+        BAJO = 'BAJO', 'Bajo'
+        MEDIO = 'MEDIO', 'Medio'
+        ALTO = 'ALTO', 'Alto'
+        MUY_ALTO = 'MUY_ALTO', 'Muy Alto'
+    
+    class TipoPresentacion(models.TextChoices):
+        SACO = 'SACO', 'Saco'
+        TAMBOR = 'TAMBOR', 'Tambor/Bidón'
+        GRANEL = 'GRANEL', 'Granel'
+        GALON = 'GALON', 'Galón'
+        CILINDRO = 'CILINDRO', 'Cilindro'
+        OTRO = 'OTRO', 'Otro'
+    
+    class UnidadConcentracion(models.TextChoices):
+        PORCENTAJE = 'PORCENTAJE', '% (Porcentaje)'
+        G_L = 'G_L', 'g/L (Gramos por litro)'
+        MG_L = 'MG_L', 'mg/L (Miligramos por litro)'
+        PPM = 'PPM', 'ppm (Partes por millón)'
 
-    USO_POTABLE = 'POTABLE'
-    USO_SERVIDAS = 'SERVIDAS'
-    USO_RIEGO = 'RIEGO'
+    # Seguridad
+    es_peligroso = models.BooleanField(
+        default=False,
+        help_text='¿El producto es peligroso?'
+    )
+    nivel_peligrosidad = models.CharField(
+        max_length=15,
+        choices=NivelPeligrosidad.choices,
+        blank=True
+    )
+    
+    # Especificaciones Químicas
+    fecha_caducidad = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Fecha de vencimiento del lote actual'
+    )
+    concentracion = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text='Concentración del químico'
+    )
+    unidad_concentracion = models.CharField(
+        max_length=20,
+        choices=UnidadConcentracion.choices,
+        default=UnidadConcentracion.PORCENTAJE
+    )
+    
+    # Presentación
+    presentacion = models.CharField(
+        max_length=20,
+        choices=TipoPresentacion.choices,
+        default=TipoPresentacion.SACO
+    )
+    peso_neto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text='Peso neto por unidad en kg'
+    )
+    
+    # Documentación
+    ficha_seguridad = models.FileField(
+        upload_to='fichas_seguridad/',
+        null=True,
+        blank=True,
+        help_text='Ficha de datos de seguridad (MSDS/FDS)'
+    )
+    numero_un = models.CharField(
+        max_length=10,
+        blank=True,
+        verbose_name='Número UN',
+        help_text='Número de Naciones Unidas'
+    )
 
-    USO_CHOICES = [
-        (USO_POTABLE, 'Aguas Potables'),
-        (USO_SERVIDAS, 'Aguas Servidas'),
-        (USO_RIEGO, 'Riego'),
-    ]
+    class Meta:
+        verbose_name = 'Producto Químico'
+        verbose_name_plural = 'Productos Químicos'
+        indexes = [
+            models.Index(fields=['es_peligroso']),
+            models.Index(fields=['fecha_caducidad']),
+            models.Index(fields=['presentacion']),
+        ]
 
-    material = models.CharField(max_length=20, choices=MATERIAL_CHOICES)
-    tipo_uso = models.CharField(max_length=20, choices=USO_CHOICES)
-    diametro_nominal_mm = models.IntegerField()
-    longitud_m = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    def clean(self):
+        super().clean()
+        if self.es_peligroso and not self.nivel_peligrosidad:
+            raise ValidationError(
+                'Debe especificar el nivel de peligrosidad para productos peligrosos'
+            )
+
+    def is_expired(self):
+        """Verifica si el producto está vencido."""
+        if self.fecha_caducidad:
+            return timezone.now().date() >= self.fecha_caducidad
+        return False
+
+    def days_until_expiration(self):
+        """Días hasta la fecha de caducidad."""
+        if self.fecha_caducidad:
+            delta = self.fecha_caducidad - timezone.now().date()
+            return delta.days
+        return None
+
+
+class Pipe(ProductBase):
+    """Tuberías para sistemas de agua potable."""
+    
+    class Material(models.TextChoices):
+        PVC = 'PVC', 'PVC (Policloruro de Vinilo)'
+        PEAD = 'PEAD', 'PEAD (Polietileno Alta Densidad)'
+        ACERO = 'ACERO', 'Acero Inoxidable'
+        HIERRO_DUCTIL = 'HIERRO_DUCTIL', 'Hierro Dúctil'
+        CEMENTO = 'CEMENTO', 'Cemento/Hormigón'
+        COBRE = 'COBRE', 'Cobre'
+        OTRO = 'OTRO', 'Otro'
+    
+    class UnidadDiametro(models.TextChoices):
+        PULGADAS = 'PULGADAS', 'Pulgadas (")'
+        MM = 'MM', 'Milímetros (mm)'
+    
+    class PresionNominal(models.TextChoices):
+        PN6 = 'PN6', 'PN 6 bar'
+        PN10 = 'PN10', 'PN 10 bar'
+        PN16 = 'PN16', 'PN 16 bar'
+        PN20 = 'PN20', 'PN 20 bar'
+        PN25 = 'PN25', 'PN 25 bar'
+        SDR11 = 'SDR11', 'SDR 11'
+        SDR17 = 'SDR17', 'SDR 17'
+        SDR21 = 'SDR21', 'SDR 21'
+        SDR26 = 'SDR26', 'SDR 26'
+        SDR41 = 'SDR41', 'SDR 41'
+    
+    class TipoUnion(models.TextChoices):
+        SOLDABLE = 'SOLDABLE', 'Soldable (Cementar)'
+        ROSCADA = 'ROSCADA', 'Roscada'
+        BRIDADA = 'BRIDADA', 'Bridada'
+        CAMPANA = 'CAMPANA', 'Espiga y Campana'
+        FUSION = 'FUSION', 'Termofusión'
+    
+    class TipoUso(models.TextChoices):
+        POTABLE = 'POTABLE', 'Agua Potable'
+        SERVIDAS = 'SERVIDAS', 'Aguas Servidas'
+        RIEGO = 'RIEGO', 'Riego'
+        PLUVIAL = 'PLUVIAL', 'Agua Pluvial'
+        INDUSTRIAL = 'INDUSTRIAL', 'Uso Industrial'
+
+    # Especificaciones
+    material = models.CharField(max_length=20, choices=Material.choices)
+    diametro_nominal = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    unidad_diametro = models.CharField(
+        max_length=10,
+        choices=UnidadDiametro.choices,
+        default=UnidadDiametro.MM
+    )
+    presion_nominal = models.CharField(
+        max_length=10,
+        choices=PresionNominal.choices
+    )
+    presion_psi = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Presión en PSI (calculado automáticamente)'
+    )
+    longitud_unitaria = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=Decimal('6.00'),
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text='Longitud por unidad en metros'
+    )
+    tipo_union = models.CharField(max_length=20, choices=TipoUnion.choices)
+    tipo_uso = models.CharField(max_length=20, choices=TipoUso.choices)
+    
+    # Especificaciones adicionales
+    espesor_pared = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Espesor de pared en mm'
+    )
 
     class Meta:
         verbose_name = 'Tubería'
         verbose_name_plural = 'Tuberías'
-
-
-class Equipo(ArticuloBase):
-    marca = models.CharField(max_length=150, blank=True)
-    modelo = models.CharField(max_length=150, blank=True)
-    potencia_hp = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    numero_serie = models.CharField(max_length=150, unique=True)
-
-    class Meta:
-        verbose_name = 'Equipo'
-        verbose_name_plural = 'Equipos'
-class StockTuberia(models.Model):
-    tuberia = models.ForeignKey(Tuberia, on_delete=models.CASCADE, related_name='stocks')
-    acueducto = models.ForeignKey(Acueducto, on_delete=models.CASCADE, related_name='stocks_tuberia')
-    cantidad = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Stock Tubería'
-        verbose_name_plural = 'Stocks Tuberías'
-        unique_together = ('tuberia', 'acueducto')
-        # constraints commented out due to reported migration error in user environment
-        # constraints = [
-        #     models.CheckConstraint(check=Q(cantidad__gte=0), name='stock_tuberia_cantidad_gte_0'),
-        # ]
-
-    def __str__(self):
-        return f"{self.tuberia} @ {self.acueducto}: {self.cantidad}"
+        indexes = [
+            models.Index(fields=['material']),
+            models.Index(fields=['diametro_nominal']),
+            models.Index(fields=['tipo_uso']),
+        ]
 
     def save(self, *args, **kwargs):
-        if self.cantidad < 0:
-            raise ValidationError('La cantidad de stock no puede ser negativa')
-        return super().save(*args, **kwargs)
+        # Calcular presión en PSI si está en PN
+        if self.presion_nominal.startswith('PN'):
+            try:
+                bar = int(self.presion_nominal.replace('PN', ''))
+                self.presion_psi = Decimal(str(bar * 14.5038))
+            except:
+                pass
+        super().save(*args, **kwargs)
+
+    def get_diametro_display(self):
+        """Retorna el diámetro con su unidad."""
+        return f"{self.diametro_nominal} {self.get_unidad_diametro_display()}"
 
 
-class StockEquipo(models.Model):
-    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='stocks')
-    acueducto = models.ForeignKey(Acueducto, on_delete=models.CASCADE, related_name='stocks_equipo')
-    cantidad = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
+# Continuará en el próximo archivo...
+"""
+Modelos refactorizados - PARTE 2
+Continúa desde models_refactored.py
+"""
+
+# Agregar al final de models_refactored.py
+
+
+class PumpAndMotor(ProductBase):
+    """Bombas y motores para sistemas de agua."""
+    
+    class TipoEquipo(models.TextChoices):
+        BOMBA_CENTRIFUGA = 'BOMBA_CENTRIFUGA', 'Bomba Centrífuga'
+        BOMBA_SUMERGIBLE = 'BOMBA_SUMERGIBLE', 'Bomba Sumergible'
+        BOMBA_PERIFERICA = 'BOMBA_PERIFERICA', 'Bomba Periférica'
+        BOMBA_TURBINA = 'BOMBA_TURBINA', 'Bomba de Turbina'
+        MOTOR_ELECTRICO = 'MOTOR_ELECTRICO', 'Motor Eléctrico'
+        VARIADOR_FRECUENCIA = 'VARIADOR', 'Variador de Frecuencia'
+    
+    class Fases(models.TextChoices):
+        MONOFASICO = 'MONOFASICO', 'Monofásico'
+        TRIFASICO = 'TRIFASICO', 'Trifásico'
+
+    # Identificación
+    tipo_equipo = models.CharField(max_length=30, choices=TipoEquipo.choices)
+    marca = models.CharField(max_length=150)
+    modelo = models.CharField(max_length=150)
+    numero_serie = models.CharField(
+        max_length=150,
+        unique=True,
+        help_text='Número de serie único del fabricante'
+    )
+    
+    # Especificaciones Eléctricas
+    potencia_hp = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Potencia (HP)',
+        help_text='Potencia en caballos de fuerza'
+    )
+    potencia_kw = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Potencia (kW)',
+        help_text='Potencia en kilovatios (calculado automáticamente)'
+    )
+    voltaje = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        help_text='Voltaje nominal (ej: 110, 220, 440)'
+    )
+    fases = models.CharField(max_length=15, choices=Fases.choices)
+    frecuencia = models.IntegerField(
+        default=60,
+        choices=[(50, '50 Hz'), (60, '60 Hz')],
+        help_text='Frecuencia en Hertz'
+    )
+    amperaje = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Amperaje nominal'
+    )
+    
+    # Especificaciones Hidráulicas (para bombas)
+    caudal_maximo = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Caudal máximo en L/s o m³/h'
+    )
+    unidad_caudal = models.CharField(
+        max_length=10,
+        choices=[('L/S', 'L/s'), ('M3/H', 'm³/h')],
+        default='L/S'
+    )
+    altura_dinamica = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Altura dinámica total en metros'
+    )
+    eficiencia = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Eficiencia en porcentaje'
+    )
+    
+    # Características adicionales
+    npsh_requerido = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='NPSH Requerido',
+        help_text='NPSH requerido en metros'
+    )
+    
+    # Documentación
+    curva_caracteristica = models.FileField(
+        upload_to='curvas_bombas/',
+        null=True,
+        blank=True,
+        help_text='Archivo con curva característica de la bomba'
+    )
 
     class Meta:
-        verbose_name = 'Stock Equipo'
-        verbose_name_plural = 'Stocks Equipos'
-        unique_together = ('equipo', 'acueducto')
-        # constraints = [
-        #     models.CheckConstraint(check=Q(cantidad__gte=0), name='stock_equipo_cantidad_gte_0'),
-        # ]
-
-    def __str__(self):
-        return f"{self.equipo} @ {self.acueducto}: {self.cantidad}"
+        verbose_name = 'Bomba y Motor'
+        verbose_name_plural = 'Bombas y Motores'
+        indexes = [
+            models.Index(fields=['tipo_equipo']),
+            models.Index(fields=['potencia_hp']),
+            models.Index(fields=['marca', 'modelo']),
+        ]
 
     def save(self, *args, **kwargs):
-        if self.cantidad < 0:
-            raise ValidationError('La cantidad de stock no puede ser negativa')
-        return super().save(*args, **kwargs)
+        # Calcular potencia en kW automáticamente
+        if self.potencia_hp:
+            self.potencia_kw = self.potencia_hp * Decimal('0.7457')
+        super().save(*args, **kwargs)
+
+    def get_potencia_display(self):
+        """Retorna potencia en ambas unidades."""
+        return f"{self.potencia_hp} HP ({self.potencia_kw:.2f} kW)"
 
 
-class InventoryAudit(models.Model):
-    STATUS_PENDING = 'PENDING'
-    STATUS_SUCCESS = 'SUCCESS'
-    STATUS_FAILED = 'FAILED'
+class Accessory(ProductBase):
+    """Accesorios para sistemas de tuberías (válvulas, codos, tees, etc)."""
+    
+    class TipoAccesorio(models.TextChoices):
+        VALVULA = 'VALVULA', 'Válvula'
+        CODO = 'CODO', 'Codo'
+        TEE = 'TEE', 'Tee/T'
+        REDUCCION = 'REDUCCION', 'Reducción'
+        TAPON = 'TAPON', 'Tapón'
+        BRIDA = 'BRIDA', 'Brida'
+        UNION = 'UNION', 'Unión'
+        COLLAR = 'COLLAR', 'Collar de Derivación'
+        ADAPTADOR = 'ADAPTADOR', 'Adaptador'
+    
+    class SubtipoValvula(models.TextChoices):
+        BOLA = 'BOLA', 'Bola'
+        COMPUERTA = 'COMPUERTA', 'Compuerta'
+        RETENCION = 'RETENCION', 'Retención/Check'
+        MARIPOSA = 'MARIPOSA', 'Mariposa'
+        GLOBO = 'GLOBO', 'Globo'
+        ALIVIO = 'ALIVIO', 'Alivio de Presión'
+        FLOTADOR = 'FLOTADOR', 'Flotador'
+    
+    class TipoConexion(models.TextChoices):
+        BRIDADA = 'BRIDADA', 'Bridada'
+        ROSCADA = 'ROSCADA', 'Roscada'
+        SOLDABLE = 'SOLDABLE', 'Soldable'
+        CAMPANA = 'CAMPANA', 'Espiga y Campana'
+        RAPIDA = 'RAPIDA', 'Conexión Rápida'
+    
+    class Material(models.TextChoices):
+        PVC = 'PVC', 'PVC'
+        HIERRO = 'HIERRO', 'Hierro Fundido/Dúctil'
+        ACERO = 'ACERO', 'Acero Inoxidable'
+        BRONCE = 'BRONCE', 'Bronce'
+        LATON = 'LATON', 'Latón'
+        PLASTICO = 'PLASTICO', 'Plástico'
 
-    STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pendiente'),
-        (STATUS_SUCCESS, 'Exitoso'),
-        (STATUS_FAILED, 'Fallido'),
-    ]
-
-    movimiento = models.ForeignKey('MovimientoInventario', on_delete=models.SET_NULL, null=True, blank=True, related_name='audits')
-    articulo_tipo = models.CharField(max_length=20, choices=[('TUBERIA', 'Tubería'), ('EQUIPO', 'Equipo')], blank=True)
-    articulo_nombre = models.CharField(max_length=250, blank=True)
-    tipo_movimiento = models.CharField(max_length=20, blank=True)
-    cantidad = models.IntegerField(null=True, blank=True)
-    acueducto_origen = models.ForeignKey(Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
-    acueducto_destino = models.ForeignKey(Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
-    mensaje = models.TextField(blank=True)
-    fecha = models.DateTimeField(auto_now_add=True)
+    # Tipo y subtipo
+    tipo_accesorio = models.CharField(max_length=20, choices=TipoAccesorio.choices)
+    subtipo = models.CharField(
+        max_length=20,
+        choices=SubtipoValvula.choices,
+        blank=True,
+        help_text='Aplica principalmente para válvulas'
+    )
+    
+    # Dimensiones
+    diametro_entrada = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text='Diámetro de entrada en pulgadas o mm'
+    )
+    diametro_salida = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Diámetro de salida (para reducciones)'
+    )
+    unidad_diametro = models.CharField(
+        max_length=10,
+        choices=[('PULGADAS', 'Pulgadas'), ('MM', 'mm')],
+        default='PULGADAS'
+    )
+    
+    # Especificaciones
+    tipo_conexion = models.CharField(max_length=20, choices=TipoConexion.choices)
+    angulo = models.IntegerField(
+        null=True,
+        blank=True,
+        choices=[(45, '45°'), (90, '90°'), (180, '180°')],
+        help_text='Ángulo (para codos)'
+    )
+    presion_trabajo = models.CharField(
+        max_length=10,
+        choices=[
+            ('PN6', 'PN 6'), ('PN10', 'PN 10'), ('PN16', 'PN 16'),
+            ('PN20', 'PN 20'), ('PN25', 'PN 25'),
+            ('150LB', '150 LB'), ('300LB', '300 LB')
+        ],
+        help_text='Presión de trabajo nominal'
+    )
+    material = models.CharField(max_length=20, choices=Material.choices)
 
     class Meta:
-        verbose_name = 'Auditoría de Inventario'
-        verbose_name_plural = 'Auditorías de Inventario'
-
-    def __str__(self):
-        return f"[{self.status}] {self.tipo_movimiento} {self.articulo_nombre or ''} ({self.fecha})"
-
-
-class AlertaStock(models.Model):
-    """Define un umbral para un artículo en un acueducto concreto.
-    Exactly one of `tuberia` or `equipo` must be set.
-    """
-    tuberia = models.ForeignKey(Tuberia, on_delete=models.CASCADE, null=True, blank=True)
-    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, null=True, blank=True)
-    acueducto = models.ForeignKey(Acueducto, on_delete=models.CASCADE, related_name='alertas')
-    umbral_minimo = models.IntegerField(validators=[MinValueValidator(0)], default=0)
-    activo = models.BooleanField(default=True)
-    creado_en = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Alerta de Stock'
-        verbose_name_plural = 'Alertas de Stock'
+        verbose_name = 'Accesorio'
+        verbose_name_plural = 'Accesorios'
+        indexes = [
+            models.Index(fields=['tipo_accesorio']),
+            models.Index(fields=['tipo_conexion']),
+            models.Index(fields=['diametro_entrada']),
+        ]
 
     def clean(self):
-        if bool(self.tuberia) == bool(self.equipo):
-            raise ValidationError('Debe especificar exactamente un artículo: tuberia o equipo en la alerta')
-
-    def __str__(self):
-        nombre = str(self.tuberia) if self.tuberia else str(self.equipo)
-        return f"Alerta {nombre} @ {self.acueducto} <= {self.umbral_minimo}"
-
-
-class Notification(models.Model):
-    alerta = models.ForeignKey(AlertaStock, on_delete=models.SET_NULL, null=True, blank=True, related_name='notifications')
-    mensaje = models.TextField()
-    creada_en = models.DateTimeField(auto_now_add=True)
-    enviada = models.BooleanField(default=False)
-    enviada_en = models.DateTimeField(null=True, blank=True)
-    meta = models.JSONField(blank=True, null=True)
-
-    class Meta:
-        verbose_name = 'Notificación'
-        verbose_name_plural = 'Notificaciones'
-
-    def mark_sent(self):
-        self.enviada = True
-        self.enviada_en = timezone.now()
-        self.save()
-
-
-
-class MovimientoInventario(models.Model):
-    T_ENTRADA = 'ENTRADA'
-    T_SALIDA = 'SALIDA'
-    T_TRANSFER = 'TRANSFERENCIA'
-    T_AJUSTE = 'AJUSTE'
-
-    TIPO_CHOICES = [
-        (T_ENTRADA, 'Entrada'),
-        (T_SALIDA, 'Salida'),
-        (T_TRANSFER, 'Transferencia'),
-        (T_AJUSTE, 'Ajuste'),
-    ]
-
-    tuberia = models.ForeignKey(Tuberia, on_delete=models.SET_NULL, null=True, blank=True)
-    equipo = models.ForeignKey(Equipo, on_delete=models.SET_NULL, null=True, blank=True)
-
-    acueducto_origen = models.ForeignKey(
-        Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='movimientos_salida'
-    )
-    acueducto_destino = models.ForeignKey(
-        Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='movimientos_entrada'
-    )
-
-    tipo_movimiento = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    cantidad = models.IntegerField(validators=[MinValueValidator(1)])
-    fecha_movimiento = models.DateTimeField(auto_now_add=True)
-    razon = models.TextField(blank=True)
-
-    class Meta:
-        verbose_name = 'Movimiento de Inventario'
-        verbose_name_plural = 'Movimientos de Inventario'
-
-    def __str__(self):
-        articulo = self.get_articulo_display_name()
-        return f"{self.tipo_movimiento} {self.cantidad} of {articulo} on {self.fecha_movimiento.date()}"
-
-    def get_articulo(self):
-        return self.tuberia or self.equipo
-
-    def get_articulo_display_name(self):
-        a = self.get_articulo()
-        return str(a) if a else '—'
-
-    def _process_movement(self, StockModel, item_field, item):
-        """
-        Maneja la lógica de actualización de stock de forma agnóstica al tipo de artículo.
+        super().clean()
+        # Validar que reducciones tengan diámetro de salida
+        if self.tipo_accesorio == 'REDUCCION' and not self.diametro_salida:
+            raise ValidationError('Las reducciones deben especificar diámetro de salida')
         
-        Para TRANSFERENCIA:
-        - Si es entre diferentes sucursales: Disminuye origen, aumenta destino
-        - Si es dentro de la misma sucursal (diferente acueducto): Solo cambia ubicación, mantiene total
-        """
-        def get_stock(acueducto, create=False):
-            if create:
-                obj, _ = StockModel.objects.get_or_create(
-                    acueducto=acueducto,
-                    **{item_field: item},
-                    defaults={'cantidad': 0}
-                )
-                # Retornamos el objeto bloqueado para lectura/escritura si es necesario
-                return StockModel.objects.select_for_update().get(pk=obj.pk)
-            else:
-                return StockModel.objects.select_for_update().get(
-                    acueducto=acueducto,
-                    **{item_field: item}
-                )
+        # Validar que codos tengan ángulo
+        if self.tipo_accesorio == 'CODO' and not self.angulo:
+            raise ValidationError('Los codos deben especificar el ángulo')
 
-        if self.tipo_movimiento == self.T_ENTRADA:
-            if not self.acueducto_destino:
-                raise ValidationError('acueducto_destino requerido para ENTRADA')
-            
-            stock = get_stock(self.acueducto_destino, create=True)
-            StockModel.objects.filter(pk=stock.pk).update(cantidad=F('cantidad') + self.cantidad)
+    def get_dimension_display(self):
+        """Retorna las dimensiones formateadas."""
+        entrada = f"{self.diametro_entrada} {self.unidad_diametro}"
+        if self.diametro_salida:
+            salida = f"{self.diametro_salida} {self.unidad_diametro}"
+            return f"{entrada} x {salida}"
+        return entrada
 
-        elif self.tipo_movimiento == self.T_SALIDA:
-            if not self.acueducto_origen:
-                raise ValidationError('acueducto_origen requerido para SALIDA')
-            
-            try:
-                stock = get_stock(self.acueducto_origen)
-            except StockModel.DoesNotExist:
-                raise ValidationError(f'Stock inexistente en origen para {item}')
-            
-            if stock.cantidad < self.cantidad:
-                raise ValidationError('Stock insuficiente en origen para realizar la salida')
-            
-            StockModel.objects.filter(pk=stock.pk).update(cantidad=F('cantidad') - self.cantidad)
 
-        elif self.tipo_movimiento == self.T_TRANSFER:
-            if not self.acueducto_origen or not self.acueducto_destino:
-                raise ValidationError('acueducto_origen y acueducto_destino son requeridos para TRANSFER')
+# ============================================================================
+# MODELOS DE STOCK POR TIPO DE PRODUCTO
+# ============================================================================
 
-            # Check if transfer is within same sucursal or between different sucursales
-            same_sucursal = self.acueducto_origen.sucursal_id == self.acueducto_destino.sucursal_id
+class StockChemical(models.Model):
+    """Stock de productos químicos por acueducto."""
+    producto = models.ForeignKey(
+        ChemicalProduct,
+        on_delete=models.CASCADE,
+        related_name='stocks'
+    )
+    acueducto = models.ForeignKey(
+        Acueducto,
+        on_delete=models.CASCADE,
+        related_name='stocks_chemical'
+    )
+    cantidad = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal('0.000'),
+        validators=[MinValueValidator(Decimal('0.000'))]
+    )
+    lote = models.CharField(max_length=50, blank=True, help_text='Número de lote')
+    fecha_vencimiento = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Fecha de vencimiento de este lote'
+    )
+    ubicacion_fisica = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Ubicación física en almacén'
+    )
+    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
 
-            if same_sucursal:
-                # Transferencia dentro de la misma sucursal: solo cambiar ubicación, mantener total
-                # Origen: disminuir
-                try:
-                    stock_orig = get_stock(self.acueducto_origen)
-                except StockModel.DoesNotExist:
-                    raise ValidationError('Stock inexistente en origen para transferencia')
-                
-                if stock_orig.cantidad < self.cantidad:
-                    raise ValidationError('Stock insuficiente en origen para la transferencia')
-                
-                StockModel.objects.filter(pk=stock_orig.pk).update(cantidad=F('cantidad') - self.cantidad)
+    class Meta:
+        verbose_name = 'Stock de Químico'
+        verbose_name_plural = 'Stocks de Químicos'
+        unique_together = ('producto', 'acueducto', 'lote')
+        ordering = ['producto', 'acueducto']
+        indexes = [
+            models.Index(fields=['producto', 'acueducto']),
+            models.Index(fields=['fecha_vencimiento']),
+        ]
 
-                # Destino: aumentar (mismo total, solo cambio de ubicación)
-                stock_dest = get_stock(self.acueducto_destino, create=True)
-                StockModel.objects.filter(pk=stock_dest.pk).update(cantidad=F('cantidad') + self.cantidad)
-            else:
-                # Transferencia entre sucursales: disminuir origen, aumentar destino (comportamiento normal)
-                # Origen
-                try:
-                    stock_orig = get_stock(self.acueducto_origen)
-                except StockModel.DoesNotExist:
-                    raise ValidationError('Stock inexistente en origen para transferencia')
-                
-                if stock_orig.cantidad < self.cantidad:
-                    raise ValidationError('Stock insuficiente en origen para la transferencia')
-                
-                StockModel.objects.filter(pk=stock_orig.pk).update(cantidad=F('cantidad') - self.cantidad)
+    def __str__(self):
+        return f"{self.producto.nombre} @ {self.acueducto}: {self.cantidad}"
 
-                # Destino
-                stock_dest = get_stock(self.acueducto_destino, create=True)
-                StockModel.objects.filter(pk=stock_dest.pk).update(cantidad=F('cantidad') + self.cantidad)
 
-        elif self.tipo_movimiento == self.T_AJUSTE:
-            # Nota: AJUSTE actualmente solo suma stock (comportamiento original).
-            if self.acueducto_destino:
-                stock = get_stock(self.acueducto_destino, create=True)
-                StockModel.objects.filter(pk=stock.pk).update(cantidad=F('cantidad') + self.cantidad)
-            elif self.acueducto_origen:
-                stock = get_stock(self.acueducto_origen, create=True)
-                StockModel.objects.filter(pk=stock.pk).update(cantidad=F('cantidad') + self.cantidad)
+class StockPipe(models.Model):
+    """Stock de tuberías por acueducto."""
+    producto = models.ForeignKey(
+        Pipe,
+        on_delete=models.CASCADE,
+        related_name='stocks'
+    )
+    acueducto = models.ForeignKey(
+        Acueducto,
+        on_delete=models.CASCADE,
+        related_name='stocks_pipe'
+    )
+    cantidad = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal('0.000'),
+        validators=[MinValueValidator(Decimal('0.000'))],
+        help_text='Cantidad en unidades (tubos)'
+    )
+    metros_totales = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Metros lineales totales (calculado)'
+    )
+    ubicacion_fisica = models.CharField(max_length=100, blank=True)
+    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Stock de Tubería'
+        verbose_name_plural = 'Stocks de Tuberías'
+        unique_together = ('producto', 'acueducto')
+        ordering = ['producto', 'acueducto']
+        indexes = [
+            models.Index(fields=['producto', 'acueducto']),
+        ]
 
     def save(self, *args, **kwargs):
-        # Validate: exactly one of tuberia/equipo should be set
-        if bool(self.tuberia) == bool(self.equipo):
-            # Create audit record for failure (without movimiento FK)
-            InventoryAudit.objects.create(
-                articulo_tipo='TUBERIA' if self.tuberia else ('EQUIPO' if self.equipo else ''),
-                articulo_nombre=(str(self.tuberia) if self.tuberia else (str(self.equipo) if self.equipo else '')),
-                tipo_movimiento=self.tipo_movimiento or '',
-                cantidad=self.cantidad,
-                acueducto_origen=self.acueducto_origen,
-                acueducto_destino=self.acueducto_destino,
-                status=InventoryAudit.STATUS_FAILED,
-                mensaje='Debe especificar exactamente un artículo: tuberia o equipo'
-            )
-            raise ValidationError('Debe especificar exactamente un artículo: tuberia o equipo')
+        # Calcular metros totales automáticamente
+        if self.producto and self.cantidad:
+            self.metros_totales = self.cantidad * self.producto.longitud_unitaria
+        super().save(*args, **kwargs)
 
-        # Configuración dinámica según el tipo de artículo
-        if self.tuberia:
-            item = self.tuberia
-            StockModel = StockTuberia
-            item_field = 'tuberia'
-            audit_type = 'TUBERIA'
-        else:
-            item = self.equipo
-            StockModel = StockEquipo
-            item_field = 'equipo'
-            audit_type = 'EQUIPO'
+    def __str__(self):
+        return f"{self.producto.nombre} @ {self.acueducto}: {self.cantidad} un ({self.metros_totales}m)"
 
-        with transaction.atomic():
-            super().save(*args, **kwargs)
 
-            # create pending audit linked to this movimiento
-            audit = InventoryAudit.objects.create(
-                movimiento=self,
-                articulo_tipo=audit_type,
-                articulo_nombre=str(item),
-                tipo_movimiento=self.tipo_movimiento,
-                cantidad=self.cantidad,
-                acueducto_origen=self.acueducto_origen,
-                acueducto_destino=self.acueducto_destino,
-                status=InventoryAudit.STATUS_PENDING,
-            )
+class StockPumpAndMotor(models.Model):
+    """Stock de bombas y motores por acueducto."""
+    producto = models.ForeignKey(
+        PumpAndMotor,
+        on_delete=models.CASCADE,
+        related_name='stocks'
+    )
+    acueducto = models.ForeignKey(
+        Acueducto,
+        on_delete=models.CASCADE,
+        related_name='stocks_pump'
+    )
+    cantidad = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text='Cantidad de equipos'
+    )
+    estado_operativo = models.CharField(
+        max_length=20,
+        choices=[
+            ('NUEVO', 'Nuevo'),
+            ('OPERATIVO', 'Operativo'),
+            ('MANTENIMIENTO', 'En Mantenimiento'),
+            ('AVERIADO', 'Averiado'),
+            ('BAJA', 'Dado de Baja')
+        ],
+        default='NUEVO'
+    )
+    ubicacion_fisica = models.CharField(max_length=100, blank=True)
+    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
 
-            try:
-                self._process_movement(StockModel, item_field, item)
-                audit.status = InventoryAudit.STATUS_SUCCESS
-                audit.save()
-            except ValidationError as e:
-                audit.status = InventoryAudit.STATUS_FAILED
-                audit.mensaje = str(e.message) if hasattr(e, 'message') else str(e)
-                audit.save()
-                raise e
+    class Meta:
+        verbose_name = 'Stock de Bomba/Motor'
+        verbose_name_plural = 'Stocks de Bombas/Motores'
+        unique_together = ('producto', 'acueducto')
+        ordering = ['producto', 'acueducto']
+        indexes = [
+            models.Index(fields=['producto', 'acueducto']),
+            models.Index(fields=['estado_operativo']),
+        ]
+
+    def __str__(self):
+        return f"{self.producto.numero_serie} @ {self.acueducto}: {self.cantidad}"
+
+
+class StockAccessory(models.Model):
+    """Stock de accesorios por acueducto."""
+    producto = models.ForeignKey(
+        Accessory,
+        on_delete=models.CASCADE,
+        related_name='stocks'
+    )
+    acueducto = models.ForeignKey(
+        Acueducto,
+        on_delete=models.CASCADE,
+        related_name='stocks_accessory'
+    )
+    cantidad = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal('0.000'),
+        validators=[MinValueValidator(Decimal('0.000'))]
+    )
+    ubicacion_fisica = models.CharField(max_length=100, blank=True)
+    fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Stock de Accesorio'
+        verbose_name_plural = 'Stocks de Accesorios'
+        unique_together = ('producto', 'acueducto')
+        ordering = ['producto', 'acueducto']
+        indexes = [
+            models.Index(fields=['producto', 'acueducto']),
+        ]
+
+    def __str__(self):
+        return f"{self.producto.nombre} @ {self.acueducto}: {self.cantidad}"
+
+
+# ============================================================================
+# MANTENER MODELOS ANTIGUOS TEMPORALMENTE (Para migración gradual)
+# ============================================================================
+
+# Los modelos Tuberia, Equipo, StockTuberia, StockEquipo, MovimientoInventario
+# se mantienen en models.py original para compatibilidad durante la transición
