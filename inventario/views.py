@@ -86,7 +86,9 @@ class EquipoViewSet(viewsets.ModelViewSet):
     search_fields = ['nombre', 'descripcion', 'marca', 'modelo', 'numero_serie']
 
 class StockTuberiaViewSet(viewsets.ModelViewSet):
-    queryset = StockTuberia.objects.all()
+    queryset = StockTuberia.objects.select_related(
+        'tuberia', 'tuberia__categoria', 'acueducto', 'acueducto__sucursal'
+    ).all()
     serializer_class = StockTuberiaSerializer
     permission_classes = [IsAdminOrSameSucursal]
     
@@ -106,7 +108,9 @@ class StockTuberiaViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
 class StockEquipoViewSet(viewsets.ModelViewSet):
-    queryset = StockEquipo.objects.all()
+    queryset = StockEquipo.objects.select_related(
+        'equipo', 'equipo__categoria', 'acueducto', 'acueducto__sucursal'
+    ).all()
     serializer_class = StockEquipoSerializer
     permission_classes = [IsAdminOrSameSucursal]
     
@@ -126,7 +130,11 @@ class StockEquipoViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
 class MovimientoInventarioViewSet(viewsets.ModelViewSet):
-    queryset = MovimientoInventario.objects.all().order_by('-fecha_movimiento')
+    queryset = MovimientoInventario.objects.select_related(
+        'tuberia', 'equipo', 
+        'acueducto_origen', 'acueducto_origen__sucursal',
+        'acueducto_destino', 'acueducto_destino__sucursal'
+    ).all().order_by('-fecha_movimiento')
     serializer_class = MovimientoInventarioSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -153,7 +161,9 @@ class MovimientoInventarioViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
 class InventoryAuditViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = InventoryAudit.objects.all().order_by('-fecha')
+    queryset = InventoryAudit.objects.select_related(
+        'movimiento', 'acueducto_origen', 'acueducto_destino'
+    ).all().order_by('-fecha')
     serializer_class = InventoryAuditSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
