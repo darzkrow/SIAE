@@ -6,8 +6,12 @@ from django.db import models, transaction
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.contrib.auth import get_user_model
+from django.conf import settings
 from decimal import Decimal
 import uuid
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 
 # ============================================================================
@@ -944,9 +948,253 @@ class StockAccessory(models.Model):
         return f"{self.producto.nombre} @ {self.acueducto}: {self.cantidad}"
 
 
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
+
+# ... (existing imports)
+
 # ============================================================================
-# MANTENER MODELOS ANTIGUOS TEMPORALMENTE (Para migración gradual)
+# AUDITORÍA Y MOVIMIENTOS
 # ============================================================================
 
+class InventoryAudit(models.Model):
+    STATUS_PENDING = 'PENDING'
+    STATUS_SUCCESS = 'SUCCESS'
+    STATUS_FAILED = 'FAILED'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pendiente'),
+        (STATUS_SUCCESS, 'Exitoso'),
+        (STATUS_FAILED, 'Fallido'),
+    ]
+
+    movimiento = models.ForeignKey(
+        'MovimientoInventario',
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='audits'
+    )
+    # Generic relation to product
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    producto = GenericForeignKey('content_type', 'object_id')
+    
+    tipo_movimiento = models.CharField(max_length=20, blank=True)
+    cantidad = models.DecimalField(max_digits=12, decimal_places=3, null=True)
+    
+    acueducto_origen = models.ForeignKey(
+        Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+    )
+    acueducto_destino = models.ForeignKey(
+        Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+    )
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    mensaje = models.TextField(blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Auditoría de Inventario'
+        verbose_name_plural = 'Auditorías de Inventario'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"[{self.status}] {self.tipo_movimiento} ({self.fecha})"
+
+
+class MovimientoInventario(models.Model):
+    T_ENTRADA = 'ENTRADA'
+    T_SALIDA = 'SALIDA'
+    T_TRANSFER = 'TRANSFERENCIA'
+    T_AJUSTE = 'AJUSTE'
+
+    TIPO_CHOICES = [
+        (T_ENTRADA, 'Entrada'),
+        (T_SALIDA, 'Salida'),
+        (T_TRANSFER, 'Transferencia'),
+        (T_AJUSTE, 'Ajuste'),
+    ]
+
+    # Relación Genérica al Producto
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    producto = GenericForeignKey('content_type', 'object_id')
+
+    acueducto_origen = models.ForeignKey(
+        Acueducto, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='movimientos_salida'
+    )
+    acueducto_destino = models.ForeignKey(
+        Acueducto, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='movimientos_entrada'
+    )
+
+    tipo_movimiento = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    cantidad = models.DecimalField(
+        max_digits=12, decimal_places=3,
+        validators=[MinValueValidator(Decimal('0.001'))]
+    )
+    fecha_movimiento = models.DateTimeField(auto_now_add=True)
+    razon = models.TextField(blank=True)
+    
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Movimiento de Inventario'
+        verbose_name_plural = 'Movimientos de Inventario'
+        ordering = ['-fecha_movimiento']
+
+    def __str__(self):
+        return f"{self.tipo_movimiento} {self.cantidad} - {self.producto}"
+
+    def get_stock_model(self):
+        """Determina el modelo de stock basado en el producto."""
+        model_name = self.content_type.model
+        if model_name == 'chemicalproduct':
+            return StockChemical
+        elif model_name == 'pipe':
+            return StockPipe
+        elif model_name == 'pumpandmotor':
+            return StockPumpAndMotor
+        elif model_name == 'accessory':
+            return StockAccessory
+        raise ValidationError(f"Tipo de producto no soportado: {model_name}")
+
+    def _update_stock(self, stock_model, acueducto, cantidad, operacion):
+        """Actualiza o crea registro de stock."""
+        stock, created = stock_model.objects.get_or_create(
+            producto_id=self.object_id,
+            acueducto=acueducto,
+            defaults={'cantidad': 0}
+        )
+        
+        # Bloquear fila para evitar race conditions
+        # stock = stock_model.objects.select_for_update().get(pk=stock.pk)
+        
+        if operacion == 'sumar':
+            stock.cantidad += cantidad
+        elif operacion == 'restar':
+            if stock.cantidad < cantidad:
+                raise ValidationError(f"Stock insuficiente en {acueducto}")
+            stock.cantidad -= cantidad
+            
+        stock.save()
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if not is_new:
+            super().save(*args, **kwargs)
+            return
+
+        StockModel = self.get_stock_model()
+        
+        # Crear auditoría pendiente
+        audit = InventoryAudit(
+            movimiento=self,
+            content_type=self.content_type,
+            object_id=self.object_id,
+            tipo_movimiento=self.tipo_movimiento,
+            cantidad=self.cantidad,
+            acueducto_origen=self.acueducto_origen,
+            acueducto_destino=self.acueducto_destino,
+            user=self.creado_por,
+            status=InventoryAudit.STATUS_PENDING
+        )
+
+        try:
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+                audit.movimiento = self
+                audit.save()
+
+                if self.tipo_movimiento == self.T_ENTRADA:
+                    if not self.acueducto_destino:
+                        raise ValidationError("Destino requerido para entrada")
+                    self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+
+                elif self.tipo_movimiento == self.T_SALIDA:
+                    if not self.acueducto_origen:
+                        raise ValidationError("Origen requerido para salida")
+                    self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
+
+                elif self.tipo_movimiento == self.T_TRANSFER:
+                    if not self.acueducto_origen or not self.acueducto_destino:
+                        raise ValidationError("Origen y Destino requeridos para transferencia")
+                    
+                    self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
+                    self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+
+                elif self.tipo_movimiento == self.T_AJUSTE:
+                    # Ajuste asume sumar si positivo. Para restar, implementar lógica adicional si se requiere
+                    if self.acueducto_destino:
+                        self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+                
+                audit.status = InventoryAudit.STATUS_SUCCESS
+                audit.save()
+
+        except Exception as e:
+            audit.status = InventoryAudit.STATUS_FAILED
+            audit.mensaje = str(e)
+            audit.save()
+            raise e
 # Los modelos Tuberia, Equipo, StockTuberia, StockEquipo, MovimientoInventario
 # se mantienen en models.py original para compatibilidad durante la transición
+
+# ============================================================================
+# SISTEMA DE ALERTAS Y NOTIFICACIONES
+# ============================================================================
+
+class Alerta(models.Model):
+    """Configuración de alertas de stock bajo."""
+    # Relación Genérica al Producto
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    producto = GenericForeignKey('content_type', 'object_id')
+    
+    acueducto = models.ForeignKey(Acueducto, on_delete=models.CASCADE)
+    umbral_minimo = models.DecimalField(max_digits=12, decimal_places=3)
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Alerta de Stock'
+        verbose_name_plural = 'Alertas de Stock'
+        unique_together = ['content_type', 'object_id', 'acueducto']
+
+    def __str__(self):
+        return f"Alerta {self.producto} - {self.acueducto} (< {self.umbral_minimo})"
+
+
+class Notificacion(models.Model):
+    """Notificaciones generadas por el sistema."""
+    mensaje = models.CharField(max_length=255)
+    tipo = models.CharField(max_length=50, default='INFO')  # INFO, WARNING, CRITICAL
+    leida = models.BooleanField(default=False)
+    enviada = models.BooleanField(default=False)  # Para emails/externos
+    creada_en = models.DateTimeField(auto_now_add=True)
+    
+    # Opcional: Relacionar con usuario si es específica
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+        ordering = ['-creada_en']
+
+    def __str__(self):
+        return f"{self.mensaje} ({self.creada_en})"
+

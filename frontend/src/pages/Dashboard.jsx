@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { InventoryService } from '../services/inventory.service';
 import { Package, Droplets, Activity, AlertCircle, TrendingUp, Plus, Minus, ArrowRight, Calendar, Users } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -14,17 +14,20 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const [statsRes, movRes, alertasRes] = await Promise.all([
-                    axios.get(`${API_URL}/api/reportes/dashboard_stats/`),
-                    axios.get(`${API_URL}/api/movimientos/?limit=5`),
-                    axios.get(`${API_URL}/api/reportes/alertas_stock_bajo/`)
+                    InventoryService.reports.dashboardStats(),
+                    InventoryService.movimientos.getAll({ limit: 5 }),
+                    // Para alertas de stock bajo, idealmente deberíamos tener un endpoint unificado
+                    // Por ahora usamos el de químicos como ejemplo o el reporte general si existe
+                    // Asumiremos que alertas_stock_bajo sigue existiendo en el nuevo reporte
+                    InventoryService.chemicals.getStockBajo()
+                    // Nota: El endpoint original /api/reportes/alertas_stock_bajo/ podría necesitar 
+                    // ser re-mapeado en el servicio si es un endpoint custom global.
                 ]);
-                
+
                 setStats(statsRes.data);
                 setMovimientos(movRes.data.results || movRes.data);
                 setAlertas(alertasRes.data);

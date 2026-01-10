@@ -22,7 +22,7 @@ class CategorySerializer(serializers.ModelSerializer):
     total_productos = serializers.SerializerMethodField()
     
     class Meta:
-        model = 'Category'  # Será Category cuando se migre
+        model = Category
         fields = [
             'id', 'nombre', 'codigo', 'descripcion',
             'activo', 'orden', 'total_productos'
@@ -40,7 +40,7 @@ class UnitOfMeasureSerializer(serializers.ModelSerializer):
     tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
     
     class Meta:
-        model = 'UnitOfMeasure'
+        model = UnitOfMeasure
         fields = ['id', 'nombre', 'simbolo', 'tipo', 'tipo_display', 'activo']
         read_only_fields = ['id']
 
@@ -50,7 +50,7 @@ class SupplierSerializer(serializers.ModelSerializer):
     total_productos = serializers.SerializerMethodField()
     
     class Meta:
-        model = 'Supplier'
+        model = Supplier
         fields = [
             'id', 'nombre', 'rif', 'codigo', 'contacto_nombre',
             'telefono', 'email', 'direccion', 'activo',
@@ -61,6 +61,17 @@ class SupplierSerializer(serializers.ModelSerializer):
     def get_total_productos(self, obj):
         """Total de productos de este proveedor."""
         return 0  # Implementar después
+
+
+class AcueductoSerializer(serializers.ModelSerializer):
+    """Serializer para acueductos."""
+    sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True)
+    
+    class Meta:
+        from inventario.models import Acueducto
+        model = Acueducto
+        fields = ['id', 'nombre', 'sucursal', 'sucursal_nombre', 'ubicacion']
+        read_only_fields = ['id']
 
 
 # ============================================================================
@@ -118,7 +129,7 @@ class ChemicalProductSerializer(ProductBaseSerializer):
     )
     
     class Meta:
-        model = 'ChemicalProduct'
+        model = ChemicalProduct
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
@@ -273,7 +284,7 @@ class StockChemicalSerializer(serializers.ModelSerializer):
     acueducto_detail = serializers.StringRelatedField(source='acueducto', read_only=True)
     
     class Meta:
-        model = 'StockChemical'
+        model = StockChemical
         fields = [
             'id', 'producto', 'producto_detail',
             'acueducto', 'acueducto_detail',
@@ -289,7 +300,7 @@ class StockPipeSerializer(serializers.ModelSerializer):
     acueducto_detail = serializers.StringRelatedField(source='acueducto', read_only=True)
     
     class Meta:
-        model = 'StockPipe'
+        model = StockPipe
         fields = [
             'id', 'producto', 'producto_detail',
             'acueducto', 'acueducto_detail',
@@ -309,7 +320,7 @@ class StockPumpAndMotorSerializer(serializers.ModelSerializer):
     )
     
     class Meta:
-        model = 'StockPumpAndMotor'
+        model = StockPumpAndMotor
         fields = [
             'id', 'producto', 'producto_detail',
             'acueducto', 'acueducto_detail',
@@ -325,7 +336,7 @@ class StockAccessorySerializer(serializers.ModelSerializer):
     acueducto_detail = serializers.StringRelatedField(source='acueducto', read_only=True)
     
     class Meta:
-        model = 'StockAccessory'
+        model = StockAccessory
         fields = [
             'id', 'producto', 'producto_detail',
             'acueducto', 'acueducto_detail',
@@ -333,6 +344,91 @@ class StockAccessorySerializer(serializers.ModelSerializer):
             'fecha_ultima_actualizacion'
         ]
         read_only_fields = ['id', 'fecha_ultima_actualizacion']
+
+
+
+# ============================================================================
+# SERIALIZERS DE MOVIMIENTOS
+# ============================================================================
+
+class MovimientoInventarioSerializer(serializers.ModelSerializer):
+    """Serializer para movimientos de inventario con soporte genérico."""
+    producto_str = serializers.SerializerMethodField()
+    creado_por_username = serializers.SerializerMethodField()
+    acueducto_origen_nombre = serializers.CharField(source='acueducto_origen.nombre', read_only=True, allow_null=True)
+    acueducto_destino_nombre = serializers.CharField(source='acueducto_destino.nombre', read_only=True, allow_null=True)
+    
+    # Campos de lectura para la relación genérica
+    product_type_read = serializers.SerializerMethodField()
+    product_id_read = serializers.SerializerMethodField()
+    
+    # Campos para escritura
+    product_type = serializers.CharField(write_only=True)  # 'chemical', 'pipe', 'pump', 'accessory'
+    product_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        from inventario.models import MovimientoInventario
+        model = MovimientoInventario
+        fields = [
+            'id', 'tipo_movimiento', 'cantidad', 'fecha_movimiento',
+            'acueducto_origen', 'acueducto_origen_nombre',
+            'acueducto_destino', 'acueducto_destino_nombre',
+            'producto_str', 'razon', 'creado_por_username',
+            'product_type', 'product_id',
+            'product_type_read', 'product_id_read'
+        ]
+        read_only_fields = ['id', 'fecha_movimiento', 'producto_str', 'creado_por_username']
+
+    def get_creado_por_username(self, obj):
+        if obj.creado_por:
+            return obj.creado_por.username
+        return None
+
+    def get_producto_str(self, obj):
+        if obj.producto:
+            return str(obj.producto)
+        return "Producto eliminado o no encontrado"
+
+    def get_product_type_read(self, obj):
+        if obj.content_type:
+            return obj.content_type.model
+        return None
+
+    def get_product_id_read(self, obj):
+        return obj.object_id
+
+    def create(self, validated_data):
+        product_type = validated_data.pop('product_type')
+
+        product_id = validated_data.pop('product_id')
+        
+        # Mapear string a ContentType
+        from django.contrib.contenttypes.models import ContentType
+        
+        type_map = {
+            'chemical': 'chemicalproduct',
+            'pipe': 'pipe',
+            'pump': 'pumpandmotor',
+            'accessory': 'accessory'
+        }
+        
+        if product_type not in type_map:
+            raise serializers.ValidationError({'product_type': 'Tipo inválido'})
+            
+        try:
+            ct = ContentType.objects.get(app_label='inventario', model=type_map[product_type])
+        except ContentType.DoesNotExist:
+             raise serializers.ValidationError({'product_type': 'ContentType no encontrado'})
+             
+        validated_data['content_type'] = ct
+        validated_data['object_id'] = product_id
+        
+        # Asignar usuario si está en el contexto
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['creado_por'] = request.user
+            
+        return super().create(validated_data)
 
 
 # ============================================================================
@@ -344,7 +440,7 @@ class ChemicalProductListSerializer(serializers.ModelSerializer):
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
     
     class Meta:
-        model = 'ChemicalProduct'
+        model = ChemicalProduct
         fields = [
             'id', 'sku', 'nombre', 'stock_actual', 'stock_minimo',
             'stock_status', 'es_peligroso', 'fecha_caducidad', 'presentacion'
@@ -385,3 +481,62 @@ class AccessoryListSerializer(serializers.ModelSerializer):
             'id', 'sku', 'nombre', 'tipo_accesorio', 'tipo_conexion',
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
+
+
+# ============================================================================
+# SERIALIZERS DE ALERTAS Y NOTIFICACIONES
+# ============================================================================
+
+
+class AlertaSerializer(serializers.ModelSerializer):
+    """Serializer para alertas de stock."""
+    producto_str = serializers.SerializerMethodField()
+    acueducto_nombre = serializers.CharField(source='acueducto.nombre', read_only=True)
+    
+    # Campos para escritura GFK
+    product_type = serializers.CharField(write_only=True)
+    product_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        from inventario.models import Alerta
+        model = Alerta
+        fields = [
+            'id', 'acueducto', 'acueducto_nombre', 
+            'umbral_minimo', 'activo', 'producto_str',
+            'product_type', 'product_id'
+        ]
+        read_only_fields = ['id', 'producto_str']
+
+    def get_producto_str(self, obj):
+        if obj.producto:
+            return str(obj.producto)
+        return "Producto no encontrado"
+
+    def create(self, validated_data):
+        product_type = validated_data.pop('product_type')
+        product_id = validated_data.pop('product_id')
+        
+        from django.contrib.contenttypes.models import ContentType
+        type_map = {
+            'chemical': 'chemicalproduct',
+            'pipe': 'pipe',
+            'pump': 'pumpandmotor',
+            'accessory': 'accessory'
+        }
+        model_name = type_map.get(product_type, product_type)
+        try:
+            ct = ContentType.objects.get(app_label='inventario', model=model_name)
+        except ContentType.DoesNotExist:
+             raise serializers.ValidationError({'product_type': 'Tipo inválido'})
+             
+        validated_data['content_type'] = ct
+        validated_data['object_id'] = product_id
+        return super().create(validated_data)
+
+
+class NotificacionSerializer(serializers.ModelSerializer):
+    """Serializer para notificaciones."""
+    class Meta:
+        from inventario.models import Notificacion
+        model = Notificacion
+        fields = '__all__'

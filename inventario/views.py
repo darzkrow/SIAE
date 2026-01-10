@@ -26,7 +26,8 @@ from inventario.serializers import (
     StockChemicalSerializer, StockPipeSerializer,
     StockPumpAndMotorSerializer, StockAccessorySerializer,
     ChemicalProductListSerializer, PipeListSerializer,
-    PumpAndMotorListSerializer, AccessoryListSerializer
+    PumpAndMotorListSerializer, AccessoryListSerializer,
+    MovimientoInventarioSerializer
 )
 
 
@@ -36,8 +37,8 @@ from inventario.serializers import (
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """ViewSet para categorías de productos."""
-    # queryset = Category.objects.all()
-    # serializer_class = CategorySerializer
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo']
@@ -48,8 +49,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class UnitOfMeasureViewSet(viewsets.ModelViewSet):
     """ViewSet para unidades de medida."""
-    # queryset = UnitOfMeasure.objects.all()
-    # serializer_class = UnitOfMeasureSerializer
+    queryset = UnitOfMeasure.objects.all()
+    serializer_class = UnitOfMeasureSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['tipo', 'activo']
@@ -60,13 +61,30 @@ class UnitOfMeasureViewSet(viewsets.ModelViewSet):
 
 class SupplierViewSet(viewsets.ModelViewSet):
     """ViewSet para proveedores."""
-    # queryset = Supplier.objects.all()
-    # serializer_class = SupplierSerializer
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['activo']
     search_fields = ['nombre', 'rif', 'codigo', 'contacto_nombre', 'email']
     ordering_fields = ['nombre', 'creado_en']
+    ordering = ['nombre']
+
+
+class AcueductoViewSet(viewsets.ModelViewSet):
+    """ViewSet para acueductos."""
+    from inventario.models import Acueducto
+    queryset = Acueducto.objects.all()
+    
+    def get_serializer_class(self):
+        from inventario.serializers import AcueductoSerializer
+        return AcueductoSerializer
+        
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['sucursal', 'activo']
+    search_fields = ['nombre', 'ubicacion']
+    ordering_fields = ['nombre']
     ordering = ['nombre']
 
 
@@ -76,10 +94,10 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
 class ChemicalProductViewSet(viewsets.ModelViewSet):
     """ViewSet para productos químicos."""
-    # queryset = ChemicalProduct.objects.select_related(
-    #     'categoria', 'unidad_medida', 'proveedor'
-    # ).all()
-    # serializer_class = ChemicalProductSerializer
+    queryset = ChemicalProduct.objects.select_related(
+        'categoria', 'unidad_medida', 'proveedor'
+    ).all()
+    serializer_class = ChemicalProductSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
@@ -90,11 +108,11 @@ class ChemicalProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ['sku', 'nombre', 'stock_actual', 'precio_unitario', 'fecha_caducidad']
     ordering = ['sku']
     
-    # def get_serializer_class(self):
-    #     """Usar serializer simplificado para listados."""
-    #     if self.action == 'list':
-    #         return ChemicalProductListSerializer
-    #     return ChemicalProductSerializer
+    def get_serializer_class(self):
+        """Usar serializer simplificado para listados."""
+        if self.action == 'list':
+            return ChemicalProductListSerializer
+        return ChemicalProductSerializer
     
     @action(detail=False, methods=['get'])
     def stock_bajo(self, request):
@@ -130,10 +148,10 @@ class ChemicalProductViewSet(viewsets.ModelViewSet):
 
 class PipeViewSet(viewsets.ModelViewSet):
     """ViewSet para tuberías."""
-    # queryset = Pipe.objects.select_related(
-    #     'categoria', 'unidad_medida', 'proveedor'
-    # ).all()
-    # serializer_class = PipeSerializer
+    queryset = Pipe.objects.select_related(
+        'categoria', 'unidad_medida', 'proveedor'
+    ).all()
+    serializer_class = PipeSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
@@ -144,10 +162,10 @@ class PipeViewSet(viewsets.ModelViewSet):
     ordering_fields = ['sku', 'nombre', 'diametro_nominal', 'stock_actual', 'precio_unitario']
     ordering = ['sku']
     
-    # def get_serializer_class(self):
-    #     if self.action == 'list':
-    #         return PipeListSerializer
-    #     return PipeSerializer
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return PipeListSerializer
+        return PipeSerializer
     
     @action(detail=False, methods=['get'])
     def by_diameter(self, request):
@@ -166,10 +184,10 @@ class PipeViewSet(viewsets.ModelViewSet):
 
 class PumpAndMotorViewSet(viewsets.ModelViewSet):
     """ViewSet para bombas y motores."""
-    # queryset = PumpAndMotor.objects.select_related(
-    #     'categoria', 'unidad_medida', 'proveedor'
-    # ).all()
-    # serializer_class = PumpAndMotorSerializer
+    queryset = PumpAndMotor.objects.select_related(
+        'categoria', 'unidad_medida', 'proveedor'
+    ).all()
+    serializer_class = PumpAndMotorSerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
@@ -180,10 +198,10 @@ class PumpAndMotorViewSet(viewsets.ModelViewSet):
     ordering_fields = ['sku', 'nombre', 'potencia_hp', 'stock_actual', 'precio_unitario']
     ordering = ['sku']
     
-    # def get_serializer_class(self):
-    #     if self.action == 'list':
-    #         return PumpAndMotorListSerializer
-    #     return PumpAndMotorSerializer
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return PumpAndMotorListSerializer
+        return PumpAndMotorSerializer
     
     @action(detail=False, methods=['get'])
     def by_power_range(self, request):
@@ -201,10 +219,10 @@ class PumpAndMotorViewSet(viewsets.ModelViewSet):
 
 class AccessoryViewSet(viewsets.ModelViewSet):
     """ViewSet para accesorios."""
-    # queryset = Accessory.objects.select_related(
-    #     'categoria', 'unidad_medida', 'proveedor'
-    # ).all()
-    # serializer_class = AccessorySerializer
+    queryset = Accessory.objects.select_related(
+        'categoria', 'unidad_medida', 'proveedor'
+    ).all()
+    serializer_class = AccessorySerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
@@ -215,10 +233,10 @@ class AccessoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ['sku', 'nombre', 'stock_actual', 'precio_unitario']
     ordering = ['sku']
     
-    # def get_serializer_class(self):
-    #     if self.action == 'list':
-    #         return AccessoryListSerializer
-    #     return AccessorySerializer
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return AccessoryListSerializer
+        return AccessorySerializer
     
     @action(detail=False, methods=['get'])
     def valvulas(self, request):
@@ -234,10 +252,10 @@ class AccessoryViewSet(viewsets.ModelViewSet):
 
 class StockChemicalViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de químicos."""
-    # queryset = StockChemical.objects.select_related(
-    #     'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
-    # ).all()
-    # serializer_class = StockChemicalSerializer
+    queryset = StockChemical.objects.select_related(
+        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+    ).all()
+    serializer_class = StockChemicalSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['producto', 'acueducto']
@@ -260,10 +278,10 @@ class StockChemicalViewSet(viewsets.ModelViewSet):
 
 class StockPipeViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de tuberías."""
-    # queryset = StockPipe.objects.select_related(
-    #     'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
-    # ).all()
-    # serializer_class = StockPipeSerializer
+    queryset = StockPipe.objects.select_related(
+        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+    ).all()
+    serializer_class = StockPipeSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['producto', 'acueducto']
@@ -285,10 +303,10 @@ class StockPipeViewSet(viewsets.ModelViewSet):
 
 class StockPumpAndMotorViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de bombas/motores."""
-    # queryset = StockPumpAndMotor.objects.select_related(
-    #     'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
-    # ).all()
-    # serializer_class = StockPumpAndMotorSerializer
+    queryset = StockPumpAndMotor.objects.select_related(
+        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+    ).all()
+    serializer_class = StockPumpAndMotorSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['producto', 'acueducto', 'estado_operativo']
@@ -310,10 +328,10 @@ class StockPumpAndMotorViewSet(viewsets.ModelViewSet):
 
 class StockAccessoryViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de accesorios."""
-    # queryset = StockAccessory.objects.select_related(
-    #     'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
-    # ).all()
-    # serializer_class = StockAccessorySerializer
+    queryset = StockAccessory.objects.select_related(
+        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+    ).all()
+    serializer_class = StockAccessorySerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['producto', 'acueducto']
@@ -332,6 +350,27 @@ class StockAccessoryViewSet(viewsets.ModelViewSet):
         
         return queryset.none()
 
+
+
+# ============================================================================
+# VIEWSET DE MOVIMIENTOS
+# ============================================================================
+
+class MovimientoInventarioViewSet(viewsets.ModelViewSet):
+    """ViewSet para movimientos de inventario."""
+    # queryset se define dinámicamente o se importa
+    serializer_class = MovimientoInventarioSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['tipo_movimiento', 'acueducto_origen', 'acueducto_destino']
+    search_fields = ['razon', 'producto__sku']  # Note: producto__sku might not work with GenericFK directly in basic SearchFilter without more config, keeping it simple
+    ordering = ['-fecha_movimiento']
+
+    def get_queryset(self):
+        from inventario.models import MovimientoInventario
+        return MovimientoInventario.objects.all().select_related(
+            'acueducto_origen', 'acueducto_destino', 'creado_por', 'content_type'
+        )
 
 # ============================================================================
 # VIEWSET DE REPORTES CONSOLIDADO
@@ -369,3 +408,33 @@ class RefactoredReportesViewSet(viewsets.ViewSet):
         """Valor del inventario por tipo de producto."""
         # TODO: Implementar
         return Response([])
+
+
+# ============================================================================
+# VIEWSETS DE ALERTAS Y NOTIFICACIONES
+# ============================================================================
+
+class AlertaViewSet(viewsets.ModelViewSet):
+    """ViewSet para alertas de stock."""
+    # serializer_class se define dinámicamente o asumiendo el nombre en inventario.serializers
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        from inventario.serializers import AlertaSerializer
+        return AlertaSerializer
+    
+    def get_queryset(self):
+        from inventario.models import Alerta
+        return Alerta.objects.all().select_related('acueducto', 'content_type')
+
+class NotificacionViewSet(viewsets.ModelViewSet):
+    """ViewSet para notificaciones."""
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        from inventario.serializers import NotificacionSerializer
+        return NotificacionSerializer
+    
+    def get_queryset(self):
+        from inventario.models import Notificacion
+        return Notificacion.objects.all()
