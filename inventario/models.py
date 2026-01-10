@@ -1068,6 +1068,26 @@ class MovimientoInventario(models.Model):
         verbose_name_plural = 'Movimientos de Inventario'
         ordering = ['-fecha_movimiento']
 
+    def __init__(self, *args, **kwargs):
+        # Compatibilidad con kwargs legacy usados en tests y código antiguo
+        # (tuberia, equipo) -> traducir a content_type/object_id para FK genérica
+        tuberia = kwargs.pop('tuberia', None)
+        equipo = kwargs.pop('equipo', None)
+        # Soporte para pasar 'producto' directamente
+        producto = kwargs.get('producto')
+
+        if tuberia is not None and producto is None:
+            ct = ContentType.objects.get_for_model(Pipe)
+            kwargs['content_type'] = ct
+            kwargs['object_id'] = getattr(tuberia, 'pk', tuberia)
+
+        if equipo is not None and producto is None:
+            ct = ContentType.objects.get_for_model(PumpAndMotor)
+            kwargs['content_type'] = ct
+            kwargs['object_id'] = getattr(equipo, 'pk', equipo)
+
+        super().__init__(*args, **kwargs)
+
     def __str__(self):
         return f"{self.tipo_movimiento} {self.cantidad} - {self.producto}"
 
@@ -1231,4 +1251,68 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"{self.mensaje} ({self.creada_en})"
+
+
+# ---------------------------------------------------------------------------
+# Compatibilidad con nombres de modelos legacy (español) usados en tests
+# Estos son proxies que permiten usar los nombres antiguos sin duplicar tablas
+# ---------------------------------------------------------------------------
+
+
+class Categoria(Category):
+    class Meta:
+        proxy = True
+        verbose_name = 'Categoría (compat)'
+
+
+class Tuberia(Pipe):
+    class Meta:
+        proxy = True
+        verbose_name = 'Tubería (compat)'
+
+    def __init__(self, *args, **kwargs):
+        # Aceptar kwargs legacy y mapear a campos del modelo actual
+        # diametro_nominal_mm -> diametro_nominal
+        if 'diametro_nominal_mm' in kwargs:
+            kwargs['diametro_nominal'] = kwargs.pop('diametro_nominal_mm')
+        if 'longitud_m' in kwargs:
+            kwargs['longitud_unitaria'] = kwargs.pop('longitud_m')
+        super().__init__(*args, **kwargs)
+
+
+class Equipo(PumpAndMotor):
+    class Meta:
+        proxy = True
+        verbose_name = 'Equipo (compat)'
+
+
+class StockTuberia(StockPipe):
+    class Meta:
+        proxy = True
+        verbose_name = 'StockTubería (compat)'
+
+    def __init__(self, *args, **kwargs):
+        # Aceptar 'tuberia' como alias para 'producto'
+        if 'tuberia' in kwargs and 'producto' not in kwargs:
+            kwargs['producto'] = kwargs.pop('tuberia')
+        super().__init__(*args, **kwargs)
+
+
+class StockEquipo(StockPumpAndMotor):
+    class Meta:
+        proxy = True
+        verbose_name = 'StockEquipo (compat)'
+
+    def __init__(self, *args, **kwargs):
+        if 'equipo' in kwargs and 'producto' not in kwargs:
+            kwargs['producto'] = kwargs.pop('equipo')
+        super().__init__(*args, **kwargs)
+
+
+# Alias para compatibilidad puntual
+Categoria = Categoria
+Tuberia = Tuberia
+Equipo = Equipo
+StockTuberia = StockTuberia
+StockEquipo = StockEquipo
 
