@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -8,14 +8,9 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
-    // Configure axios defaults
-    if (token) {
-        axios.defaults.headers.common['Authorization'] = `Token ${token}`;
-    }
-
     // Axios interceptor para manejar errores 401/403
     useEffect(() => {
-        const interceptor = axios.interceptors.response.use(
+        const interceptor = api.interceptors.response.use(
             response => response,
             error => {
                 if (error.response?.status === 401 || error.response?.status === 403) {
@@ -27,7 +22,7 @@ export const AuthProvider = ({ children }) => {
             }
         );
 
-        return () => axios.interceptors.response.eject(interceptor);
+        return () => api.interceptors.response.eject(interceptor);
     }, []);
 
     useEffect(() => {
@@ -35,10 +30,7 @@ export const AuthProvider = ({ children }) => {
         const verifyToken = async () => {
             if (token) {
                 try {
-                    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-                    const response = await axios.get(`${API_URL}/api/accounts/me/`, {
-                        headers: { Authorization: `Token ${token}` }
-                    });
+                    const response = await api.get('accounts/me/');
                     setUser(response.data);
                 } catch (error) {
                     console.error("Token verification failed", error);
@@ -53,19 +45,15 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-            const res = await axios.post(`${API_URL}/api/accounts/api-token-auth/`, { username, password });
+            const res = await api.post('accounts/api-token-auth/', { username, password });
 
             const { token: newToken } = res.data;
 
             localStorage.setItem('token', newToken);
             setToken(newToken);
-            axios.defaults.headers.common['Authorization'] = `Token ${newToken}`;
 
             // Obtener datos del usuario
-            const userRes = await axios.get(`${API_URL}/api/accounts/me/`, {
-                headers: { Authorization: `Token ${newToken}` }
-            });
+            const userRes = await api.get('accounts/me/');
             setUser(userRes.data);
 
             return true;
@@ -79,7 +67,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
-        delete axios.defaults.headers.common['Authorization'];
     };
 
     return (

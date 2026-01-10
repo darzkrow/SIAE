@@ -10,10 +10,13 @@ from inventario import views
 router = DefaultRouter()
 
 # Modelos auxiliares
+router.register(r'organizaciones', views.OrganizacionCentralViewSet, basename='organizacion')
+router.register(r'sucursales', views.SucursalViewSet, basename='sucursal')
 router.register(r'categories', views.CategoryViewSet, basename='category')
 router.register(r'units', views.UnitOfMeasureViewSet, basename='unit')
 router.register(r'suppliers', views.SupplierViewSet, basename='supplier')
 router.register(r'acueductos', views.AcueductoViewSet, basename='acueducto')
+router.register(r'users', views.UserViewSet, basename='user')
 
 # Productos
 router.register(r'chemicals', views.ChemicalProductViewSet, basename='chemical')

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { BarChart3, Download, Filter, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { InventoryService } from '../services/inventory.service';
 
 export default function Reportes() {
     const { user } = useAuth();
@@ -13,8 +13,6 @@ export default function Reportes() {
     const [resumen, setResumen] = useState([]);
     const [error, setError] = useState(null);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
     useEffect(() => {
         fetchReportData();
     }, [reportType, dateRange]);
@@ -24,19 +22,13 @@ export default function Reportes() {
         setError(null);
         try {
             if (reportType === 'movimientos') {
-                const response = await axios.get(
-                    `${API_URL}/api/reportes/movimientos_recientes/?dias=${dateRange}`
-                );
+                const response = await InventoryService.reports.getMovimientosRecientes(dateRange);
                 setMovimientos(response.data);
             } else if (reportType === 'stock') {
-                const response = await axios.get(
-                    `${API_URL}/api/reportes/stock_por_sucursal/`
-                );
+                const response = await InventoryService.reports.getStockPorSucursal();
                 setStockData(response.data);
             } else if (reportType === 'resumen') {
-                const response = await axios.get(
-                    `${API_URL}/api/reportes/resumen_movimientos/?dias=${dateRange}`
-                );
+                const response = await InventoryService.reports.getResumenMovimientos(dateRange);
                 setResumen(response.data);
             }
         } catch (err) {

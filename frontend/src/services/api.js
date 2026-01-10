@@ -1,9 +1,21 @@
 import axios from 'axios';
+import { API_BASE_URL, API_PREFIX } from '../config';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Limpiar la URL base y asegurar que el prefijo se asigne correctamente
+const getBaseURL = () => {
+    let base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    let prefix = API_PREFIX.startsWith('/') ? API_PREFIX : `/${API_PREFIX}`;
+
+    // Evitar duplicación si la base ya tiene el prefijo (caso común en despliegues)
+    if (base.endsWith(prefix)) {
+        return `${base}/`;
+    }
+
+    return `${base}${prefix}/`;
+};
 
 const api = axios.create({
-    baseURL: API_URL,
+    baseURL: getBaseURL(),
     headers: {
         'Content-Type': 'application/json',
     },

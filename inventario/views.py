@@ -1,7 +1,3 @@
-"""
-Views refactorizadas para el sistema de inventario.
-ViewSets optimizados con filtros, búsqueda y paginación.
-"""
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -15,10 +11,13 @@ from inventario.permissions import IsAdminOrReadOnly, IsAdminOrSameSucursal
 
 # Imports de modelos y serializers
 from inventario.models import (
+    OrganizacionCentral, Sucursal, Acueducto,
     Category, UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory
 )
+from django.contrib.auth import get_user_model
+User = get_user_model()
 from inventario.serializers import (
     CategorySerializer, UnitOfMeasureSerializer, SupplierSerializer,
     ChemicalProductSerializer, PipeSerializer,
@@ -27,8 +26,45 @@ from inventario.serializers import (
     StockPumpAndMotorSerializer, StockAccessorySerializer,
     ChemicalProductListSerializer, PipeListSerializer,
     PumpAndMotorListSerializer, AccessoryListSerializer,
-    MovimientoInventarioSerializer
+    MovimientoInventarioSerializer,
+    OrganizacionCentralSerializer, SucursalSerializer, UserSerializer
 )
+
+
+# ============================================================================
+# VIEWSETS DE MODELOS ORGANIZACIONALES
+# ============================================================================
+
+class OrganizacionCentralViewSet(viewsets.ModelViewSet):
+    """ViewSet para organizaciones centrales."""
+    queryset = OrganizacionCentral.objects.all()
+    serializer_class = OrganizacionCentralSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    search_fields = ['nombre', 'rif']
+
+class SucursalViewSet(viewsets.ModelViewSet):
+    """ViewSet para sucursales."""
+    queryset = Sucursal.objects.select_related('organizacion_central').all()
+    serializer_class = SucursalSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['organizacion_central']
+    search_fields = ['nombre', 'codigo']
+
+class UserViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestión de usuarios."""
+    queryset = User.objects.select_related('sucursal').all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated] # Solo ADMIN debería acceder a todo, filtrar en get_queryset
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['role', 'sucursal', 'is_active']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == user.ROLE_ADMIN:
+            return super().get_queryset()
+        return super().get_queryset().filter(id=user.id)
 
 
 # ============================================================================
@@ -82,7 +118,7 @@ class AcueductoViewSet(viewsets.ModelViewSet):
         
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['sucursal', 'activo']
+    filterset_fields = ['sucursal']
     search_fields = ['nombre', 'ubicacion']
     ordering_fields = ['nombre']
     ordering = ['nombre']
@@ -363,7 +399,7 @@ class MovimientoInventarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['tipo_movimiento', 'acueducto_origen', 'acueducto_destino']
-    search_fields = ['razon', 'producto__sku']  # Note: producto__sku might not work with GenericFK directly in basic SearchFilter without more config, keeping it simple
+    search_fields = ['razon']  # producto__sku no compatible con GFK en SearchFilter
     ordering = ['-fecha_movimiento']
 
     def get_queryset(self):
@@ -383,31 +419,77 @@ class RefactoredReportesViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Estadísticas generales para el dashboard."""
-        # TODO: Implementar después de la migración
+        from inventario.models import Pipe, PumpAndMotor, Sucursal, StockPipe, StockPumpAndMotor
+        
         stats = {
-            'total_productos': 0,
-            'total_quimicos': 0,
-            'total_tuberias': 0,
-            'total_bombas': 0,
-            'total_accesorios': 0,
-            'productos_criticos': 0,
-            'quimicos_peligrosos': 0,
-            'quimicos_proximos_vencer': 0,
-            'valor_total_inventario': 0
+            'total_tuberias': Pipe.objects.count(),
+            'total_equipos': PumpAndMotor.objects.count(),
+            'total_sucursales': Sucursal.objects.count(),
+            'total_stock_tuberias': StockPipe.objects.aggregate(total=Sum('cantidad'))['total'] or 0,
+            'total_stock_equipos': StockPumpAndMotor.objects.aggregate(total=Sum('cantidad'))['total'] or 0,
         }
         return Response(stats)
     
     @action(detail=False, methods=['get'])
-    def stock_por_categoria(self, request):
-        """Stock agrupado por categoría."""
-        # TODO: Implementar
-        return Response([])
+    def movimientos_recientes(self, request):
+        """Movimientos de inventario de los últimos N días."""
+        from inventario.models import MovimientoInventario
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        dias = int(request.query_params.get('dias', 30))
+        fecha_inicio = timezone.now() - timedelta(days=dias)
+        
+        movimientos = MovimientoInventario.objects.filter(
+            fecha_movimiento__gte=fecha_inicio
+        ).order_by('-fecha_movimiento')
+        
+        serializer = MovimientoInventarioSerializer(movimientos, many=True)
+        return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
-    def valor_inventario_por_tipo(self, request):
-        """Valor del inventario por tipo de producto."""
-        # TODO: Implementar
-        return Response([])
+    def stock_por_sucursal(self, request):
+        """Resumen de stock por sucursal."""
+        from inventario.models import Sucursal, Acueducto, StockPipe, StockPumpAndMotor
+        
+        sucursales = Sucursal.objects.all()
+        data = []
+        
+        for suc in sucursales:
+            acueductos = Acueducto.objects.filter(sucursal=suc)
+            stock_tuberias = StockPipe.objects.filter(acueducto__in=acueductos).aggregate(total=Sum('cantidad'))['total'] or 0
+            stock_equipos = StockPumpAndMotor.objects.filter(acueducto__in=acueductos).aggregate(total=Sum('cantidad'))['total'] or 0
+            
+            data.append({
+                'id': suc.id,
+                'nombre': suc.nombre,
+                'total_acueductos': acueductos.count(),
+                'stock_tuberias': stock_tuberias,
+                'stock_equipos': stock_equipos,
+                'stock_total': stock_tuberias + stock_equipos
+            })
+            
+        return Response(data)
+    
+    @action(detail=False, methods=['get'])
+    def resumen_movimientos(self, request):
+        """Resumen cuantitativo de movimientos por tipo."""
+        from inventario.models import MovimientoInventario
+        from django.db.models import Count, Sum
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        dias = int(request.query_params.get('dias', 30))
+        fecha_inicio = timezone.now() - timedelta(days=dias)
+        
+        resumen = MovimientoInventario.objects.filter(
+            fecha_movimiento__gte=fecha_inicio
+        ).values('tipo_movimiento').annotate(
+            total=Count('id'),
+            cantidad_total=Sum('cantidad')
+        )
+        
+        return Response(list(resumen))
 
 
 # ============================================================================
@@ -437,4 +519,42 @@ class NotificacionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         from inventario.models import Notificacion
-        return Notificacion.objects.all()
+        return Notificacion.objects.all().order_by('-creada_en')
+# ============================================================================
+# VIEWSETS DE ORGANIZACION Y USUARIOS
+# ============================================================================
+
+class OrganizacionCentralViewSet(viewsets.ModelViewSet):
+    """ViewSet para la organización central."""
+    queryset = OrganizacionCentral.objects.all()
+    serializer_class = OrganizacionCentralSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    search_fields = ['nombre', 'rif']
+
+class SucursalViewSet(viewsets.ModelViewSet):
+    """ViewSet para las sucursales."""
+    queryset = Sucursal.objects.select_related('organizacion_central').all()
+    serializer_class = SucursalSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['organizacion_central']
+    search_fields = ['nombre', 'codigo']
+
+class UserViewSet(viewsets.ModelViewSet):
+    """ViewSet para usuarios personalizados."""
+    queryset = User.objects.select_related('sucursal').all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['role', 'sucursal', 'is_active']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # Admins ven todo, operadores solo ven su propia info (o nada de otros)
+        if user.is_staff or user.role == 'ADMIN':
+            return queryset
+        
+        return queryset.filter(id=user.id)

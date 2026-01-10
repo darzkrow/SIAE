@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Plus, Edit2, Trash2, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { InventoryService } from '../services/inventory.service';
 
 export default function Usuarios() {
     const { user } = useAuth();
@@ -23,8 +23,6 @@ export default function Usuarios() {
         sucursal: ''
     });
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
     useEffect(() => {
         // Solo ADMIN puede acceder
         if (user?.role !== 'ADMIN') {
@@ -37,8 +35,8 @@ export default function Usuarios() {
     const fetchData = async () => {
         try {
             const [usersRes, sucRes] = await Promise.all([
-                axios.get(`${API_URL}/api/users/`),
-                axios.get(`${API_URL}/api/sucursales/`)
+                InventoryService.users.getAll(),
+                InventoryService.sucursales.getAll()
             ]);
 
             setUsuarios(usersRes.data.results || usersRes.data);
@@ -76,14 +74,14 @@ export default function Usuarios() {
             }
 
             if (editingId) {
-                await axios.put(`${API_URL}/api/users/${editingId}/`, payload);
+                await InventoryService.users.update(editingId, payload);
                 setSuccess("Usuario actualizado exitosamente");
             } else {
                 if (!formData.password) {
                     setError("La contraseña es requerida para nuevos usuarios");
                     return;
                 }
-                await axios.post(`${API_URL}/api/users/`, payload);
+                await InventoryService.users.create(payload);
                 setSuccess("Usuario creado exitosamente");
             }
 
@@ -99,7 +97,7 @@ export default function Usuarios() {
         if (!window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) return;
 
         try {
-            await axios.delete(`${API_URL}/api/users/${id}/`);
+            await InventoryService.users.delete(id);
             setSuccess("Usuario eliminado exitosamente");
             fetchData();
         } catch (err) {
@@ -349,11 +347,10 @@ export default function Usuarios() {
                                             {usuario.first_name} {usuario.last_name}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                                usuario.role === 'ADMIN'
+                                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${usuario.role === 'ADMIN'
                                                     ? 'bg-red-100 text-red-800'
                                                     : 'bg-blue-100 text-blue-800'
-                                            }`}>
+                                                }`}>
                                                 {usuario.role === 'ADMIN' ? 'Administrador' : 'Operador'}
                                             </span>
                                         </td>

@@ -1077,9 +1077,6 @@ class MovimientoInventario(models.Model):
             defaults={'cantidad': 0}
         )
         
-        # Bloquear fila para evitar race conditions
-        # stock = stock_model.objects.select_for_update().get(pk=stock.pk)
-        
         if operacion == 'sumar':
             stock.cantidad += cantidad
         elif operacion == 'restar':
@@ -1095,7 +1092,10 @@ class MovimientoInventario(models.Model):
             super().save(*args, **kwargs)
             return
 
-        StockModel = self.get_stock_model()
+        try:
+            StockModel = self.get_stock_model()
+        except Exception as e:
+            raise e
         
         # Crear auditoría pendiente
         audit = InventoryAudit(
@@ -1134,7 +1134,6 @@ class MovimientoInventario(models.Model):
                     self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
 
                 elif self.tipo_movimiento == self.T_AJUSTE:
-                    # Ajuste asume sumar si positivo. Para restar, implementar lógica adicional si se requiere
                     if self.acueducto_destino:
                         self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
                 
@@ -1144,7 +1143,10 @@ class MovimientoInventario(models.Model):
         except Exception as e:
             audit.status = InventoryAudit.STATUS_FAILED
             audit.mensaje = str(e)
-            audit.save()
+            try:
+                audit.save()
+            except:
+                pass
             raise e
 # Los modelos Tuberia, Equipo, StockTuberia, StockEquipo, MovimientoInventario
 # se mantienen en models.py original para compatibilidad durante la transición

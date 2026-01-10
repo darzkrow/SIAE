@@ -11,11 +11,53 @@ from inventario.models import (
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory
 )
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 # ============================================================================
 # SERIALIZERS DE MODELOS AUXILIARES
 # ============================================================================
+
+class OrganizacionCentralSerializer(serializers.ModelSerializer):
+    """Serializer para organizaciones centrales."""
+    class Meta:
+        model = OrganizacionCentral
+        fields = ['id', 'nombre', 'rif']
+
+class SucursalSerializer(serializers.ModelSerializer):
+    """Serializer para sucursales."""
+    organizacion_central_nombre = serializers.CharField(source='organizacion_central.nombre', read_only=True)
+    
+    class Meta:
+        model = Sucursal
+        fields = ['id', 'nombre', 'organizacion_central', 'organizacion_central_nombre', 'codigo', 'direccion', 'telefono']
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer para usuarios."""
+    sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True, allow_null=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'sucursal', 'sucursal_nombre', 'is_active', 'password']
+        read_only_fields = ['id']
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().create(validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
 
 class CategorySerializer(serializers.ModelSerializer):
     """Serializer para categorías de productos."""
@@ -91,9 +133,9 @@ class ProductBaseSerializer(serializers.ModelSerializer):
     valor_total = serializers.SerializerMethodField()
     
     # Writable nested fields (IDs)
-    categoria = serializers.PrimaryKeyRelatedField(queryset='Category.objects.all()')
-    unidad_medida = serializers.PrimaryKeyRelatedField(queryset='UnitOfMeasure.objects.all()')
-    proveedor = serializers.PrimaryKeyRelatedField(queryset='Supplier.objects.all()')
+    categoria = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    unidad_medida = serializers.PrimaryKeyRelatedField(queryset=UnitOfMeasure.objects.all())
+    proveedor = serializers.PrimaryKeyRelatedField(queryset=Supplier.objects.all())
     
     def get_stock_percentage(self, obj):
         """Porcentaje de stock vs mínimo."""
@@ -122,9 +164,8 @@ class ChemicalProductSerializer(ProductBaseSerializer):
         source='get_unidad_concentracion_display', 
         read_only=True
     )
-    is_expired = serializers.BooleanField(source='is_expired', read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
     days_until_expiration = serializers.IntegerField(
-        source='days_until_expiration', 
         read_only=True
     )
     
@@ -174,7 +215,7 @@ class PipeSerializer(ProductBaseSerializer):
     diametro_display = serializers.CharField(source='get_diametro_display', read_only=True)
     
     class Meta:
-        model = 'Pipe'
+        model = Pipe
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
@@ -208,7 +249,7 @@ class PumpAndMotorSerializer(ProductBaseSerializer):
     potencia_display = serializers.CharField(source='get_potencia_display', read_only=True)
     
     class Meta:
-        model = 'PumpAndMotor'
+        model = PumpAndMotor
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
@@ -248,7 +289,7 @@ class AccessorySerializer(ProductBaseSerializer):
     dimension_display = serializers.CharField(source='get_dimension_display', read_only=True)
     
     class Meta:
-        model = 'Accessory'
+        model = Accessory
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
@@ -354,6 +395,7 @@ class StockAccessorySerializer(serializers.ModelSerializer):
 class MovimientoInventarioSerializer(serializers.ModelSerializer):
     """Serializer para movimientos de inventario con soporte genérico."""
     producto_str = serializers.SerializerMethodField()
+    articulo_nombre = serializers.SerializerMethodField()
     creado_por_username = serializers.SerializerMethodField()
     acueducto_origen_nombre = serializers.CharField(source='acueducto_origen.nombre', read_only=True, allow_null=True)
     acueducto_destino_nombre = serializers.CharField(source='acueducto_destino.nombre', read_only=True, allow_null=True)
@@ -373,11 +415,11 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
             'id', 'tipo_movimiento', 'cantidad', 'fecha_movimiento',
             'acueducto_origen', 'acueducto_origen_nombre',
             'acueducto_destino', 'acueducto_destino_nombre',
-            'producto_str', 'razon', 'creado_por_username',
+            'producto_str', 'articulo_nombre', 'razon', 'creado_por_username',
             'product_type', 'product_id',
             'product_type_read', 'product_id_read'
         ]
-        read_only_fields = ['id', 'fecha_movimiento', 'producto_str', 'creado_por_username']
+        read_only_fields = ['id', 'fecha_movimiento', 'producto_str', 'articulo_nombre', 'creado_por_username']
 
     def get_creado_por_username(self, obj):
         if obj.creado_por:
@@ -388,6 +430,9 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
         if obj.producto:
             return str(obj.producto)
         return "Producto eliminado o no encontrado"
+
+    def get_articulo_nombre(self, obj):
+        return self.get_producto_str(obj)
 
     def get_product_type_read(self, obj):
         if obj.content_type:
@@ -452,7 +497,7 @@ class PipeListSerializer(serializers.ModelSerializer):
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
     
     class Meta:
-        model = 'Pipe'
+        model = Pipe
         fields = [
             'id', 'sku', 'nombre', 'material', 'diametro_nominal',
             'stock_actual', 'stock_minimo', 'stock_status'
@@ -464,7 +509,7 @@ class PumpAndMotorListSerializer(serializers.ModelSerializer):
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
     
     class Meta:
-        model = 'PumpAndMotor'
+        model = PumpAndMotor
         fields = [
             'id', 'sku', 'nombre', 'tipo_equipo', 'marca', 'modelo',
             'potencia_hp', 'stock_actual', 'stock_minimo', 'stock_status'
@@ -476,12 +521,61 @@ class AccessoryListSerializer(serializers.ModelSerializer):
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
     
     class Meta:
-        model = 'Accessory'
+        model = Accessory
         fields = [
             'id', 'sku', 'nombre', 'tipo_accesorio', 'tipo_conexion',
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
+
+# ============================================================================
+# SERIALIZERS DE ORGANIZACION Y USUARIOS
+# ============================================================================
+
+class OrganizacionCentralSerializer(serializers.ModelSerializer):
+    """Serializer para la organización central."""
+    class Meta:
+        model = OrganizacionCentral
+        fields = ['id', 'nombre', 'rif']
+
+class SucursalSerializer(serializers.ModelSerializer):
+    """Serializer para sucursales."""
+    organizacion_central_nombre = serializers.CharField(source='organizacion_central.nombre', read_only=True)
+    
+    class Meta:
+        model = Sucursal
+        fields = [
+            'id', 'nombre', 'organizacion_central', 'organizacion_central_nombre',
+            'codigo', 'direccion', 'telefono'
+        ]
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer para el modelo CustomUser."""
+    sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True)
+    password = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 
+            'role', 'sucursal', 'sucursal_nombre', 'is_active', 'password'
+        ]
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().create(validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
 
 # ============================================================================
 # SERIALIZERS DE ALERTAS Y NOTIFICACIONES
