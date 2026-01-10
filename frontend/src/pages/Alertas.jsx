@@ -284,7 +284,7 @@ export default function Alertas() {
                                     <option value="">-- Seleccionar Producto --</option>
                                     {productsList.map(p => (
                                         <option key={p.id} value={p.id}>
-                                            {p.nombre} {p.codigo ? `(${p.codigo})` : ''} - {p.marca || ''}
+                                            {p.nombre} {p.sku ? `(${p.sku})` : ''} - {p.marca || ''}
                                         </option>
                                     ))}
                                 </select>
@@ -343,8 +343,8 @@ export default function Alertas() {
                 <button
                     onClick={() => setActiveTab('alertas')}
                     className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'alertas'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-gray-600 hover:text-gray-800'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
                         }`}
                 >
                     Alertas ({alertas.length})
@@ -352,8 +352,8 @@ export default function Alertas() {
                 <button
                     onClick={() => setActiveTab('notificaciones')}
                     className={`px-4 py-2 font-medium border-b-2 transition ${activeTab === 'notificaciones'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-gray-600 hover:text-gray-800'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
                         }`}
                 >
                     Notificaciones ({notificaciones.length})

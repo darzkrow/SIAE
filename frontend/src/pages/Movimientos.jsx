@@ -262,7 +262,7 @@ export default function Movimientos() {
                                     <option value="">-- Seleccionar Producto --</option>
                                     {productsList.map(p => (
                                         <option key={p.id} value={p.id}>
-                                            {p.nombre} {p.codigo ? `(${p.codigo})` : ''} - {p.marca || ''}
+                                            {p.nombre} {p.sku ? `(${p.sku})` : ''} - {p.marca || ''}
                                         </option>
                                     ))}
                                 </select>

@@ -40,7 +40,7 @@ class Sucursal(models.Model):
         on_delete=models.PROTECT,
         related_name='sucursales'
     )
-    codigo = models.CharField(max_length=10, unique=True, blank=True)
+    codigo = models.CharField(max_length=10, unique=True, blank=True, null=True)
     direccion = models.TextField(blank=True)
     telefono = models.CharField(max_length=50, blank=True)
 
@@ -130,7 +130,7 @@ class Supplier(models.Model):
     """Proveedores de productos."""
     nombre = models.CharField(max_length=200, unique=True)
     rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
-    codigo = models.CharField(max_length=20, unique=True, blank=True)
+    codigo = models.CharField(max_length=20, unique=True, blank=True, null=True)
     contacto_nombre = models.CharField(max_length=150, blank=True)
     telefono = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
@@ -513,7 +513,7 @@ class Pipe(ProductBase):
         if self.presion_nominal.startswith('PN'):
             try:
                 bar = int(self.presion_nominal.replace('PN', ''))
-                self.presion_psi = Decimal(str(bar * 14.5038))
+                self.presion_psi = Decimal(str(bar * 14.5038)).quantize(Decimal('0.00'))
             except:
                 pass
         super().save(*args, **kwargs)
@@ -1020,6 +1020,16 @@ class MovimientoInventario(models.Model):
         (T_AJUSTE, 'Ajuste'),
     ]
 
+    STATUS_PENDIENTE = 'PENDIENTE'
+    STATUS_APROBADO = 'APROBADO'
+    STATUS_RECHAZADO = 'RECHAZADO'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDIENTE, 'Pendiente'),
+        (STATUS_APROBADO, 'Aprobado'),
+        (STATUS_RECHAZADO, 'Rechazado'),
+    ]
+
     # Relación Genérica al Producto
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
@@ -1035,6 +1045,11 @@ class MovimientoInventario(models.Model):
     )
 
     tipo_movimiento = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default=STATUS_PENDIENTE
+    )
     cantidad = models.DecimalField(
         max_digits=12, decimal_places=3,
         validators=[MinValueValidator(Decimal('0.001'))]
@@ -1088,65 +1103,82 @@ class MovimientoInventario(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
+        
+        # Obtener el estado anterior si no es nuevo
+        old_status = None
         if not is_new:
-            super().save(*args, **kwargs)
-            return
+            old_instance = MovimientoInventario.objects.get(pk=self.pk)
+            old_status = old_instance.status
 
         try:
             StockModel = self.get_stock_model()
         except Exception as e:
             raise e
         
-        # Crear auditoría pendiente
-        audit = InventoryAudit(
-            movimiento=self,
-            content_type=self.content_type,
-            object_id=self.object_id,
-            tipo_movimiento=self.tipo_movimiento,
-            cantidad=self.cantidad,
-            acueducto_origen=self.acueducto_origen,
-            acueducto_destino=self.acueducto_destino,
-            user=self.creado_por,
-            status=InventoryAudit.STATUS_PENDING
-        )
+        # Validar lógica de transición de estado
+        should_update_stock = False
+        if is_new and self.status == self.STATUS_APROBADO:
+            should_update_stock = True
+        elif not is_new and old_status == self.STATUS_PENDIENTE and self.status == self.STATUS_APROBADO:
+            should_update_stock = True
+
+        # Crear o buscar auditoría
+        audit = None
+        if is_new:
+            audit = InventoryAudit(
+                movimiento=self,
+                content_type=self.content_type,
+                object_id=self.object_id,
+                tipo_movimiento=self.tipo_movimiento,
+                cantidad=self.cantidad,
+                acueducto_origen=self.acueducto_origen,
+                acueducto_destino=self.acueducto_destino,
+                user=self.creado_por,
+                status=InventoryAudit.STATUS_PENDING
+            )
 
         try:
             with transaction.atomic():
                 super().save(*args, **kwargs)
-                audit.movimiento = self
-                audit.save()
-
-                if self.tipo_movimiento == self.T_ENTRADA:
-                    if not self.acueducto_destino:
-                        raise ValidationError("Destino requerido para entrada")
-                    self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
-
-                elif self.tipo_movimiento == self.T_SALIDA:
-                    if not self.acueducto_origen:
-                        raise ValidationError("Origen requerido para salida")
-                    self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
-
-                elif self.tipo_movimiento == self.T_TRANSFER:
-                    if not self.acueducto_origen or not self.acueducto_destino:
-                        raise ValidationError("Origen y Destino requeridos para transferencia")
-                    
-                    self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
-                    self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
-
-                elif self.tipo_movimiento == self.T_AJUSTE:
-                    if self.acueducto_destino:
-                        self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
                 
-                audit.status = InventoryAudit.STATUS_SUCCESS
-                audit.save()
+                if is_new and audit:
+                    audit.movimiento = self
+                    audit.save()
+
+                if should_update_stock:
+                    if self.tipo_movimiento == self.T_ENTRADA:
+                        if not self.acueducto_destino:
+                            raise ValidationError("Destino requerido para entrada")
+                        self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+
+                    elif self.tipo_movimiento == self.T_SALIDA:
+                        if not self.acueducto_origen:
+                            raise ValidationError("Origen requerido para salida")
+                        self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
+
+                    elif self.tipo_movimiento == self.T_TRANSFER:
+                        if not self.acueducto_origen or not self.acueducto_destino:
+                            raise ValidationError("Origen y Destino requeridos para transferencia")
+                        
+                        self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
+                        self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+
+                    elif self.tipo_movimiento == self.T_AJUSTE:
+                        if self.acueducto_destino:
+                            self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+                
+                if audit:
+                    audit.status = InventoryAudit.STATUS_SUCCESS
+                    audit.save()
 
         except Exception as e:
-            audit.status = InventoryAudit.STATUS_FAILED
-            audit.mensaje = str(e)
-            try:
-                audit.save()
-            except:
-                pass
+            if audit:
+                audit.status = InventoryAudit.STATUS_FAILED
+                audit.mensaje = str(e)
+                try:
+                    audit.save()
+                except:
+                    pass
             raise e
 # Los modelos Tuberia, Equipo, StockTuberia, StockEquipo, MovimientoInventario
 # se mantienen en models.py original para compatibilidad durante la transición

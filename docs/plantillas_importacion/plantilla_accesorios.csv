@@ -1,0 +1,3 @@
+sku,nombre,tipo_accesorio,tipo_conexion,material,stock_actual,stock_minimo,precio_unitario,categoria,unidad_medida,proveedor
+ACC-VAL-001,Válvula de Compuerta 2",VALVULA,BRIDADA,HIERRO,10,2,85.00,Accesorios Hidráulicos,Unidades,Suministros Industriales
+ACC-COD-002,Codo PVC 90° 2",CODO,SOLDABLE,PVC,200,50,2.50,Accesorios PVC,Unidades,Proveedor Hidro

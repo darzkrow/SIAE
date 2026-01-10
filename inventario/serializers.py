@@ -128,6 +128,8 @@ class ProductBaseSerializer(serializers.ModelSerializer):
     proveedor_detail = SupplierSerializer(source='proveedor', read_only=True)
     
     # Display fields
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    unidad_medida_nombre = serializers.CharField(source='unidad_medida.nombre', read_only=True)
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
     stock_percentage = serializers.SerializerMethodField()
     valor_total = serializers.SerializerMethodField()
@@ -174,8 +176,8 @@ class ChemicalProductSerializer(ProductBaseSerializer):
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
-            'categoria', 'categoria_detail',
-            'unidad_medida', 'unidad_medida_detail',
+            'categoria', 'categoria_detail', 'categoria_nombre',
+            'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
             'proveedor', 'proveedor_detail',
             'activo', 'fecha_entrada', 'notas',
@@ -219,8 +221,8 @@ class PipeSerializer(ProductBaseSerializer):
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
-            'categoria', 'categoria_detail',
-            'unidad_medida', 'unidad_medida_detail',
+            'categoria', 'categoria_detail', 'categoria_nombre',
+            'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
             'proveedor', 'proveedor_detail',
             'activo', 'fecha_entrada', 'notas',
@@ -253,8 +255,8 @@ class PumpAndMotorSerializer(ProductBaseSerializer):
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
-            'categoria', 'categoria_detail',
-            'unidad_medida', 'unidad_medida_detail',
+            'categoria', 'categoria_detail', 'categoria_nombre',
+            'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
             'proveedor', 'proveedor_detail',
             'activo', 'fecha_entrada', 'notas',
@@ -293,8 +295,8 @@ class AccessorySerializer(ProductBaseSerializer):
         fields = [
             # Campos base
             'id', 'sku', 'nombre', 'descripcion',
-            'categoria', 'categoria_detail',
-            'unidad_medida', 'unidad_medida_detail',
+            'categoria', 'categoria_detail', 'categoria_nombre',
+            'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
             'proveedor', 'proveedor_detail',
             'activo', 'fecha_entrada', 'notas',
@@ -417,7 +419,7 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
             'acueducto_destino', 'acueducto_destino_nombre',
             'producto_str', 'articulo_nombre', 'razon', 'creado_por_username',
             'product_type', 'product_id',
-            'product_type_read', 'product_id_read'
+            'product_type_read', 'product_id_read', 'status'
         ]
         read_only_fields = ['id', 'fecha_movimiento', 'producto_str', 'articulo_nombre', 'creado_por_username']
 
@@ -467,6 +469,10 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
              
         validated_data['content_type'] = ct
         validated_data['object_id'] = product_id
+        
+        # Validar existencia del producto
+        if not ct.get_all_objects_for_this_type().filter(id=product_id).exists():
+             raise serializers.ValidationError({'product_id': f'El producto con ID {product_id} no existe para el tipo {product_type}'})
         
         # Asignar usuario si está en el contexto
         request = self.context.get('request')

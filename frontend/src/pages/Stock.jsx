@@ -52,7 +52,7 @@ export default function Stock() {
         const term = searchTerm.toLowerCase();
         return (
             (item.nombre && item.nombre.toLowerCase().includes(term)) ||
-            (item.codigo && item.codigo.toLowerCase().includes(term)) ||
+            (item.sku && item.sku.toLowerCase().includes(term)) ||
             (item.marca && item.marca.toLowerCase().includes(term))
         );
     });
@@ -77,8 +77,8 @@ export default function Stock() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-blue-600 text-white font-medium'
-                                : 'text-gray-600 hover:bg-gray-100'
+                            ? 'bg-blue-600 text-white font-medium'
+                            : 'text-gray-600 hover:bg-gray-100'
                             }`}
                     >
                         {tab.icon}
@@ -139,7 +139,7 @@ export default function Stock() {
                                     return (
                                         <tr key={item.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {item.codigo || '-'}
+                                                {item.sku || '-'}
                                             </td>
                                             <td className="px-6 py-4 text-sm font-medium text-gray-900">
                                                 {item.nombre}

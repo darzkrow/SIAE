@@ -5,10 +5,10 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Sum, F, Count
 from decimal import Decimal
-
+from inventario.models import Acueducto
 # Importar permisos existentes
 from inventario.permissions import IsAdminOrReadOnly, IsAdminOrSameSucursal
-
+from inventario.serializers import AcueductoSerializer
 # Imports de modelos y serializers
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
@@ -109,11 +109,11 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
 class AcueductoViewSet(viewsets.ModelViewSet):
     """ViewSet para acueductos."""
-    from inventario.models import Acueducto
+
     queryset = Acueducto.objects.all()
     
     def get_serializer_class(self):
-        from inventario.serializers import AcueductoSerializer
+        
         return AcueductoSerializer
         
     permission_classes = [IsAdminOrReadOnly]
@@ -181,6 +181,22 @@ class ChemicalProductViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Historial de movimientos para este químico."""
+        from inventario.models import MovimientoInventario
+        from django.contrib.contenttypes.models import ContentType
+        
+        ct = ContentType.objects.get_for_model(ChemicalProduct)
+        movimientos = MovimientoInventario.objects.filter(
+            content_type=ct, 
+            object_id=pk
+        ).order_by('-fecha_movimiento')
+        
+        from inventario.serializers import MovimientoInventarioSerializer
+        serializer = MovimientoInventarioSerializer(movimientos, many=True)
+        return Response(serializer.data)
+
 
 class PipeViewSet(viewsets.ModelViewSet):
     """ViewSet para tuberías."""
@@ -215,6 +231,23 @@ class PipeViewSet(viewsets.ModelViewSet):
         
         queryset = self.get_queryset().filter(diametro_nominal=diametro)
         serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Historial de movimientos para esta tubería."""
+        from inventario.models import MovimientoInventario
+        from django.contrib.contenttypes.models import ContentType
+        
+        ct = ContentType.objects.get_for_model(Pipe)
+        movimientos = MovimientoInventario.objects.filter(
+            content_type=ct, 
+            object_id=pk
+        ).order_by('-fecha_movimiento')
+        
+        from inventario.serializers import MovimientoInventarioSerializer
+        serializer = MovimientoInventarioSerializer(movimientos, many=True)
         return Response(serializer.data)
 
 
@@ -250,6 +283,23 @@ class PumpAndMotorViewSet(viewsets.ModelViewSet):
             potencia_hp__lte=Decimal(max_hp)
         )
         serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Historial de movimientos para esta bomba/motor."""
+        from inventario.models import MovimientoInventario
+        from django.contrib.contenttypes.models import ContentType
+        
+        ct = ContentType.objects.get_for_model(PumpAndMotor)
+        movimientos = MovimientoInventario.objects.filter(
+            content_type=ct, 
+            object_id=pk
+        ).order_by('-fecha_movimiento')
+        
+        from inventario.serializers import MovimientoInventarioSerializer
+        serializer = MovimientoInventarioSerializer(movimientos, many=True)
         return Response(serializer.data)
 
 
@@ -279,6 +329,23 @@ class AccessoryViewSet(viewsets.ModelViewSet):
         """Filtrar solo válvulas."""
         queryset = self.get_queryset().filter(tipo_accesorio='VALVULA')
         serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Historial de movimientos para este accesorio."""
+        from inventario.models import MovimientoInventario
+        from django.contrib.contenttypes.models import ContentType
+        
+        ct = ContentType.objects.get_for_model(Accessory)
+        movimientos = MovimientoInventario.objects.filter(
+            content_type=ct, 
+            object_id=pk
+        ).order_by('-fecha_movimiento')
+        
+        from inventario.serializers import MovimientoInventarioSerializer
+        serializer = MovimientoInventarioSerializer(movimientos, many=True)
         return Response(serializer.data)
 
 
@@ -407,6 +474,50 @@ class MovimientoInventarioViewSet(viewsets.ModelViewSet):
         return MovimientoInventario.objects.all().select_related(
             'acueducto_origen', 'acueducto_destino', 'creado_por', 'content_type'
         )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def aprobar(self, request, pk=None):
+        """Aprueba un movimiento pendiente."""
+        movimiento = self.get_object()
+        if movimiento.status != movimiento.STATUS_PENDIENTE:
+            return Response(
+                {'error': 'Solo se pueden aprobar movimientos en estado PENDIENTE'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Opcional: Validar que sea ADMIN
+        if request.user.role != 'ADMIN':
+            return Response(
+                {'error': 'Solo un administrador puede aprobar movimientos'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        try:
+            movimiento.status = movimiento.STATUS_APROBADO
+            movimiento.save() # Esto disparará el update_stock en el modelo
+            return Response({'status': 'Movimiento aprobado y stock actualizado'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def rechazar(self, request, pk=None):
+        """Rechaza un movimiento pendiente."""
+        movimiento = self.get_object()
+        if movimiento.status != movimiento.STATUS_PENDIENTE:
+            return Response(
+                {'error': 'Solo se pueden rechazar movimientos en estado PENDIENTE'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if request.user.role != 'ADMIN':
+            return Response(
+                {'error': 'Solo un administrador puede rechazar movimientos'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        movimiento.status = movimiento.STATUS_RECHAZADO
+        movimiento.save()
+        return Response({'status': 'Movimiento rechazado'})
 
 # ============================================================================
 # VIEWSET DE REPORTES CONSOLIDADO

@@ -108,3 +108,22 @@ class StockAccessoryAdmin(admin.ModelAdmin):
     list_display = ['producto', 'acueducto', 'cantidad']
     list_filter = ['acueducto']
     search_fields = ['producto__nombre']
+
+
+# ===========================================================================
+# MOVIMIENTOS Y AUDITORÍA
+# ===========================================================================
+
+@admin.register(models.MovimientoInventario)
+class MovimientoInventarioAdmin(admin.ModelAdmin):
+    list_display = ['id', 'tipo_movimiento', 'status', 'cantidad', 'acueducto_origen', 'acueducto_destino', 'fecha_movimiento']
+    list_filter = ['tipo_movimiento', 'status', 'fecha_movimiento']
+    search_fields = ['razon']
+    readonly_fields = ['fecha_movimiento', 'creado_por']
+
+@admin.register(models.InventoryAudit)
+class InventoryAuditAdmin(admin.ModelAdmin):
+    list_display = ['id', 'status', 'tipo_movimiento', 'cantidad', 'user', 'fecha']
+    list_filter = ['status', 'tipo_movimiento', 'fecha']
+    search_fields = ['mensaje']
+    readonly_fields = ['movimiento', 'content_type', 'object_id', 'tipo_movimiento', 'cantidad', 'acueducto_origen', 'acueducto_destino', 'user', 'status', 'mensaje', 'fecha']

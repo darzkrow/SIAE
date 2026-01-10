@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from django.urls import path, include
 
 from inventario import views
+from inventario.views_import import CSVImportViewSet
 
 # Crear router para las nuevas rutas
 router = DefaultRouter()
@@ -39,6 +40,9 @@ router.register(r'reportes-v2', views.RefactoredReportesViewSet, basename='repor
 # Alertas y Notificaciones
 router.register(r'alertas', views.AlertaViewSet, basename='alerta')
 router.register(r'notificaciones', views.NotificacionViewSet, basename='notificacion')
+
+# Importación
+router.register(r'import', CSVImportViewSet, basename='import')
 
 urlpatterns = [
     path('', include(router.urls)),

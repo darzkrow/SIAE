@@ -60,6 +60,11 @@ Esta es la sección más crítica para mantener el inventario actualizado.
 4. Haga clic en **"Guardar Movimiento"**.
 
 > [!IMPORTANT]
+> **Sistema de Aprobaciones (Fase 4)**:
+> Por defecto, todos los nuevos movimientos se crean en estado **PENDIENTE**. El stock no se actualizará hasta que un usuario con rol **ADMIN** apruebe el movimiento.
+> Los administradores pueden ver los movimientos pendientes y seleccionar "Aprobar" para hacer efectiva la carga/descarga de stock.
+
+> [!WARNING]
 > El sistema valida automáticamente si hay stock suficiente para Salidas y Transferencias. Si no hay suficiente, el sistema mostrará un error y no permitirá guardar el movimiento.
 
 ---
@@ -69,10 +74,10 @@ Esta es la sección más crítica para mantener el inventario actualizado.
 En la sección **"Stock"** podrá visualizar las existencias actuales:
 - Use las **pestañas superiores** para filtrar por tipo (Químicos, Tuberías, etc.).
 - Use la **barra de búsqueda** para encontrar un artículo por nombre, código o marca.
-- **Estados de Stock**:
-  - 🟢 **Normal**: Stock suficiente.
-  - 🟡 **Bajo**: Stock cerca o en el mínimo de seguridad.
-  - 🔴 **Sin stock**: Existencia cero.
+   - 🔴 **Sin stock**: Existencia cero.
+
+### Historial y Auditoría (Fase 4)
+En la vista de detalles de cada artículo o a través del panel administrativo, puede consultar el **Historial de Movimientos**, que muestra todas las transacciones (aprobadas, pendientes o rechazadas) vinculadas a ese ítem, permitiendo una trazabilidad completa.
 
 ---
 
@@ -100,6 +105,7 @@ Gestión de las entidades base:
 - **Categorías**: Clasificación de productos.
 - **Unidades de Medida**: (kg, metros, unidades, galones).
 - **Proveedores**: Directorio de suministradores.
+- **Carga Masiva (Fase 4)**: Opción para importar catálogos de artículos, sucursales y acueductos desde archivos CSV. Las plantillas óptimas se encuentran en la carpeta `docs/plantillas_importacion/` del proyecto.
 
 ---
 
