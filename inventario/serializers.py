@@ -489,11 +489,12 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
 class ChemicalProductListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de químicos."""
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     
     class Meta:
         model = ChemicalProduct
         fields = [
-            'id', 'sku', 'nombre', 'stock_actual', 'stock_minimo',
+            'id', 'sku', 'nombre', 'categoria_nombre', 'stock_actual', 'stock_minimo',
             'stock_status', 'es_peligroso', 'fecha_caducidad', 'presentacion'
         ]
 
@@ -501,11 +502,12 @@ class ChemicalProductListSerializer(serializers.ModelSerializer):
 class PipeListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de tuberías."""
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     
     class Meta:
         model = Pipe
         fields = [
-            'id', 'sku', 'nombre', 'material', 'diametro_nominal',
+            'id', 'sku', 'nombre', 'categoria_nombre', 'material', 'diametro_nominal',
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
@@ -513,11 +515,12 @@ class PipeListSerializer(serializers.ModelSerializer):
 class PumpAndMotorListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de bombas."""
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     
     class Meta:
         model = PumpAndMotor
         fields = [
-            'id', 'sku', 'nombre', 'tipo_equipo', 'marca', 'modelo',
+            'id', 'sku', 'nombre', 'categoria_nombre', 'tipo_equipo', 'marca', 'modelo',
             'potencia_hp', 'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
@@ -525,11 +528,12 @@ class PumpAndMotorListSerializer(serializers.ModelSerializer):
 class AccessoryListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de accesorios."""
     stock_status = serializers.CharField(source='get_stock_status', read_only=True)
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
     
     class Meta:
         model = Accessory
         fields = [
-            'id', 'sku', 'nombre', 'tipo_accesorio', 'tipo_conexion',
+            'id', 'sku', 'nombre', 'categoria_nombre', 'tipo_accesorio', 'tipo_conexion',
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
 

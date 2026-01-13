@@ -1,22 +1,24 @@
 """Minimal Django settings for the `inventario` app demonstration."""
 import os
 from pathlib import Path
-
+import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# DEBUG mode - read from environment
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 't')
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-# Generate a new one with: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
-if not SECRET_KEY:
-    if not DEBUG or os.environ.get('DJANGO_PRODUCTION'):
-        raise ValueError('DJANGO_SECRET_KEY environment variable must be set in production!')
-    # Only use this default in development
-    SECRET_KEY = 'django-insecure-dev-key-CHANGE-IN-PRODUCTION-f8k2m9x7w4q1p6n3v5h8j0'
-    print('WARNING: Using insecure development SECRET_KEY. Set DJANGO_SECRET_KEY in production!')
+
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, False)
+)
+# False if not in os.environ because of casting above
+DEBUG = env('DEBUG')
+
+# Raises Django's ImproperlyConfigured
+# exception if SECRET_KEY not in os.environ
+SECRET_KEY = env('SECRET_KEY')
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -124,6 +126,9 @@ else:
         'http://localhost:3000',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
+
+        'http://127.0.0.1:5173',
+        'http://192.168.20.191:5173',
     ]
 
 CORS_ALLOW_CREDENTIALS = True
