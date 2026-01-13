@@ -2,8 +2,28 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Instalar dependencias del sistema necesarias para compilar extensiones
+# (libpq para drivers PostgreSQL, build-essential, y rust/cargo para crates si es necesario)
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+	   build-essential \
+	   gcc \
+	   libpq-dev \
+	   libffi-dev \
+	   curl \
+	   ca-certificates \
+	   gnupg \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Instalar Rust toolchain (solo si alguna dependencia lo requiere, p.ej. rpds-py)
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+	. $HOME/.cargo/env && rustup default stable
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Actualizar pip/setuptools/wheel antes de instalar paquetes Python
+RUN python -m pip install --upgrade pip setuptools wheel && \
+	pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
