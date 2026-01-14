@@ -650,7 +650,7 @@ class PumpAndMotor(ProductBase):
     def save(self, *args, **kwargs):
         # Calcular potencia en kW automáticamente
         if self.potencia_hp:
-            self.potencia_kw = self.potencia_hp * Decimal('0.7457')
+            self.potencia_kw = (self.potencia_hp * Decimal('0.7457')).quantize(Decimal('0.01'))
         super().save(*args, **kwargs)
 
     def get_potencia_display(self):

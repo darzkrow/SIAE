@@ -9,7 +9,7 @@ from django.contrib.auth import get_user_model
 from decimal import Decimal
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto, Categoria,
-    Tuberia, Equipo, StockTuberia, StockEquipo, AlertaStock
+    Tuberia, Equipo, StockTuberia, StockEquipo, Alerta, UnitOfMeasure, Supplier
 )
 
 User = get_user_model()
@@ -71,78 +71,81 @@ class Command(BaseCommand):
                 self.stdout.write(f"{'✓' if created else '→'} Acueducto: {acueducto.nombre}")
         
         # Crear categorías
-        categorias_data = [
-            'Tuberías',
-            'Motores de Bombeo',
-            'Bombas Centrífugas',
-            'Válvulas',
-            'Compresores',
-            'Generadores',
-            'Transformadores',
-            'Filtros',
-        ]
+        categorias_data = {
+            'Tuberías': 'TUB',
+            'Motores de Bombeo': 'MOT',
+            'Bombas Centrífugas': 'BOM',
+            'Válvulas': 'VAL',
+            'Compresores': 'COM',
+            'Generadores': 'GEN',
+            'Transformadores': 'TRA',
+            'Filtros': 'FIL',
+        }
         
         categorias = {}
-        for cat_nombre in categorias_data:
-            categoria, created = Categoria.objects.get_or_create(nombre=cat_nombre)
+        for cat_nombre, cat_codigo in categorias_data.items():
+            categoria, created = Categoria.objects.get_or_create(
+                nombre=cat_nombre,
+                defaults={'codigo': cat_codigo}
+            )
             categorias[cat_nombre] = categoria
             self.stdout.write(f"{'✓' if created else '→'} Categoría: {categoria.nombre}")
+
+        # Crear Proveedor y Unidades de Medida por defecto
+        self.stdout.write(self.style.SUCCESS('\\n🔧 Creando datos maestros adicionales...'))
+        
+        proveedor_generico, created = Supplier.objects.get_or_create(
+            nombre='Proveedor Genérico S.A.',
+            defaults={'rif': 'J-00000000-0'}
+        )
+        self.stdout.write(f"{'✓' if created else '→'} Proveedor: {proveedor_generico.nombre}")
+
+        udm_unidad, created = UnitOfMeasure.objects.get_or_create(
+            nombre='Unidad',
+            simbolo='ud',
+            defaults={'tipo': 'UNIDAD'}
+        )
+        self.stdout.write(f"{'✓' if created else '→'} Unidad de Medida: {udm_unidad.nombre}")
+
+        udm_metros, created = UnitOfMeasure.objects.get_or_create(
+            nombre='Metro',
+            simbolo='m',
+            defaults={'tipo': 'LONGITUD'}
+        )
+        self.stdout.write(f"{'✓' if created else '→'} Unidad de Medida: {udm_metros.nombre}")
+
         
         # Crear tuberías (artículos operativos)
         tuberias_data = [
             {
-                'nombre': 'Tubería PVC 100mm - Agua Potable',
-                'categoria': 'Tuberías',
-                'material': 'PVC',
-                'tipo_uso': 'POTABLE',
-                'diametro': 100,
-                'longitud': Decimal('50.00'),
-                'desc': 'Tubería de PVC para sistemas de agua potable'
+                'nombre': 'Tubería PVC 100mm - Agua Potable', 'categoria': 'Tuberías', 'material': 'PVC',
+                'tipo_uso': 'POTABLE', 'diametro': 100, 'longitud': Decimal('6.00'),
+                'presion_nominal': 'PN10', 'tipo_union': 'SOLDABLE', 'desc': 'Tubería de PVC para sistemas de agua potable'
             },
             {
-                'nombre': 'Tubería PVC 75mm - Agua Potable',
-                'categoria': 'Tuberías',
-                'material': 'PVC',
-                'tipo_uso': 'POTABLE',
-                'diametro': 75,
-                'longitud': Decimal('50.00'),
-                'desc': 'Tubería de PVC de menor diámetro'
+                'nombre': 'Tubería PVC 75mm - Agua Potable', 'categoria': 'Tuberías', 'material': 'PVC',
+                'tipo_uso': 'POTABLE', 'diametro': 75, 'longitud': Decimal('6.00'),
+                'presion_nominal': 'PN10', 'tipo_union': 'SOLDABLE', 'desc': 'Tubería de PVC de menor diámetro'
             },
             {
-                'nombre': 'Tubería Hierro Dúctil 150mm - Aguas Servidas',
-                'categoria': 'Tuberías',
-                'material': 'HIERRO',
-                'tipo_uso': 'SERVIDAS',
-                'diametro': 150,
-                'longitud': Decimal('100.00'),
-                'desc': 'Tubería de hierro dúctil para aguas servidas'
+                'nombre': 'Tubería Hierro Dúctil 150mm - Aguas Servidas', 'categoria': 'Tuberías', 'material': 'HIERRO_DUCTIL',
+                'tipo_uso': 'SERVIDAS', 'diametro': 150, 'longitud': Decimal('5.50'),
+                'presion_nominal': 'PN16', 'tipo_union': 'BRIDADA', 'desc': 'Tubería de hierro dúctil para aguas servidas'
             },
             {
-                'nombre': 'Tubería Hierro Dúctil 200mm - Aguas Servidas',
-                'categoria': 'Tuberías',
-                'material': 'HIERRO',
-                'tipo_uso': 'SERVIDAS',
-                'diametro': 200,
-                'longitud': Decimal('100.00'),
-                'desc': 'Tubería de hierro dúctil de mayor diámetro'
+                'nombre': 'Tubería Hierro Dúctil 200mm - Aguas Servidas', 'categoria': 'Tuberías', 'material': 'HIERRO_DUCTIL',
+                'tipo_uso': 'SERVIDAS', 'diametro': 200, 'longitud': Decimal('5.50'),
+                'presion_nominal': 'PN16', 'tipo_union': 'BRIDADA', 'desc': 'Tubería de hierro dúctil de mayor diámetro'
             },
             {
-                'nombre': 'Tubería Cemento 200mm - Riego',
-                'categoria': 'Tuberías',
-                'material': 'CEMENTO',
-                'tipo_uso': 'RIEGO',
-                'diametro': 200,
-                'longitud': Decimal('75.00'),
-                'desc': 'Tubería de cemento para sistemas de riego'
+                'nombre': 'Tubería Cemento 200mm - Riego', 'categoria': 'Tuberías', 'material': 'CEMENTO',
+                'tipo_uso': 'RIEGO', 'diametro': 200, 'longitud': Decimal('4.00'),
+                'presion_nominal': 'PN6', 'tipo_union': 'CAMPANA', 'desc': 'Tubería de cemento para sistemas de riego'
             },
             {
-                'nombre': 'Tubería Cemento 250mm - Riego',
-                'categoria': 'Tuberías',
-                'material': 'CEMENTO',
-                'tipo_uso': 'RIEGO',
-                'diametro': 250,
-                'longitud': Decimal('75.00'),
-                'desc': 'Tubería de cemento de mayor capacidad'
+                'nombre': 'Tubería Cemento 250mm - Riego', 'categoria': 'Tuberías', 'material': 'CEMENTO',
+                'tipo_uso': 'RIEGO', 'diametro': 250, 'longitud': Decimal('4.00'),
+                'presion_nominal': 'PN6', 'tipo_union': 'CAMPANA', 'desc': 'Tubería de cemento de mayor capacidad'
             },
         ]
         
@@ -155,8 +158,12 @@ class Command(BaseCommand):
                     'categoria': categorias[tub_data['categoria']],
                     'material': tub_data['material'],
                     'tipo_uso': tub_data['tipo_uso'],
-                    'diametro_nominal_mm': tub_data['diametro'],
-                    'longitud_m': tub_data['longitud'],
+                    'diametro_nominal': tub_data['diametro'],
+                    'longitud_unitaria': tub_data['longitud'],
+                    'presion_nominal': tub_data['presion_nominal'],
+                    'tipo_union': tub_data['tipo_union'],
+                    'unidad_medida': udm_metros, # Se gestiona por metros
+                    'proveedor': proveedor_generico,
                 }
             )
             tuberias[tub_data['nombre']] = tuberia
@@ -165,99 +172,29 @@ class Command(BaseCommand):
         # Crear equipos (motores de bombeo y otros equipos operativos)
         equipos_data = [
             {
-                'nombre': 'Motor de Bombeo Centrífugo 50 HP',
-                'categoria': 'Motores de Bombeo',
-                'marca': 'Siemens',
-                'modelo': 'IE3-100L-4',
-                'potencia': Decimal('50.00'),
-                'serie': 'SIE-2024-001',
-                'desc': 'Motor trifásico para bombeo de agua'
+                'nombre': 'Motor de Bombeo Centrífugo 50 HP', 'categoria': 'Motores de Bombeo', 'marca': 'Siemens',
+                'modelo': 'IE3-100L-4', 'potencia': Decimal('50.00'), 'serie': 'SIE-2024-001', 'voltaje': 440, 'fases': 'TRIFASICO',
+                'tipo_equipo': 'MOTOR_ELECTRICO', 'desc': 'Motor trifásico para bombeo de agua'
             },
             {
-                'nombre': 'Motor de Bombeo Centrífugo 75 HP',
-                'categoria': 'Motores de Bombeo',
-                'marca': 'ABB',
-                'modelo': 'M3BP-225M-4',
-                'potencia': Decimal('75.00'),
-                'serie': 'ABB-2024-001',
-                'desc': 'Motor trifásico de alta potencia'
+                'nombre': 'Motor de Bombeo Centrífugo 75 HP', 'categoria': 'Motores de Bombeo', 'marca': 'ABB',
+                'modelo': 'M3BP-225M-4', 'potencia': Decimal('75.00'), 'serie': 'ABB-2024-001', 'voltaje': 440, 'fases': 'TRIFASICO',
+                'tipo_equipo': 'MOTOR_ELECTRICO', 'desc': 'Motor trifásico de alta potencia'
             },
             {
-                'nombre': 'Motor de Bombeo Centrífugo 100 HP',
-                'categoria': 'Motores de Bombeo',
-                'marca': 'WEG',
-                'modelo': 'W22-100L-4',
-                'potencia': Decimal('100.00'),
-                'serie': 'WEG-2024-001',
-                'desc': 'Motor de bombeo de máxima potencia'
+                'nombre': 'Motor de Bombeo Centrífugo 100 HP', 'categoria': 'Motores de Bombeo', 'marca': 'WEG',
+                'modelo': 'W22-100L-4', 'potencia': Decimal('100.00'), 'serie': 'WEG-2024-001', 'voltaje': 440, 'fases': 'TRIFASICO',
+                'tipo_equipo': 'MOTOR_ELECTRICO', 'desc': 'Motor de bombeo de máxima potencia'
             },
             {
-                'nombre': 'Bomba Centrífuga 100m³/h',
-                'categoria': 'Bombas Centrífugas',
-                'marca': 'Grundfos',
-                'modelo': 'CR-100-2-2',
-                'potencia': Decimal('30.00'),
-                'serie': 'GRU-2024-001',
-                'desc': 'Bomba para sistemas de distribución'
+                'nombre': 'Bomba Centrífuga 100m³/h', 'categoria': 'Bombas Centrífugas', 'marca': 'Grundfos',
+                'modelo': 'CR-100-2-2', 'potencia': Decimal('30.00'), 'serie': 'GRU-2024-001', 'voltaje': 440, 'fases': 'TRIFASICO',
+                'tipo_equipo': 'BOMBA_CENTRIFUGA', 'desc': 'Bomba para sistemas de distribución'
             },
             {
-                'nombre': 'Bomba Centrífuga 150m³/h',
-                'categoria': 'Bombas Centrífugas',
-                'marca': 'Grundfos',
-                'modelo': 'CR-150-2-2',
-                'potencia': Decimal('45.00'),
-                'serie': 'GRU-2024-002',
-                'desc': 'Bomba de mayor capacidad'
-            },
-            {
-                'nombre': 'Válvula de Compuerta 150mm',
-                'categoria': 'Válvulas',
-                'marca': 'Watts',
-                'modelo': 'WC-150',
-                'serie': 'WAT-2024-001',
-                'desc': 'Válvula de control de flujo'
-            },
-            {
-                'nombre': 'Válvula de Compuerta 200mm',
-                'categoria': 'Válvulas',
-                'marca': 'Watts',
-                'modelo': 'WC-200',
-                'serie': 'WAT-2024-002',
-                'desc': 'Válvula de mayor diámetro'
-            },
-            {
-                'nombre': 'Compresor de Aire 10 HP',
-                'categoria': 'Compresores',
-                'marca': 'Atlas Copco',
-                'modelo': 'GA-10',
-                'potencia': Decimal('10.00'),
-                'serie': 'ATC-2024-001',
-                'desc': 'Compresor para sistemas neumáticos'
-            },
-            {
-                'nombre': 'Generador Diesel 50 kW',
-                'categoria': 'Generadores',
-                'marca': 'Caterpillar',
-                'modelo': 'C50',
-                'potencia': Decimal('50.00'),
-                'serie': 'CAT-2024-001',
-                'desc': 'Generador de emergencia'
-            },
-            {
-                'nombre': 'Transformador 100 kVA',
-                'categoria': 'Transformadores',
-                'marca': 'Siemens',
-                'modelo': 'SIEMENS-100',
-                'serie': 'SIE-TRANS-001',
-                'desc': 'Transformador de distribución'
-            },
-            {
-                'nombre': 'Filtro de Arena 50 micras',
-                'categoria': 'Filtros',
-                'marca': 'Pentair',
-                'modelo': 'FIL-50',
-                'serie': 'PEN-2024-001',
-                'desc': 'Filtro para tratamiento de agua'
+                'nombre': 'Bomba Centrífuga 150m³/h', 'categoria': 'Bombas Centrífugas', 'marca': 'Grundfos',
+                'modelo': 'CR-150-2-2', 'potencia': Decimal('45.00'), 'serie': 'GRU-2024-002', 'voltaje': 440, 'fases': 'TRIFASICO',
+                'tipo_equipo': 'BOMBA_CENTRIFUGA', 'desc': 'Bomba de mayor capacidad'
             },
         ]
         
@@ -272,6 +209,11 @@ class Command(BaseCommand):
                     'marca': eq_data['marca'],
                     'modelo': eq_data['modelo'],
                     'potencia_hp': eq_data.get('potencia'),
+                    'voltaje': eq_data['voltaje'],
+                    'fases': eq_data['fases'],
+                    'tipo_equipo': eq_data['tipo_equipo'],
+                    'unidad_medida': udm_unidad,
+                    'proveedor': proveedor_generico,
                 }
             )
             equipos[eq_data['nombre']] = equipo
@@ -292,7 +234,7 @@ class Command(BaseCommand):
         
         for tub_nombre, acueducto_nombre, cantidad in stock_tuberias_data:
             stock, created = StockTuberia.objects.get_or_create(
-                tuberia=tuberias[tub_nombre],
+                producto=tuberias[tub_nombre],
                 acueducto=acueductos[acueducto_nombre],
                 defaults={'cantidad': cantidad}
             )
@@ -305,17 +247,11 @@ class Command(BaseCommand):
             ('Motor de Bombeo Centrífugo 100 HP', 'Sistema de Bombeo Orinoco', 1),
             ('Bomba Centrífuga 100m³/h', 'Sistema de Bombeo Principal', 5),
             ('Bomba Centrífuga 150m³/h', 'Sistema de Tratamiento', 3),
-            ('Válvula de Compuerta 150mm', 'Sistema de Bombeo Principal', 8),
-            ('Válvula de Compuerta 200mm', 'Sistema de Distribución Secundario', 6),
-            ('Compresor de Aire 10 HP', 'Sistema de Emergencia', 2),
-            ('Generador Diesel 50 kW', 'Sistema de Emergencia', 1),
-            ('Transformador 100 kVA', 'Sistema de Bombeo Principal', 2),
-            ('Filtro de Arena 50 micras', 'Sistema de Tratamiento', 10),
         ]
         
         for eq_nombre, acueducto_nombre, cantidad in stock_equipos_data:
             stock, created = StockEquipo.objects.get_or_create(
-                equipo=equipos[eq_nombre],
+                producto=equipos[eq_nombre],
                 acueducto=acueductos[acueducto_nombre],
                 defaults={'cantidad': cantidad}
             )
@@ -332,18 +268,20 @@ class Command(BaseCommand):
             ('Válvula de Compuerta 150mm', 'Sistema de Bombeo Principal', 3, True),
         ]
         
+        from django.contrib.contenttypes.models import ContentType
+
         for item_nombre, acueducto_nombre, umbral, activo in alertas_data:
+            producto = None
             if item_nombre in tuberias:
-                alerta, created = AlertaStock.objects.get_or_create(
-                    tuberia=tuberias[item_nombre],
-                    acueducto=acueductos[acueducto_nombre],
-                    defaults={'umbral_minimo': umbral, 'activo': activo}
-                )
-                if created:
-                    self.stdout.write(f"✓ Alerta: {item_nombre} <= {umbral}")
+                producto = tuberias[item_nombre]
             elif item_nombre in equipos:
-                alerta, created = AlertaStock.objects.get_or_create(
-                    equipo=equipos[item_nombre],
+                producto = equipos[item_nombre]
+            
+            if producto:
+                content_type = ContentType.objects.get_for_model(producto.__class__)
+                alerta, created = Alerta.objects.get_or_create(
+                    content_type=content_type,
+                    object_id=producto.pk,
                     acueducto=acueductos[acueducto_nombre],
                     defaults={'umbral_minimo': umbral, 'activo': activo}
                 )
