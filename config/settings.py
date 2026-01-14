@@ -193,7 +193,7 @@ SPECTACULAR_SETTINGS = {
     'SCHEMA_PATH_PREFIX': r'/api/',
     'SERVERS': [
         {'url': 'http://localhost:8000', 'description': 'Development server'},
-        {'url': 'http://localhost', 'description': 'Production server (via Nginx)'},
+        {'url': 'http://1', 'description': 'Production server (via Nginx)'},
     ],
 }
 
