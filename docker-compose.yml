@@ -63,6 +63,18 @@ services:
     networks:
       - gsih_network
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gsih_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - gsih_network
+
 volumes:
   postgres_data:
     driver: local
