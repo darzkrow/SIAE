@@ -127,8 +127,12 @@ else:
         'http://localhost:3000',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
-
-        'http://127.0.0.1:5173',
+         'http://127.0.0.1:8000',
+         'http://localhost:8000',
+         'http://10.10.50.26:5173',
+         'http://10.10.50.26:3000',
+         'http://10.10.50.26:8000',
+         'http://127.0.0.1:5173',
         'http://192.168.20.191:5173',
     ]
 
@@ -194,7 +198,7 @@ SPECTACULAR_SETTINGS = {
     'SCHEMA_PATH_PREFIX': r'/api/',
     'SERVERS': [
         {'url': 'http://localhost:8000', 'description': 'Development server'},
-        {'url': 'http://1', 'description': 'Production server (via Nginx)'},
+        {'url': 'http://10.10.50.26', 'description': 'Production server (via Nginx)'},
     ],
 }
 
