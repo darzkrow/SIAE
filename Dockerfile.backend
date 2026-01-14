@@ -27,6 +27,16 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
 
 COPY . .
 
+# Ensure entrypoint is executable and run as non-root
+RUN chmod +x /app/entrypoint.sh
+RUN useradd -m -s /bin/bash appuser && chown -R appuser:appuser /app
+
+ENV PYTHONUNBUFFERED=1
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+USER appuser
+
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Use Gunicorn for production-ready WSGI serving (kept as CMD so entrypoint can run pre-start tasks)
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "4", "--chdir", "/app", "--log-level", "info"]
