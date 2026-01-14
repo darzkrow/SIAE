@@ -35,6 +35,8 @@ services:
       - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+    # Run entrypoint as root so it can fix ownership on volumes, entrypoint will drop to appuser
+    user: root
     ports:
       - "8000:8000"
     depends_on:
