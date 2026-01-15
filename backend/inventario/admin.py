@@ -2,28 +2,6 @@ from django.contrib import admin
 from . import models
 
 # ===========================================================================
-# MODELOS ORGANIZACIONALES
-# ===========================================================================
-
-@admin.register(models.OrganizacionCentral)
-class OrganizacionCentralAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'rif']
-    search_fields = ['nombre', 'rif']
-
-@admin.register(models.Sucursal)
-class SucursalAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'organizacion_central', 'codigo']
-    list_filter = ['organizacion_central']
-    search_fields = ['nombre', 'codigo']
-
-@admin.register(models.Acueducto)
-class AcueductoAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'sucursal', 'codigo']
-    list_filter = ['sucursal']
-    search_fields = ['nombre', 'codigo']
-
-
-# ===========================================================================
 # MODELOS AUXILIARES
 # ===========================================================================
 
@@ -86,27 +64,27 @@ class AccessoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.StockChemical)
 class StockChemicalAdmin(admin.ModelAdmin):
-    list_display = ['producto', 'acueducto', 'cantidad', 'lote']
-    list_filter = ['acueducto']
+    list_display = ['producto', 'ubicacion', 'cantidad', 'lote']
+    list_filter = ['ubicacion']
     search_fields = ['producto__nombre', 'lote']
 
 @admin.register(models.StockPipe)
 class StockPipeAdmin(admin.ModelAdmin):
-    list_display = ['producto', 'acueducto', 'cantidad', 'metros_totales']
-    list_filter = ['acueducto']
+    list_display = ['producto', 'ubicacion', 'cantidad', 'metros_totales']
+    list_filter = ['ubicacion']
     search_fields = ['producto__nombre']
     readonly_fields = ['metros_totales']
 
 @admin.register(models.StockPumpAndMotor)
 class StockPumpAndMotorAdmin(admin.ModelAdmin):
-    list_display = ['producto', 'acueducto', 'cantidad', 'estado_operativo']
-    list_filter = ['acueducto', 'estado_operativo']
+    list_display = ['producto', 'ubicacion', 'cantidad', 'estado_operativo']
+    list_filter = ['ubicacion', 'estado_operativo']
     search_fields = ['producto__numero_serie']
 
 @admin.register(models.StockAccessory)
 class StockAccessoryAdmin(admin.ModelAdmin):
-    list_display = ['producto', 'acueducto', 'cantidad']
-    list_filter = ['acueducto']
+    list_display = ['producto', 'ubicacion', 'cantidad']
+    list_filter = ['ubicacion']
     search_fields = ['producto__nombre']
 
 
@@ -116,7 +94,7 @@ class StockAccessoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.MovimientoInventario)
 class MovimientoInventarioAdmin(admin.ModelAdmin):
-    list_display = ['id', 'tipo_movimiento', 'status', 'cantidad', 'acueducto_origen', 'acueducto_destino', 'fecha_movimiento']
+    list_display = ['id', 'tipo_movimiento', 'status', 'cantidad', 'ubicacion_origen', 'ubicacion_destino', 'fecha_movimiento']
     list_filter = ['tipo_movimiento', 'status', 'fecha_movimiento']
     search_fields = ['razon']
     readonly_fields = ['fecha_movimiento', 'creado_por']
@@ -126,4 +104,4 @@ class InventoryAuditAdmin(admin.ModelAdmin):
     list_display = ['id', 'status', 'tipo_movimiento', 'cantidad', 'user', 'fecha']
     list_filter = ['status', 'tipo_movimiento', 'fecha']
     search_fields = ['mensaje']
-    readonly_fields = ['movimiento', 'content_type', 'object_id', 'tipo_movimiento', 'cantidad', 'acueducto_origen', 'acueducto_destino', 'user', 'status', 'mensaje', 'fecha']
+    readonly_fields = ['movimiento', 'content_type', 'object_id', 'tipo_movimiento', 'cantidad', 'ubicacion_origen', 'ubicacion_destino', 'user', 'status', 'mensaje', 'fecha']

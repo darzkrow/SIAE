@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'accounts',
     'inventario',
     'notificaciones',
+    'institucion',
 ]
 
 MIDDLEWARE = [
