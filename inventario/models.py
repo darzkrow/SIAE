@@ -777,14 +777,14 @@ class Accessory(ProductBase):
 # ============================================================================
 
 class StockChemical(models.Model):
-    """Stock de productos químicos por acueducto."""
+    """Stock de productos químicos por ubicación."""
     producto = models.ForeignKey(
         ChemicalProduct,
         on_delete=models.CASCADE,
         related_name='stocks'
     )
-    acueducto = models.ForeignKey(
-        Acueducto,
+    ubicacion = models.ForeignKey(
+        'Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_chemical'
     )
@@ -800,36 +800,31 @@ class StockChemical(models.Model):
         blank=True,
         help_text='Fecha de vencimiento de este lote'
     )
-    ubicacion_fisica = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text='Ubicación física en almacén'
-    )
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Stock de Químico'
         verbose_name_plural = 'Stocks de Químicos'
-        unique_together = ('producto', 'acueducto', 'lote')
-        ordering = ['producto', 'acueducto']
+        unique_together = ('producto', 'ubicacion', 'lote')
+        ordering = ['producto', 'ubicacion']
         indexes = [
-            models.Index(fields=['producto', 'acueducto']),
+            models.Index(fields=['producto', 'ubicacion']),
             models.Index(fields=['fecha_vencimiento']),
         ]
 
     def __str__(self):
-        return f"{self.producto.nombre} @ {self.acueducto}: {self.cantidad}"
+        return f"{self.producto.nombre} @ {self.ubicacion}: {self.cantidad}"
 
 
 class StockPipe(models.Model):
-    """Stock de tuberías por acueducto."""
+    """Stock de tuberías por ubicación."""
     producto = models.ForeignKey(
         Pipe,
         on_delete=models.CASCADE,
         related_name='stocks'
     )
-    acueducto = models.ForeignKey(
-        Acueducto,
+    ubicacion = models.ForeignKey(
+        'Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_pipe'
     )
@@ -847,16 +842,15 @@ class StockPipe(models.Model):
         blank=True,
         help_text='Metros lineales totales (calculado)'
     )
-    ubicacion_fisica = models.CharField(max_length=100, blank=True)
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Stock de Tubería'
         verbose_name_plural = 'Stocks de Tuberías'
-        unique_together = ('producto', 'acueducto')
-        ordering = ['producto', 'acueducto']
+        unique_together = ('producto', 'ubicacion')
+        ordering = ['producto', 'ubicacion']
         indexes = [
-            models.Index(fields=['producto', 'acueducto']),
+            models.Index(fields=['producto', 'ubicacion']),
         ]
 
     def save(self, *args, **kwargs):
@@ -866,18 +860,18 @@ class StockPipe(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.producto.nombre} @ {self.acueducto}: {self.cantidad} un ({self.metros_totales}m)"
+        return f"{self.producto.nombre} @ {self.ubicacion}: {self.cantidad} un ({self.metros_totales}m)"
 
 
 class StockPumpAndMotor(models.Model):
-    """Stock de bombas y motores por acueducto."""
+    """Stock de bombas y motores por ubicación."""
     producto = models.ForeignKey(
         PumpAndMotor,
         on_delete=models.CASCADE,
         related_name='stocks'
     )
-    acueducto = models.ForeignKey(
-        Acueducto,
+    ubicacion = models.ForeignKey(
+        'Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_pump'
     )
@@ -897,32 +891,31 @@ class StockPumpAndMotor(models.Model):
         ],
         default='NUEVO'
     )
-    ubicacion_fisica = models.CharField(max_length=100, blank=True)
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Stock de Bomba/Motor'
         verbose_name_plural = 'Stocks de Bombas/Motores'
-        unique_together = ('producto', 'acueducto')
-        ordering = ['producto', 'acueducto']
+        unique_together = ('producto', 'ubicacion')
+        ordering = ['producto', 'ubicacion']
         indexes = [
-            models.Index(fields=['producto', 'acueducto']),
+            models.Index(fields=['producto', 'ubicacion']),
             models.Index(fields=['estado_operativo']),
         ]
 
     def __str__(self):
-        return f"{self.producto.numero_serie} @ {self.acueducto}: {self.cantidad}"
+        return f"{self.producto.numero_serie} @ {self.ubicacion}: {self.cantidad}"
 
 
 class StockAccessory(models.Model):
-    """Stock de accesorios por acueducto."""
+    """Stock de accesorios por ubicación."""
     producto = models.ForeignKey(
         Accessory,
         on_delete=models.CASCADE,
         related_name='stocks'
     )
-    acueducto = models.ForeignKey(
-        Acueducto,
+    ubicacion = models.ForeignKey(
+        'Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_accessory'
     )
@@ -932,20 +925,19 @@ class StockAccessory(models.Model):
         default=Decimal('0.000'),
         validators=[MinValueValidator(Decimal('0.000'))]
     )
-    ubicacion_fisica = models.CharField(max_length=100, blank=True)
     fecha_ultima_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Stock de Accesorio'
         verbose_name_plural = 'Stocks de Accesorios'
-        unique_together = ('producto', 'acueducto')
-        ordering = ['producto', 'acueducto']
+        unique_together = ('producto', 'ubicacion')
+        ordering = ['producto', 'ubicacion']
         indexes = [
-            models.Index(fields=['producto', 'acueducto']),
+            models.Index(fields=['producto', 'ubicacion']),
         ]
 
     def __str__(self):
-        return f"{self.producto.nombre} @ {self.acueducto}: {self.cantidad}"
+        return f"{self.producto.nombre} @ {self.ubicacion}: {self.cantidad}"
 
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -982,11 +974,11 @@ class InventoryAudit(models.Model):
     tipo_movimiento = models.CharField(max_length=20, blank=True)
     cantidad = models.DecimalField(max_digits=12, decimal_places=3, null=True)
     
-    acueducto_origen = models.ForeignKey(
-        Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+    ubicacion_origen = models.ForeignKey(
+        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
     )
-    acueducto_destino = models.ForeignKey(
-        Acueducto, on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+    ubicacion_destino = models.ForeignKey(
+        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
     )
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
@@ -1035,12 +1027,12 @@ class MovimientoInventario(models.Model):
     object_id = models.PositiveIntegerField()
     producto = GenericForeignKey('content_type', 'object_id')
 
-    acueducto_origen = models.ForeignKey(
-        Acueducto, on_delete=models.SET_NULL, null=True, blank=True,
+    ubicacion_origen = models.ForeignKey(
+        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='movimientos_salida'
     )
-    acueducto_destino = models.ForeignKey(
-        Acueducto, on_delete=models.SET_NULL, null=True, blank=True,
+    ubicacion_destino = models.ForeignKey(
+        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='movimientos_entrada'
     )
 
@@ -1060,7 +1052,14 @@ class MovimientoInventario(models.Model):
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
-        null=True, blank=True
+        null=True, blank=True,
+        related_name='movimientos_creados'
+    )
+    aprobado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='movimientos_aprobados'
     )
 
     class Meta:
@@ -1069,24 +1068,25 @@ class MovimientoInventario(models.Model):
         ordering = ['-fecha_movimiento']
 
     def __init__(self, *args, **kwargs):
-        # Compatibilidad con kwargs legacy usados en tests y código antiguo
-        # (tuberia, equipo) -> traducir a content_type/object_id para FK genérica
-        tuberia = kwargs.pop('tuberia', None)
-        equipo = kwargs.pop('equipo', None)
-        # Soporte para pasar 'producto' directamente
-        producto = kwargs.get('producto')
-
-        if tuberia is not None and producto is None:
-            ct = ContentType.objects.get_for_model(Pipe)
-            kwargs['content_type'] = ct
-            kwargs['object_id'] = getattr(tuberia, 'pk', tuberia)
-
-        if equipo is not None and producto is None:
-            ct = ContentType.objects.get_for_model(PumpAndMotor)
-            kwargs['content_type'] = ct
-            kwargs['object_id'] = getattr(equipo, 'pk', equipo)
-
+        # Compatibilidad con kwargs legacy
+        acueducto_origen = kwargs.pop('acueducto_origen', None)
+        acueducto_destino = kwargs.pop('acueducto_destino', None)
+        
         super().__init__(*args, **kwargs)
+        
+        # Lógica para mapear acueducto a ubicación de almacén por defecto
+        if acueducto_origen and not self.ubicacion_origen_id:
+            self.ubicacion_origen, _ = Ubicacion.objects.get_or_create(
+                acueducto=acueducto_origen,
+                tipo=Ubicacion.TipoUbicacion.ALMACEN,
+                defaults={'nombre': f'Almacén General {acueducto_origen.nombre}'}
+            )
+        if acueducto_destino and not self.ubicacion_destino_id:
+            self.ubicacion_destino, _ = Ubicacion.objects.get_or_create(
+                acueducto=acueducto_destino,
+                tipo=Ubicacion.TipoUbicacion.ALMACEN,
+                defaults={'nombre': f'Almacén General {acueducto_destino.nombre}'}
+            )
 
     def __str__(self):
         return f"{self.tipo_movimiento} {self.cantidad} - {self.producto}"
@@ -1104,11 +1104,11 @@ class MovimientoInventario(models.Model):
             return StockAccessory
         raise ValidationError(f"Tipo de producto no soportado: {model_name}")
 
-    def _update_stock(self, stock_model, acueducto, cantidad, operacion):
+    def _update_stock(self, stock_model, ubicacion, cantidad, operacion):
         """Actualiza o crea registro de stock."""
         stock, created = stock_model.objects.get_or_create(
             producto_id=self.object_id,
-            acueducto=acueducto,
+            ubicacion=ubicacion,
             defaults={'cantidad': 0}
         )
         
@@ -1116,15 +1116,13 @@ class MovimientoInventario(models.Model):
             stock.cantidad += cantidad
         elif operacion == 'restar':
             if stock.cantidad < cantidad:
-                raise ValidationError(f"Stock insuficiente en {acueducto}")
+                raise ValidationError(f"Stock insuficiente en {ubicacion}")
             stock.cantidad -= cantidad
             
         stock.save()
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        
-        # Obtener el estado anterior si no es nuevo
         old_status = None
         if not is_new:
             old_instance = MovimientoInventario.objects.get(pk=self.pk)
@@ -1135,14 +1133,9 @@ class MovimientoInventario(models.Model):
         except Exception as e:
             raise e
         
-        # Validar lógica de transición de estado
-        should_update_stock = False
-        if is_new and self.status == self.STATUS_APROBADO:
-            should_update_stock = True
-        elif not is_new and old_status == self.STATUS_PENDIENTE and self.status == self.STATUS_APROBADO:
-            should_update_stock = True
+        should_update_stock = (is_new and self.status == self.STATUS_APROBADO) or \
+                              (not is_new and old_status == self.STATUS_PENDIENTE and self.status == self.STATUS_APROBADO)
 
-        # Crear o buscar auditoría
         audit = None
         if is_new:
             audit = InventoryAudit(
@@ -1151,8 +1144,8 @@ class MovimientoInventario(models.Model):
                 object_id=self.object_id,
                 tipo_movimiento=self.tipo_movimiento,
                 cantidad=self.cantidad,
-                acueducto_origen=self.acueducto_origen,
-                acueducto_destino=self.acueducto_destino,
+                ubicacion_origen=self.ubicacion_origen,
+                ubicacion_destino=self.ubicacion_destino,
                 user=self.creado_por,
                 status=InventoryAudit.STATUS_PENDING
             )
@@ -1167,26 +1160,50 @@ class MovimientoInventario(models.Model):
 
                 if should_update_stock:
                     if self.tipo_movimiento == self.T_ENTRADA:
-                        if not self.acueducto_destino:
+                        if not self.ubicacion_destino:
                             raise ValidationError("Destino requerido para entrada")
-                        self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+                        self._update_stock(StockModel, self.ubicacion_destino, self.cantidad, 'sumar')
 
                     elif self.tipo_movimiento == self.T_SALIDA:
-                        if not self.acueducto_origen:
+                        if not self.ubicacion_origen:
                             raise ValidationError("Origen requerido para salida")
-                        self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
+                        self._update_stock(StockModel, self.ubicacion_origen, self.cantidad, 'restar')
 
                     elif self.tipo_movimiento == self.T_TRANSFER:
-                        if not self.acueducto_origen or not self.acueducto_destino:
+                        if not self.ubicacion_origen or not self.ubicacion_destino:
                             raise ValidationError("Origen y Destino requeridos para transferencia")
                         
-                        self._update_stock(StockModel, self.acueducto_origen, self.cantidad, 'restar')
-                        self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
+                        self._update_stock(StockModel, self.ubicacion_origen, self.cantidad, 'restar')
+                        self._update_stock(StockModel, self.ubicacion_destino, self.cantidad, 'sumar')
 
                     elif self.tipo_movimiento == self.T_AJUSTE:
-                        if self.acueducto_destino:
-                            self._update_stock(StockModel, self.acueducto_destino, self.cantidad, 'sumar')
-                
+                        if self.ubicacion_destino:
+                            self._update_stock(StockModel, self.ubicacion_destino, self.cantidad, 'sumar')
+                        elif self.ubicacion_origen:
+                            self._update_stock(StockModel, self.ubicacion_origen, self.cantidad, 'restar')
+
+                    # Lógica para Orden de Compra y Ficha Técnica
+                    if self.tipo_movimiento == self.T_TRANSFER:
+                        # Productos que generan Orden de Compra
+                        if self.content_type.model in ['pumpandmotor', 'chemicalproduct', 'pipe', 'accessory']:
+                            OrdenCompra.objects.create(
+                                movimiento=self,
+                                solicitante=self.creado_por,
+                                aprobado_por=self.aprobado_por,
+                                detalles=f"Transferencia de {self.producto} de {self.ubicacion_origen} a {self.ubicacion_destino}."
+                            )
+                        
+                        # Lógica específica para Ficha Técnica de Motores/Bombas
+                        if self.content_type.model == 'pumpandmotor':
+                            ficha, created = FichaTecnicaMotor.objects.get_or_create(equipo_id=self.object_id)
+                            if self.ubicacion_destino.tipo == Ubicacion.TipoUbicacion.INSTALACION:
+                                ficha.estado_actual = 'Instalado'
+                                if not ficha.fecha_instalacion:
+                                    ficha.fecha_instalacion = timezone.now().date()
+                            else:
+                                ficha.estado_actual = 'En Almacén'
+                            ficha.save()
+
                 if audit:
                     audit.status = InventoryAudit.STATUS_SUCCESS
                     audit.save()
@@ -1272,17 +1289,35 @@ class Tuberia(Pipe):
 
     def __init__(self, *args, **kwargs):
         # Aceptar kwargs legacy y mapear a campos del modelo actual
-        # diametro_nominal_mm -> diametro_nominal
-        if 'diametro_nominal_mm' in kwargs:
-            kwargs['diametro_nominal'] = kwargs.pop('diametro_nominal_mm')
-        if 'longitud_m' in kwargs:
-            kwargs['longitud_unitaria'] = kwargs.pop('longitud_m')
+        # Mapear acueducto a ubicación
+        if 'acueducto' in kwargs and 'ubicacion' not in kwargs:
+            acueducto = kwargs.pop('acueducto')
+            ubicacion, _ = Ubicacion.objects.get_or_create(
+                acueducto=acueducto,
+                tipo=Ubicacion.TipoUbicacion.ALMACEN,
+                defaults={'nombre': f'Almacén General {acueducto.nombre}'}
+            )
+            kwargs['ubicacion'] = ubicacion
         super().__init__(*args, **kwargs)
 
 
-class Equipo(PumpAndMotor):
+class StockEquipo(StockPumpAndMotor):
     class Meta:
         proxy = True
+        verbose_name = 'StockEquipo (compat)'
+
+    def __init__(self, *args, **kwargs):
+        if 'equipo' in kwargs and 'producto' not in kwargs:
+            kwargs['producto'] = kwargs.pop('equipo')
+        # Mapear acueducto a ubicación
+        if 'acueducto' in kwargs and 'ubicacion' not in kwargs:
+            acueducto = kwargs.pop('acueducto')
+            ubicacion, _ = Ubicacion.objects.get_or_create(
+                acueducto=acueducto,
+                tipo=Ubicacion.TipoUbicacion.ALMACEN,
+                defaults={'nombre': f'Almacén General {acueducto.nombre}'}
+            )
+            kwargs['ubicacion'] = ubicacion
         verbose_name = 'Equipo (compat)'
 
 
@@ -1315,4 +1350,135 @@ Tuberia = Tuberia
 Equipo = Equipo
 StockTuberia = StockTuberia
 StockEquipo = StockEquipo
+
+
+class Ubicacion(models.Model):
+    """Ubicación física de un ítem, puede ser un almacén o una instalación."""
+    
+    class TipoUbicacion(models.TextChoices):
+        ALMACEN = 'ALMACEN', 'Almacén'
+        INSTALACION = 'INSTALACION', 'Instalación (Pozo, Estación, etc.)'
+
+    nombre = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=20, choices=TipoUbicacion.choices)
+    acueducto = models.ForeignKey(
+        Acueducto,
+        on_delete=models.CASCADE,
+        related_name='ubicaciones'
+    )
+    descripcion = models.TextField(blank=True)
+    activa = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Ubicación'
+        verbose_name_plural = 'Ubicaciones'
+        unique_together = ('nombre', 'acueducto')
+        ordering = ['acueducto', 'nombre']
+
+    def __str__(self):
+        return f"{self.nombre} ({self.acueducto.nombre})"
+
+
+# ============================================================================
+# MODELOS DE FICHA TÉCNICA Y MANTENIMIENTO
+# ============================================================================
+
+class FichaTecnicaMotor(models.Model):
+    """Ficha técnica para seguimiento y mantenimiento de motores y bombas."""
+    equipo = models.OneToOneField(
+        'PumpAndMotor',
+        on_delete=models.CASCADE,
+        related_name='ficha_tecnica'
+    )
+    fecha_instalacion = models.DateField(null=True, blank=True)
+    horas_operacion_totales = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text='Horas totales de operación acumuladas'
+    )
+    ultimo_mantenimiento = models.DateField(null=True, blank=True)
+    proximo_mantenimiento = models.DateField(null=True, blank=True)
+    estado_actual = models.CharField(
+        max_length=50,
+        default='No instalado',
+        help_text='Ej: Operativo, En mantenimiento, Averiado, No instalado'
+    )
+    notas = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Ficha Técnica de Motor/Bomba'
+        verbose_name_plural = 'Fichas Técnicas de Motores/Bombas'
+
+    def __str__(self):
+        return f"Ficha de {self.equipo.nombre}"
+
+class RegistroMantenimiento(models.Model):
+    """Registro de un mantenimiento realizado a un motor o bomba."""
+    ficha_tecnica = models.ForeignKey(
+        FichaTecnicaMotor,
+        on_delete=models.CASCADE,
+        related_name='historial_mantenimiento'
+    )
+    fecha = models.DateField()
+    tipo_mantenimiento = models.CharField(
+        max_length=50,
+        choices=[
+            ('PREVENTIVO', 'Preventivo'),
+            ('CORRECTIVO', 'Correctivo'),
+            ('PREDICTIVO', 'Predictivo')
+        ]
+    )
+    descripcion = models.TextField()
+    realizado_por = models.CharField(max_length=150)
+    costo = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    class Meta:
+        verbose_name = 'Registro de Mantenimiento'
+        verbose_name_plural = 'Registros de Mantenimiento'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"Mantenimiento de {self.ficha_tecnica.equipo.nombre} el {self.fecha}"
+
+# ============================================================================
+# MODELO DE ORDEN DE COMPRA/TRANSFERENCIA
+# ============================================================================
+
+class OrdenCompra(models.Model):
+    """Orden de compra o transferencia generada por un movimiento de inventario."""
+    movimiento = models.OneToOneField(
+        'MovimientoInventario',
+        on_delete=models.CASCADE,
+        related_name='orden_compra'
+    )
+    codigo_orden = models.CharField(max_length=50, unique=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    solicitante = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='ordenes_solicitadas'
+    )
+    aprobador = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ordenes_aprobadas'
+    )
+    detalles = models.TextField(help_text="Detalles de la orden, producto, cantidad, origen y destino.")
+
+    class Meta:
+        verbose_name = 'Orden de Compra/Transferencia'
+        verbose_name_plural = 'Órdenes de Compra/Transferencia'
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        return self.codigo_orden
+
+    def save(self, *args, **kwargs):
+        if not self.codigo_orden:
+            self.codigo_orden = f"OC-{self.movimiento.id}-{timezone.now().strftime('%Y%m%d')}"
+        super().save(*args, **kwargs)
 

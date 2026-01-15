@@ -1,42 +1,43 @@
 FROM python:3.14-slim
 
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias para compilar extensiones
-# (libpq para drivers PostgreSQL, build-essential, y rust/cargo para crates si es necesario)
+# Instalar dependencias del sistema y crear usuario no-root
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends \
-	   build-essential \
-	   gcc \
-	   libpq-dev \
-	   libffi-dev \
-	   curl \
-	   ca-certificates \
-	   gnupg \
-	&& rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       gcc \
+       libpq-dev \
+       libffi-dev \
+       curl \
+       ca-certificates \
+       gnupg \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home appuser
 
-# Instalar Rust toolchain (solo si alguna dependencia lo requiere, p.ej. rpds-py)
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-	. $HOME/.cargo/env && rustup default stable
+# Instalar Rust toolchain (requerido por algunas dependencias de Python)
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 COPY requirements.txt .
 
-# Actualizar pip/setuptools/wheel antes de instalar paquetes Python
+# Actualizar pip e instalar requerimientos
 RUN python -m pip install --upgrade pip setuptools wheel && \
-	pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
+# Copiar el proyecto y establecer permisos
 COPY . .
-
-# Ensure entrypoint is executable and run as non-root
+RUN chown -R appuser:appuser /app
 RUN chmod +x /app/entrypoint.sh
-RUN useradd -m -s /bin/bash appuser && chown -R appuser:appuser /app
 
-ENV PYTHONUNBUFFERED=1
-
-ENTRYPOINT ["sh", "/app/entrypoint.sh"]
+# Cambiar al usuario no-root
 USER appuser
 
-EXPOSE 8000
+# Punto de entrada para ejecutar tareas de inicialización
+ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Use Gunicorn for production-ready WSGI serving (kept as CMD so entrypoint can run pre-start tasks)
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "4", "--chdir", "/app", "--log-level", "info"]
+# Comando por defecto para correr la aplicación con Gunicorn
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "4", "--log-level", "info"]
