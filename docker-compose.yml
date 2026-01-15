@@ -22,9 +22,11 @@ services:
   # Backend Django
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.backend
     container_name: gsih_backend
+    env_file:
+      - ./backend/.env
     environment:
       - DEBUG=${DEBUG:-False}
       - DJANGO_SECRET=${DJANGO_SECRET:-change-me-in-production}
@@ -32,7 +34,7 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-10.10.50.26,localhost,127.0.0.1}
       - CORS_ALLOW_ALL_ORIGINS=True
     volumes:
-      - .:/app
+      - ./backend:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     # Run entrypoint as root so it can fix ownership on volumes, entrypoint will drop to appuser
@@ -58,8 +60,8 @@ services:
     ports:
       - "80:80"
     volumes:
-      - static_volume:/app/staticfiles:ro
-      - media_volume:/app/media:ro
+      - static_volume:/app/backend/staticfiles:ro
+      - media_volume:/app/backend/media:ro
     depends_on:
       - backend
     networks:
