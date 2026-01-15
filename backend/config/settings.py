@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'inventario',
     'notificaciones',
     'institucion',
+    'geography',
 ]
 
 MIDDLEWARE = [

@@ -13,6 +13,8 @@ import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from institucion.models import Acueducto, Sucursal, OrganizacionCentral
+from geography.models import Ubicacion
+from geography.models import Ubicacion
 
 
 # ============================================================================
@@ -725,7 +727,7 @@ class StockChemical(models.Model):
         related_name='stocks'
     )
     ubicacion = models.ForeignKey(
-        'Ubicacion',
+        'geography.Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_chemical'
     )
@@ -765,7 +767,7 @@ class StockPipe(models.Model):
         related_name='stocks'
     )
     ubicacion = models.ForeignKey(
-        'Ubicacion',
+        'geography.Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_pipe'
     )
@@ -812,7 +814,7 @@ class StockPumpAndMotor(models.Model):
         related_name='stocks'
     )
     ubicacion = models.ForeignKey(
-        'Ubicacion',
+        'geography.Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_pump'
     )
@@ -856,7 +858,7 @@ class StockAccessory(models.Model):
         related_name='stocks'
     )
     ubicacion = models.ForeignKey(
-        'Ubicacion',
+        'geography.Ubicacion',
         on_delete=models.CASCADE,
         related_name='stocks_accessory'
     )
@@ -886,6 +888,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 
 # ... (existing imports)
+from geography.models import Ubicacion
 
 # ============================================================================
 # AUDITORÍA Y MOVIMIENTOS
@@ -916,10 +919,10 @@ class InventoryAudit(models.Model):
     cantidad = models.DecimalField(max_digits=12, decimal_places=3, null=True)
     
     ubicacion_origen = models.ForeignKey(
-        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+        'geography.Ubicacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
     )
     ubicacion_destino = models.ForeignKey(
-        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
+        'geography.Ubicacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='+'
     )
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
@@ -969,11 +972,11 @@ class MovimientoInventario(models.Model):
     producto = GenericForeignKey('content_type', 'object_id')
 
     ubicacion_origen = models.ForeignKey(
-        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True,
+        'geography.Ubicacion', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='movimientos_salida'
     )
     ubicacion_destino = models.ForeignKey(
-        'Ubicacion', on_delete=models.SET_NULL, null=True, blank=True,
+        'geography.Ubicacion', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='movimientos_entrada'
     )
 
@@ -1292,32 +1295,6 @@ Equipo = Equipo
 StockTuberia = StockTuberia
 StockEquipo = StockEquipo
 
-
-class Ubicacion(models.Model):
-    """Ubicación física de un ítem, puede ser un almacén o una instalación."""
-    
-    class TipoUbicacion(models.TextChoices):
-        ALMACEN = 'ALMACEN', 'Almacén'
-        INSTALACION = 'INSTALACION', 'Instalación (Pozo, Estación, etc.)'
-
-    nombre = models.CharField(max_length=200)
-    tipo = models.CharField(max_length=20, choices=TipoUbicacion.choices)
-    acueducto = models.ForeignKey(
-        Acueducto,
-        on_delete=models.CASCADE,
-        related_name='ubicaciones'
-    )
-    descripcion = models.TextField(blank=True)
-    activa = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name = 'Ubicación'
-        verbose_name_plural = 'Ubicaciones'
-        unique_together = ('nombre', 'acueducto')
-        ordering = ['acueducto', 'nombre']
-
-    def __str__(self):
-        return f"{self.nombre} ({self.acueducto.nombre})"
 
 
 # ============================================================================
