@@ -325,15 +325,15 @@ class AccessorySerializer(ProductBaseSerializer):
 class StockChemicalSerializer(serializers.ModelSerializer):
     """Serializer para stock de químicos."""
     producto_detail = ChemicalProductSerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='acueducto', read_only=True)
+    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
     
     class Meta:
         model = StockChemical
         fields = [
             'id', 'producto', 'producto_detail',
-            'acueducto', 'acueducto_detail',
+            'ubicacion', 'acueducto_detail',
             'cantidad', 'lote', 'fecha_vencimiento',
-            'ubicacion_fisica', 'fecha_ultima_actualizacion'
+            'fecha_ultima_actualizacion'
         ]
         read_only_fields = ['id', 'fecha_ultima_actualizacion']
 
@@ -341,14 +341,14 @@ class StockChemicalSerializer(serializers.ModelSerializer):
 class StockPipeSerializer(serializers.ModelSerializer):
     """Serializer para stock de tuberías."""
     producto_detail = PipeSerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='acueducto', read_only=True)
+    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
     
     class Meta:
         model = StockPipe
         fields = [
             'id', 'producto', 'producto_detail',
-            'acueducto', 'acueducto_detail',
-            'cantidad', 'metros_totales', 'ubicacion_fisica',
+            'ubicacion', 'acueducto_detail',
+            'cantidad', 'metros_totales',
             'fecha_ultima_actualizacion'
         ]
         read_only_fields = ['id', 'metros_totales', 'fecha_ultima_actualizacion']
@@ -357,7 +357,7 @@ class StockPipeSerializer(serializers.ModelSerializer):
 class StockPumpAndMotorSerializer(serializers.ModelSerializer):
     """Serializer para stock de bombas/motores."""
     producto_detail = PumpAndMotorSerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='acueducto', read_only=True)
+    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
     estado_operativo_display = serializers.CharField(
         source='get_estado_operativo_display', 
         read_only=True
@@ -367,9 +367,9 @@ class StockPumpAndMotorSerializer(serializers.ModelSerializer):
         model = StockPumpAndMotor
         fields = [
             'id', 'producto', 'producto_detail',
-            'acueducto', 'acueducto_detail',
+            'ubicacion', 'acueducto_detail',
             'cantidad', 'estado_operativo', 'estado_operativo_display',
-            'ubicacion_fisica', 'fecha_ultima_actualizacion'
+            'fecha_ultima_actualizacion'
         ]
         read_only_fields = ['id', 'fecha_ultima_actualizacion']
 
@@ -377,14 +377,14 @@ class StockPumpAndMotorSerializer(serializers.ModelSerializer):
 class StockAccessorySerializer(serializers.ModelSerializer):
     """Serializer para stock de accesorios."""
     producto_detail = AccessorySerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='acueducto', read_only=True)
+    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
     
     class Meta:
         model = StockAccessory
         fields = [
             'id', 'producto', 'producto_detail',
-            'acueducto', 'acueducto_detail',
-            'cantidad', 'ubicacion_fisica',
+            'ubicacion', 'acueducto_detail',
+            'cantidad',
             'fecha_ultima_actualizacion'
         ]
         read_only_fields = ['id', 'fecha_ultima_actualizacion']
@@ -400,8 +400,12 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
     producto_str = serializers.SerializerMethodField()
     articulo_nombre = serializers.SerializerMethodField()
     creado_por_username = serializers.SerializerMethodField()
-    acueducto_origen_nombre = serializers.CharField(source='acueducto_origen.nombre', read_only=True, allow_null=True)
-    acueducto_destino_nombre = serializers.CharField(source='acueducto_destino.nombre', read_only=True, allow_null=True)
+    acueducto_origen_nombre = serializers.CharField(source='ubicacion_origen.acueducto.nombre', read_only=True, allow_null=True)
+    acueducto_destino_nombre = serializers.CharField(source='ubicacion_destino.acueducto.nombre', read_only=True, allow_null=True)
+    
+    # Aliases para compatibilidad con el frontend si usa los nombres viejos
+    acueducto_origen = serializers.PrimaryKeyRelatedField(source='ubicacion_origen', read_only=True)
+    acueducto_destino = serializers.PrimaryKeyRelatedField(source='ubicacion_destino', read_only=True)
     
     # Campos de lectura para la relación genérica
     product_type_read = serializers.SerializerMethodField()
@@ -416,8 +420,8 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
         model = MovimientoInventario
         fields = [
             'id', 'tipo_movimiento', 'cantidad', 'fecha_movimiento',
-            'acueducto_origen', 'acueducto_origen_nombre',
-            'acueducto_destino', 'acueducto_destino_nombre',
+            'ubicacion_origen', 'acueducto_origen', 'acueducto_origen_nombre',
+            'ubicacion_destino', 'acueducto_destino', 'acueducto_destino_nombre',
             'producto_str', 'articulo_nombre', 'razon', 'creado_por_username',
             'product_type', 'product_id',
             'product_type_read', 'product_id_read', 'status'

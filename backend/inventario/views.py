@@ -360,13 +360,13 @@ class AccessoryViewSet(viewsets.ModelViewSet):
 class StockChemicalViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de químicos."""
     queryset = StockChemical.objects.select_related(
-        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+        'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
     ).all()
     serializer_class = StockChemicalSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['producto', 'acueducto']
-    search_fields = ['producto__nombre', 'producto__sku', 'lote', 'ubicacion_fisica']
+    filterset_fields = ['producto', 'ubicacion__acueducto']
+    search_fields = ['producto__nombre', 'producto__sku', 'lote', 'ubicacion__nombre']
     ordering = ['producto__sku']
     
     def get_queryset(self):
@@ -378,7 +378,7 @@ class StockChemicalViewSet(viewsets.ModelViewSet):
             return queryset
         
         if user.sucursal:
-            return queryset.filter(acueducto__sucursal=user.sucursal)
+            return queryset.filter(ubicacion__acueducto__sucursal=user.sucursal)
         
         return queryset.none()
 
@@ -386,13 +386,13 @@ class StockChemicalViewSet(viewsets.ModelViewSet):
 class StockPipeViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de tuberías."""
     queryset = StockPipe.objects.select_related(
-        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+        'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
     ).all()
     serializer_class = StockPipeSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['producto', 'acueducto']
-    search_fields = ['producto__nombre', 'producto__sku', 'ubicacion_fisica']
+    filterset_fields = ['producto', 'ubicacion__acueducto']
+    search_fields = ['producto__nombre', 'producto__sku', 'ubicacion__nombre']
     ordering = ['producto__sku']
     
     def get_queryset(self):
@@ -403,7 +403,7 @@ class StockPipeViewSet(viewsets.ModelViewSet):
             return queryset
         
         if user.sucursal:
-            return queryset.filter(acueducto__sucursal=user.sucursal)
+            return queryset.filter(ubicacion__acueducto__sucursal=user.sucursal)
         
         return queryset.none()
 
@@ -411,13 +411,13 @@ class StockPipeViewSet(viewsets.ModelViewSet):
 class StockPumpAndMotorViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de bombas/motores."""
     queryset = StockPumpAndMotor.objects.select_related(
-        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+        'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
     ).all()
     serializer_class = StockPumpAndMotorSerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['producto', 'acueducto', 'estado_operativo']
-    search_fields = ['producto__nombre', 'producto__numero_serie', 'ubicacion_fisica']
+    filterset_fields = ['producto', 'ubicacion__acueducto', 'estado_operativo']
+    search_fields = ['producto__nombre', 'producto__numero_serie', 'ubicacion__nombre']
     ordering = ['producto__numero_serie']
     
     def get_queryset(self):
@@ -428,7 +428,7 @@ class StockPumpAndMotorViewSet(viewsets.ModelViewSet):
             return queryset
         
         if user.sucursal:
-            return queryset.filter(acueducto__sucursal=user.sucursal)
+            return queryset.filter(ubicacion__acueducto__sucursal=user.sucursal)
         
         return queryset.none()
 
@@ -436,13 +436,13 @@ class StockPumpAndMotorViewSet(viewsets.ModelViewSet):
 class StockAccessoryViewSet(viewsets.ModelViewSet):
     """ViewSet para stock de accesorios."""
     queryset = StockAccessory.objects.select_related(
-        'producto', 'producto__categoria', 'acueducto', 'acueducto__sucursal'
+        'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
     ).all()
     serializer_class = StockAccessorySerializer
     permission_classes = [IsAdminOrSameSucursal]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['producto', 'acueducto']
-    search_fields = ['producto__nombre', 'producto__sku', 'ubicacion_fisica']
+    filterset_fields = ['producto', 'ubicacion__acueducto']
+    search_fields = ['producto__nombre', 'producto__sku', 'ubicacion__nombre']
     ordering = ['producto__sku']
     
     def get_queryset(self):
@@ -453,7 +453,7 @@ class StockAccessoryViewSet(viewsets.ModelViewSet):
             return queryset
         
         if user.sucursal:
-            return queryset.filter(acueducto__sucursal=user.sucursal)
+            return queryset.filter(ubicacion__acueducto__sucursal=user.sucursal)
         
         return queryset.none()
 
