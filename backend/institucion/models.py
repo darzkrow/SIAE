@@ -5,9 +5,17 @@ from django.db import models
 # ============================================================================
 
 class OrganizacionCentral(models.Model):
-    """Organización central que agrupa sucursales."""
+    """Organización central que agrupa sucursales. Puede ser jerárquica (Ministerio -> Ente)."""
     nombre = models.CharField(max_length=200, unique=True)
     rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sub_organizaciones',
+        help_text='Organización superior (ej: MINAGUAS)'
+    )
 
     class Meta:
         verbose_name = 'Organización Central'
@@ -15,6 +23,8 @@ class OrganizacionCentral(models.Model):
         ordering = ['nombre']
 
     def __str__(self):
+        if self.parent:
+            return f"{self.nombre} ← {self.parent.nombre}"
         return self.nombre
 
 
