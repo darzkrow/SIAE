@@ -16,6 +16,7 @@ services:
       retries: 5
     networks:
       - gsih_network
+    restart: always
 
   # Redis para Celery y Channels
   redis:
@@ -28,6 +29,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: always
 
   # Backend Django
   backend:
@@ -38,17 +40,19 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - DEBUG=${DEBUG:-True}
+      - DEBUG=${DEBUG:-False}
       - DJANGO_SECRET=${DJANGO_SECRET:-change-me-in-production}
       - DATABASE_URL=postgresql://${DB_USER:-gsih_user}:${DB_PASSWORD:-gsih_password}@db:5432/${DB_NAME:-gsih_inventario}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-sigei.hidroven.gob.ve,localhost,127.0.0.1,backend}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-sigei.hidroven.gob.ve,localhost,127.0.0.1,backend,nginx}
       - REDIS_HOST=redis
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-    ports:
-      - "8080:8000" # Acceso directo al backend
+    # No exponemos el puerto 8000 directamente al exterior por seguridad, 
+    # todo el tráfico debe pasar por Nginx (Port 80/443)
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
@@ -61,6 +65,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    restart: always
 
   # Celery Worker
   worker:
@@ -81,18 +86,22 @@ services:
         condition: service_healthy
     networks:
       - gsih_network
+    restart: always
 
-  # Nginx Reverse Proxy y Servidor de Frontend
+  # Nginx Reverse Proxy (Puerta de enlace única)
   nginx:
     build:
       context: .
       dockerfile: nginx/Dockerfile
     container_name: gsih_nginx
     ports:
-      - "8181:80" # Frontend accesible en el puerto 8181
+      - "80:80"
+      - "443:443"
     volumes:
       - static_volume:/app/backend/staticfiles:ro
       - media_volume:/app/backend/media:ro
+      # Descomentar para SSL
+      # - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       backend:
         condition: service_healthy
