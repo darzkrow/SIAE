@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Instalar dependencias del sistema y crear usuario no-root
+# Instalar dependencias del sistema, incluyendo netcat, y crear usuario no-root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        build-essential \
@@ -15,6 +15,7 @@ RUN apt-get update \
        curl \
        ca-certificates \
        gnupg \
+       netcat-openbsd \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home appuser
 
@@ -22,8 +23,7 @@ RUN apt-get update \
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-
-# Copiar solo los archivos necesarios para instalar dependencias
+# Copiar solo los archivos necesarios para instalar dependencias (optimización de caché)
 COPY requirements.txt .
 
 # Actualizar pip e instalar requerimientos
@@ -43,8 +43,5 @@ USER appuser
 # Punto de entrada para ejecutar tareas de inicialización
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Comando por defecto para correr la aplicación con Gunicorn
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "4", "--log-level", "info"]
-
-# Comando por defecto para correr la aplicación con Gunicorn
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "4", "--log-level", "info"]
+# Comando por defecto para correr la aplicación (será ejecutado por el entrypoint)
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]

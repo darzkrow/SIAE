@@ -19,6 +19,21 @@ DEBUG = env('DEBUG')
 SECRET_KEY = env('SECRET_KEY')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
+CORS_ALLOW_ALL_ORIGINS = True
+
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost",
+#     "http://127.0.0.1",
+#     "http://localhost:8080",
+#     "http://localhost:8181",
+# ]
+# CSRF_TRUSTED_ORIGINS = [
+#     "http://localhost",
+#     "http://127.0.0.1",
+#     "http://localhost:8080",
+#     "http://localhost:8181",
+# ]
+
 
 INSTALLED_APPS = [
     'daphne',
@@ -261,3 +276,4 @@ CHANNEL_LAYERS = {
         },
     },
 }
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
