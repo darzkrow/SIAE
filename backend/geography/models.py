@@ -1,6 +1,6 @@
 from django.db import models
 from institucion.models import Acueducto
-from geography.models import Parish
+
 
 
 class State(models.Model):

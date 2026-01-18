@@ -1253,16 +1253,28 @@ class StockEquipo(StockPumpAndMotor):
     def __init__(self, *args, **kwargs):
         if 'equipo' in kwargs and 'producto' not in kwargs:
             kwargs['producto'] = kwargs.pop('equipo')
-        # Mapear acueducto a ubicación
+        super().__init__(*args, **kwargs)
+
+
+class Equipo(PumpAndMotor):
+    class Meta:
+        proxy = True
+        verbose_name = 'Equipo (compat)'
+
+    def __init__(self, *args, **kwargs):
         if 'acueducto' in kwargs and 'ubicacion' not in kwargs:
-            acueducto = kwargs.pop('acueducto')
-            ubicacion, _ = Ubicacion.objects.get_or_create(
+             # Logic to map acueducto to ubicacion if needed, similar to Tuberia
+             acueducto = kwargs.pop('acueducto')
+             # Import Ubicacion inside method to avoid circular import issues if any
+             from geography.models import Ubicacion
+             ubicacion, _ = Ubicacion.objects.get_or_create(
                 acueducto=acueducto,
                 tipo=Ubicacion.TipoUbicacion.ALMACEN,
                 defaults={'nombre': f'Almacén General {acueducto.nombre}'}
             )
-            kwargs['ubicacion'] = ubicacion
-        verbose_name = 'Equipo (compat)'
+             kwargs['ubicacion'] = ubicacion
+        super().__init__(*args, **kwargs)
+
 
 
 class StockTuberia(StockPipe):
@@ -1277,23 +1289,7 @@ class StockTuberia(StockPipe):
         super().__init__(*args, **kwargs)
 
 
-class StockEquipo(StockPumpAndMotor):
-    class Meta:
-        proxy = True
-        verbose_name = 'StockEquipo (compat)'
 
-    def __init__(self, *args, **kwargs):
-        if 'equipo' in kwargs and 'producto' not in kwargs:
-            kwargs['producto'] = kwargs.pop('equipo')
-        super().__init__(*args, **kwargs)
-
-
-# Alias para compatibilidad puntual
-Categoria = Categoria
-Tuberia = Tuberia
-Equipo = Equipo
-StockTuberia = StockTuberia
-StockEquipo = StockEquipo
 
 
 

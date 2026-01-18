@@ -2,6 +2,6 @@ from django.apps import AppConfig
 
 class GeographyConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.geography'
+    name = 'geography'
     verbose_name = 'Geografía'
     verbose_name_plural = 'Geografías'

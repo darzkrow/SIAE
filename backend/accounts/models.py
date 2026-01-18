@@ -9,7 +9,7 @@ class CustomUser(AbstractUser):
         (ROLE_OPERADOR, 'Operador'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_OPERADOR)
-    sucursal = models.ForeignKey('inventario.Sucursal', on_delete=models.SET_NULL, null=True, blank=True)
+    sucursal = models.ForeignKey('institucion.Sucursal', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.role})"

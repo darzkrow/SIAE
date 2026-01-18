@@ -27,7 +27,8 @@ from inventario.serializers import (
     ChemicalProductListSerializer, PipeListSerializer,
     PumpAndMotorListSerializer, AccessoryListSerializer,
     MovimientoInventarioSerializer,
-    OrganizacionCentralSerializer, SucursalSerializer, UserSerializer
+    OrganizacionCentralSerializer, SucursalSerializer, UserSerializer,
+    AlertaSerializer, NotificacionSerializer
 )
 
 
@@ -631,41 +632,4 @@ class NotificacionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         from inventario.models import Notificacion
         return Notificacion.objects.all().order_by('-creada_en')
-# ============================================================================
-# VIEWSETS DE ORGANIZACION Y USUARIOS
-# ============================================================================
 
-class OrganizacionCentralViewSet(viewsets.ModelViewSet):
-    """ViewSet para la organización central."""
-    queryset = OrganizacionCentral.objects.all()
-    serializer_class = OrganizacionCentralSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    search_fields = ['nombre', 'rif']
-
-class SucursalViewSet(viewsets.ModelViewSet):
-    """ViewSet para las sucursales."""
-    queryset = Sucursal.objects.select_related('organizacion_central').all()
-    serializer_class = SucursalSerializer
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['organizacion_central']
-    search_fields = ['nombre', 'codigo']
-
-class UserViewSet(viewsets.ModelViewSet):
-    """ViewSet para usuarios personalizados."""
-    queryset = User.objects.select_related('sucursal').all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['role', 'sucursal', 'is_active']
-    search_fields = ['username', 'email', 'first_name', 'last_name']
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-        
-        # Admins ven todo, operadores solo ven su propia info (o nada de otros)
-        if user.is_staff or user.role == 'ADMIN':
-            return queryset
-        
-        return queryset.filter(id=user.id)
