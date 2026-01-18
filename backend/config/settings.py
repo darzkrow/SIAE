@@ -138,29 +138,36 @@ STOCK_ALERT_EMAILS = os.environ.get('STOCK_ALERT_EMAILS', '').split(',') if os.e
 
 # CORS Configuration
 # https://github.com/adamchainz/django-cors-headers
-# SECURITY: Never use CORS_ALLOW_ALL_ORIGINS = True in production!
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only allow all origins in development
+CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=DEBUG)
 
-if not DEBUG:
-    # In production, specify exact allowed origins
-    CORS_ALLOWED_ORIGINS = os.environ.get(
-        'CORS_ALLOWED_ORIGINS', 
-        'http://localhost:5173,http://localhost:3000'
-    ).split(',')
+if not CORS_ALLOW_ALL_ORIGINS:
+    # En producción, especificar orígenes exactos permitidos
+    CORS_ALLOWED_ORIGINS = [
+        'http://sigei.hidroven.gob.ve',
+        'https://sigei.hidroven.gob.ve',
+        'http://localhost',
+        'http://localhost:80',
+        'http://127.0.0.1',
+    ]
 else:
-    # In development, allow localhost variations
+    # En desarrollo, permitir variaciones de localhost
     CORS_ALLOWED_ORIGINS = [
         'http://localhost:5173',
         'http://localhost:3000',
+        'http://localhost:8181',
+        'http://localhost:80',
+        'http://localhost',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
-        'http://127.0.0.1:8000',
-        'http://localhost:8000',
+        'http://127.0.0.1:8181',
+        'http://127.0.0.1:80',
+        'http://127.0.0.1',
         'http://10.10.50.26:5173',
         'http://10.10.50.26:3000',
         'http://10.10.50.26:8000',
-        'http://127.0.0.1:5173',
-        'http://192.168.20.191:5173',
+        'http://10.10.50.26:8080',
+        'http://10.10.50.26',
+        'http://sigei.hidroven.gob.ve',
     ]
 
 CORS_ALLOW_CREDENTIALS = True

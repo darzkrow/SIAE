@@ -1,5 +1,9 @@
 // Configuración centralizada de la API
-// Use the VITE_API_URL if provided, otherwise default to the server IP:port
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://10.10.50.26:8000';
-// El prefijo se usa en la instancia de axios
+// En producción, usar rutas relativas para aprovechar el proxy de Nginx
+// En desarrollo, usar la variable de entorno VITE_API_URL
+const isDevelopment = import.meta.env.DEV;
+export const API_BASE_URL = isDevelopment
+    ? (import.meta.env.VITE_API_URL || 'http://localhost:8080')
+    : ''; // Ruta relativa en producción (usa el mismo dominio)
 export const API_PREFIX = '/api';
+
