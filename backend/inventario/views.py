@@ -534,7 +534,7 @@ class RefactoredReportesViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """Estadísticas generales para el dashboard."""
-        from inventario.models import Pipe, PumpAndMotor, Sucursal, StockPipe, StockPumpAndMotor
+        from inventario.models import Pipe, PumpAndMotor, Sucursal, StockPipe, StockPumpAndMotor, ChemicalProduct, Accessory, StockChemical, StockAccessory
         
         stats = {
             'total_tuberias': Pipe.objects.count(),
@@ -542,6 +542,10 @@ class RefactoredReportesViewSet(viewsets.ViewSet):
             'total_sucursales': Sucursal.objects.count(),
             'total_stock_tuberias': StockPipe.objects.aggregate(total=Sum('cantidad'))['total'] or 0,
             'total_stock_equipos': StockPumpAndMotor.objects.aggregate(total=Sum('cantidad'))['total'] or 0,
+            'total_productos_quimicos': ChemicalProduct.objects.count(),
+            'total_accesorios': Accessory.objects.count(),
+            'total_stock_quimicos': StockChemical.objects.aggregate(total=Sum('cantidad'))['total'] or 0,
+            'total_stock_accesorios': StockAccessory.objects.aggregate(total=Sum('cantidad'))['total'] or 0,
         }
         return Response(stats)
     

@@ -1,47 +1,52 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
+# Prevent Python from writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Instalar dependencias del sistema, incluyendo netcat, y crear usuario no-root
+# Install system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       build-essential \
-       gcc \
-       libpq-dev \
-       libffi-dev \
-       curl \
-       ca-certificates \
-       gnupg \
-       netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home appuser
+    build-essential \
+    gcc \
+    libpq-dev \
+    libffi-dev \
+    curl \
+    ca-certificates \
+    gnupg \
+    netcat-openbsd \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar Rust toolchain (requerido por algunas dependencias de Python)
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+# Create a non-root user
+RUN useradd -m -U appuser \
+    && mkdir -p /app/staticfiles /app/media \
+    && chown -R appuser:appuser /app
+
+# Install Rust toolchain (required by some Python packages like cryptography)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Copiar solo los archivos necesarios para instalar dependencias (optimización de caché)
+# Copy only requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Actualizar pip e instalar requerimientos
-RUN python -m pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+# Upgrade pip and install dependencies
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto de la aplicación
-COPY . .
+# Copy the rest of the application
+COPY --chown=appuser:appuser . .
 
-# Establecer permisos
-RUN chown -R appuser:appuser /app
+# Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh
 
-# Cambiar al usuario no-root
-USER appuser
+# We start as root to fix volume permissions in the entrypoint, then drop to appuser
+USER root
 
-# Punto de entrada para ejecutar tareas de inicialización
+# Entrypoint for initialization tasks
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Comando por defecto para correr la aplicación (será ejecutado por el entrypoint)
+# Default command to run the application
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]

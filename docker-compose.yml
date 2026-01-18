@@ -9,15 +9,25 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-gsih_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-gsih_user} -d postgres" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-gsih_user} -d ${DB_NAME:-gsih_inventario}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - gsih_network
+
+  # Redis para Celery y Channels
+  redis:
+    image: redis:7-alpine
+    container_name: gsih_redis
+    networks:
+      - gsih_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Backend Django
   backend:
@@ -28,56 +38,71 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - DEBUG=${DEBUG:-False}
+      - DEBUG=${DEBUG:-True}
       - DJANGO_SECRET=${DJANGO_SECRET:-change-me-in-production}
       - DATABASE_URL=postgresql://${DB_USER:-gsih_user}:${DB_PASSWORD:-gsih_password}@db:5432/${DB_NAME:-gsih_inventario}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-sigei.hidroven.gob.ve,localhost,127.0.0.1}
-      - CORS_ALLOW_ALL_ORIGINS=True
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-sigei.hidroven.gob.ve,localhost,127.0.0.1,backend}
+      - REDIS_HOST=redis
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-    # Run entrypoint as root so it can fix ownership on volumes, entrypoint will drop to appuser
-    user: root
     ports:
-      - 8080:8000
+      - "8080:8000" # Acceso directo al backend
     depends_on:
       db:
         condition: service_healthy
-    entrypoint: /app/entrypoint.sh
-    # command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+      redis:
+        condition: service_healthy
+    networks:
+      - gsih_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: gsih_worker
+    command: celery -A config worker --loglevel=info
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-gsih_user}:${DB_PASSWORD:-gsih_password}@db:5432/${DB_NAME:-gsih_inventario}
+      - REDIS_HOST=redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - gsih_network
 
-  # Nginx Reverse Proxy (Producción)
+  # Nginx Reverse Proxy y Servidor de Frontend
   nginx:
     build:
       context: .
       dockerfile: nginx/Dockerfile
     container_name: gsih_nginx
     ports:
-      - "80:80"
+      - "8181:80" # Frontend accesible en el puerto 8181
     volumes:
       - static_volume:/app/backend/staticfiles:ro
       - media_volume:/app/backend/media:ro
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - gsih_network
+    restart: always
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: gsih_frontend
-    environment:
-      - VITE_API_URL=http://sigei.hidroven.gob.ve/api
-    ports:
-      - "8181:5173"
-    depends_on:
-      - backend
-    networks:
-      - gsih_network
+networks:
+  gsih_network:
+    driver: bridge
 
 volumes:
   postgres_data:
@@ -86,7 +111,3 @@ volumes:
     driver: local
   media_volume:
     driver: local
-
-networks:
-  gsih_network:
-    driver: bridge

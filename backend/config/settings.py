@@ -17,22 +17,19 @@ DEBUG = env('DEBUG')
 # Raises Django's ImproperlyConfigured
 # exception if SECRET_KEY not in os.environ
 SECRET_KEY = env('SECRET_KEY')
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Security Settings from Environment
+CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'backend', 'sigei.hidroven.gob.ve'])
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost",
-#     "http://127.0.0.1",
-#     "http://localhost:8080",
-#     "http://localhost:8181",
-# ]
-# CSRF_TRUSTED_ORIGINS = [
-#     "http://localhost",
-#     "http://127.0.0.1",
-#     "http://localhost:8080",
-#     "http://localhost:8181",
-# ]
+# CSRF Trust
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8080",
+    "http://localhost:8181",
+    "http://localhost",
+    "http://sigei.hidroven.gob.ve",
+    "http://sigei.hidroven.gob.ve:8181",
+]
 
 
 INSTALLED_APPS = [
@@ -159,9 +156,10 @@ if not CORS_ALLOW_ALL_ORIGINS:
     # En producción, especificar orígenes exactos permitidos
     CORS_ALLOWED_ORIGINS = [
         'http://sigei.hidroven.gob.ve',
-        'https://sigei.hidroven.gob.ve',
+        'http://sigei.hidroven.gob.ve:8181',
         'http://localhost',
-        'http://localhost:80',
+        'http://localhost:8181',
+        'http://localhost:8080',
         'http://127.0.0.1',
     ]
 else:
@@ -170,12 +168,12 @@ else:
         'http://localhost:5173',
         'http://localhost:3000',
         'http://localhost:8181',
-        'http://localhost:80',
+        'http://localhost:8080',
         'http://localhost',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
         'http://127.0.0.1:8181',
-        'http://127.0.0.1:80',
+        'http://127.0.0.1:8080',
         'http://127.0.0.1',
         'http://10.10.50.26:5173',
         'http://10.10.50.26:3000',
@@ -183,6 +181,7 @@ else:
         'http://10.10.50.26:8080',
         'http://10.10.50.26',
         'http://sigei.hidroven.gob.ve',
+        'http://sigei.hidroven.gob.ve:8181',
     ]
 
 CORS_ALLOW_CREDENTIALS = True
