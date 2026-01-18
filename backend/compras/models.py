@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from auditoria.models import SoftDeleteModel
 
 class Correlativo(models.Model):
     """Manejo de numeración secuencial para órdenes."""
@@ -20,7 +21,7 @@ class Correlativo(models.Model):
         verbose_name = 'Correlativo'
         verbose_name_plural = 'Correlativos'
 
-class OrdenCompra(models.Model):
+class OrdenCompra(SoftDeleteModel):
     """Orden de compra para adquisición de stock."""
     class Status(models.TextChoices):
         BORRADOR = 'BORRADOR', 'Borrador'
@@ -35,7 +36,7 @@ class OrdenCompra(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='orden_compra_v2' # New relation name to avoid conflict during migration
+        related_name='orden_compra_v2' 
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     solicitante = models.ForeignKey(
@@ -74,7 +75,7 @@ class OrdenCompra(models.Model):
             self.codigo = correlativo.siguiente()
         super().save(*args, **kwargs)
 
-class ItemOrden(models.Model):
+class ItemOrden(SoftDeleteModel):
     """Detalle de productos en una orden de compra."""
     orden = models.ForeignKey(
         OrdenCompra,

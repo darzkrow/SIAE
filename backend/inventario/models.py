@@ -15,6 +15,7 @@ from django.contrib.contenttypes.models import ContentType
 from institucion.models import Acueducto, Sucursal, OrganizacionCentral
 from geography.models import Ubicacion
 from catalogo.models import CategoriaProducto, Marca
+from auditoria.models import SoftDeleteModel
 
 
 # ============================================================================
@@ -24,7 +25,7 @@ from catalogo.models import CategoriaProducto, Marca
 # Category removed, moved to catalogo app
 
 
-class UnitOfMeasure(models.Model):
+class UnitOfMeasure(SoftDeleteModel):
     """Unidades de medida normalizadas."""
     
     class TipoUnidad(models.TextChoices):
@@ -48,7 +49,7 @@ class UnitOfMeasure(models.Model):
         return f"{self.nombre} ({self.simbolo})"
 
 
-class Supplier(models.Model):
+class Supplier(SoftDeleteModel):
     """Proveedores de productos."""
     nombre = models.CharField(max_length=200, unique=True)
     rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
@@ -77,7 +78,7 @@ class Supplier(models.Model):
 # MODELO BASE ABSTRACTO
 # ============================================================================
 
-class ProductBase(models.Model):
+class ProductBase(SoftDeleteModel):
     """
     Modelo base abstracto para todos los productos.
     Contiene campos comunes a todos los tipos de productos.
@@ -926,7 +927,7 @@ class InventoryAudit(models.Model):
         return f"[{self.status}] {self.tipo_movimiento} ({self.fecha})"
 
 
-class MovimientoInventario(models.Model):
+class MovimientoInventario(SoftDeleteModel):
     T_ENTRADA = 'ENTRADA'
     T_SALIDA = 'SALIDA'
     T_TRANSFER = 'TRANSFERENCIA'

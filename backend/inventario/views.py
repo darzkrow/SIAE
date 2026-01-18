@@ -10,6 +10,7 @@ from inventario.models import Acueducto
 from inventario.permissions import IsAdminOrReadOnly, IsAdminOrSameSucursal
 from inventario.serializers import AcueductoSerializer
 from .filters import MovimientoInventarioFilter
+from auditoria.mixins import AuditMixin, TrashBinMixin
 # Imports de modelos y serializers
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
@@ -75,7 +76,7 @@ class UserViewSet(viewsets.ModelViewSet):
 # VIEWSETS DE MODELOS AUXILIARES
 # ============================================================================
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para categorías de productos."""
     queryset = CategoriaProducto.objects.all()
     serializer_class = CategorySerializer
@@ -87,7 +88,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering = ['orden', 'nombre']
 
 
-class UnitOfMeasureViewSet(viewsets.ModelViewSet):
+class UnitOfMeasureViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para unidades de medida."""
     queryset = UnitOfMeasure.objects.all()
     serializer_class = UnitOfMeasureSerializer
@@ -99,7 +100,7 @@ class UnitOfMeasureViewSet(viewsets.ModelViewSet):
     ordering = ['tipo', 'nombre']
 
 
-class SupplierViewSet(viewsets.ModelViewSet):
+class SupplierViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para proveedores."""
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
@@ -132,7 +133,7 @@ class AcueductoViewSet(viewsets.ModelViewSet):
 # VIEWSETS DE PRODUCTOS
 # ============================================================================
 
-class ChemicalProductViewSet(viewsets.ModelViewSet):
+class ChemicalProductViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para productos químicos."""
     queryset = ChemicalProduct.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
@@ -202,7 +203,7 @@ class ChemicalProductViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class PipeViewSet(viewsets.ModelViewSet):
+class PipeViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para tuberías."""
     queryset = Pipe.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
@@ -255,7 +256,7 @@ class PipeViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class PumpAndMotorViewSet(viewsets.ModelViewSet):
+class PumpAndMotorViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para bombas y motores."""
     queryset = PumpAndMotor.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
@@ -307,7 +308,7 @@ class PumpAndMotorViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class AccessoryViewSet(viewsets.ModelViewSet):
+class AccessoryViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para accesorios."""
     queryset = Accessory.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
@@ -463,7 +464,7 @@ class StockAccessoryViewSet(viewsets.ModelViewSet):
 # VIEWSET DE MOVIMIENTOS
 # ============================================================================
 
-class MovimientoInventarioViewSet(viewsets.ModelViewSet):
+class MovimientoInventarioViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     """ViewSet para movimientos de inventario."""
     # queryset se define dinámicamente o se importa
     serializer_class = MovimientoInventarioSerializer

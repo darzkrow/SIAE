@@ -1,6 +1,7 @@
 from django.db import models
+from auditoria.models import SoftDeleteModel
 
-class CategoriaProducto(models.Model):
+class CategoriaProducto(SoftDeleteModel):
     """Categorías generales de productos (Químicos, Tuberías, etc.)"""
     nombre = models.CharField(max_length=150, unique=True)
     codigo = models.CharField(
@@ -20,7 +21,7 @@ class CategoriaProducto(models.Model):
     def __str__(self):
         return self.nombre
 
-class Marca(models.Model):
+class Marca(SoftDeleteModel):
     """Marcas de fabricantes de equipos y productos."""
     nombre = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(blank=True)

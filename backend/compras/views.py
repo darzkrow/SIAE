@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from .models import OrdenCompra, ItemOrden
 from .serializers import OrdenCompraSerializer, ItemOrdenSerializer
 from rest_framework.permissions import IsAuthenticated
+from auditoria.mixins import AuditMixin, TrashBinMixin
 
-class OrdenCompraViewSet(viewsets.ModelViewSet):
+class OrdenCompraViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     queryset = OrdenCompra.objects.all()
     serializer_class = OrdenCompraSerializer
     permission_classes = [IsAuthenticated]

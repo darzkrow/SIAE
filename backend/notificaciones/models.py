@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from institucion.models import Acueducto
+from auditoria.models import SoftDeleteModel
 
 class ConfiguracionTelegram(models.Model):
     """
@@ -43,7 +44,7 @@ class DestinatarioTelegram(models.Model):
         verbose_name = "Destinatario de Telegram"
         verbose_name_plural = "Destinatarios de Telegram"
 
-class Alerta(models.Model):
+class Alerta(SoftDeleteModel):
     """Configuración de alertas de stock bajo."""
     # Relación Genérica al Producto
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -65,7 +66,7 @@ class Alerta(models.Model):
         return f"Alerta {self.producto} - {self.acueducto} (< {self.umbral_minimo})"
 
 
-class Notificacion(models.Model):
+class Notificacion(SoftDeleteModel):
     """Notificaciones generadas por el sistema."""
     mensaje = models.CharField(max_length=255)
     tipo = models.CharField(max_length=50, default='INFO')  # INFO, WARNING, CRITICAL
