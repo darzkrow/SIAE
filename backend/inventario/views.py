@@ -476,7 +476,7 @@ class MovimientoInventarioViewSet(viewsets.ModelViewSet):
         from inventario.models import MovimientoInventario
         return MovimientoInventario.objects.all().select_related(
             'acueducto_origen', 'acueducto_destino', 'creado_por', 'content_type'
-        )
+        ).prefetch_related('producto')
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def aprobar(self, request, pk=None):

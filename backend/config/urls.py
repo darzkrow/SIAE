@@ -2,6 +2,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.http import HttpResponse
+from django.views.generic.base import RedirectView
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -12,6 +13,7 @@ def health_check(request):
     return HttpResponse("OK", status=200)
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/admin/', permanent=False)),
     path('admin/', admin.site.urls),
     path('health/', health_check, name='health_check'),
     
