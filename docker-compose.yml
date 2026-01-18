@@ -40,14 +40,11 @@ services:
     # Run entrypoint as root so it can fix ownership on volumes, entrypoint will drop to appuser
     user: root
     ports:
-      - "8080:8000"
+      - 8080:8000
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    entrypoint: /app/entrypoint.sh
     networks:
       - gsih_network
 
