@@ -9,6 +9,7 @@ from inventario.models import Acueducto
 # Importar permisos existentes
 from inventario.permissions import IsAdminOrReadOnly, IsAdminOrSameSucursal
 from inventario.serializers import AcueductoSerializer
+from .filters import MovimientoInventarioFilter
 # Imports de modelos y serializers
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
@@ -468,14 +469,14 @@ class MovimientoInventarioViewSet(viewsets.ModelViewSet):
     serializer_class = MovimientoInventarioSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['tipo_movimiento', 'acueducto_origen', 'acueducto_destino']
+    filterset_class = MovimientoInventarioFilter
     search_fields = ['razon']  # producto__sku no compatible con GFK en SearchFilter
     ordering = ['-fecha_movimiento']
 
     def get_queryset(self):
         from inventario.models import MovimientoInventario
         return MovimientoInventario.objects.all().select_related(
-            'acueducto_origen', 'acueducto_destino', 'creado_por', 'content_type'
+            'ubicacion_origen', 'ubicacion_destino', 'creado_por', 'content_type'
         ).prefetch_related('producto')
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
