@@ -100,3 +100,5 @@ class InventoryAuditAdmin(admin.ModelAdmin):
     list_filter = ['status', 'tipo_movimiento', 'fecha']
     search_fields = ['mensaje']
     readonly_fields = ['movimiento', 'content_type', 'object_id', 'tipo_movimiento', 'cantidad', 'ubicacion_origen', 'ubicacion_destino', 'user', 'status', 'mensaje', 'fecha']
+
+# OrdenCompra and Notifications moved to their respective apps

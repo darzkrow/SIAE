@@ -10,7 +10,7 @@ from inventario.models import (
     UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
-    FichaTecnicaMotor, RegistroMantenimiento, OrdenCompra
+    FichaTecnicaMotor, RegistroMantenimiento
 )
 from catalogo.models import CategoriaProducto, Marca
 from django.contrib.auth import get_user_model
@@ -551,60 +551,7 @@ class AccessoryListSerializer(serializers.ModelSerializer):
 # ============================================================================
 
 
-class AlertaSerializer(serializers.ModelSerializer):
-    """Serializer para alertas de stock."""
-    producto_str = serializers.SerializerMethodField()
-    acueducto_nombre = serializers.CharField(source='acueducto.nombre', read_only=True)
-    
-    # Campos para escritura GFK
-    product_type = serializers.CharField(write_only=True)
-    product_id = serializers.IntegerField(write_only=True)
-
-    class Meta:
-        from inventario.models import Alerta
-        model = Alerta
-        fields = [
-            'id', 'acueducto', 'acueducto_nombre', 
-            'umbral_minimo', 'activo', 'producto_str',
-            'product_type', 'product_id'
-        ]
-        read_only_fields = ['id', 'producto_str']
-
-    def get_producto_str(self, obj):
-        if obj.producto:
-            return str(obj.producto)
-        return "Producto no encontrado"
-
-    def create(self, validated_data):
-        product_type = validated_data.pop('product_type')
-        product_id = validated_data.pop('product_id')
-        
-        from django.contrib.contenttypes.models import ContentType
-        type_map = {
-            'chemical': 'chemicalproduct',
-            'pipe': 'pipe',
-            'pump': 'pumpandmotor',
-            'accessory': 'accessory'
-        }
-        model_name = type_map.get(product_type, product_type)
-        try:
-            ct = ContentType.objects.get(app_label='inventario', model=model_name)
-        except ContentType.DoesNotExist:
-             raise serializers.ValidationError({'product_type': 'Tipo inválido'})
-             
-        validated_data['content_type'] = ct
-        validated_data['object_id'] = product_id
-        return super().create(validated_data)
-
-
-
-class NotificacionSerializer(serializers.ModelSerializer):
-    """Serializer para notificaciones."""
-    class Meta:
-        from inventario.models import Notificacion
-        model = Notificacion
-        fields = '__all__'
-
+# Alerta, Notificacion and OrdenCompra serializers moved to their respective apps
 
 # ============================================================================
 # SERIALIZERS DE MANTENIMIENTO Y OTRAS OPERACIONES
@@ -615,18 +562,12 @@ class FichaTecnicaMotorSerializer(serializers.ModelSerializer):
     equipo_serial = serializers.CharField(source='equipo.numero_serie', read_only=True)
 
     class Meta:
+        from inventario.models import FichaTecnicaMotor
         model = FichaTecnicaMotor
         fields = '__all__'
 
 class RegistroMantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
+        from inventario.models import RegistroMantenimiento
         model = RegistroMantenimiento
-        fields = '__all__'
-
-class OrdenCompraSerializer(serializers.ModelSerializer):
-    solicitante_username = serializers.CharField(source='solicitante.username', read_only=True)
-    aprobador_username = serializers.CharField(source='aprobador.username', read_only=True)
-
-    class Meta:
-        model = OrdenCompra
         fields = '__all__'

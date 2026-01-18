@@ -6,10 +6,11 @@ from django.contrib.auth import get_user_model
 
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
-    Category, UnitOfMeasure, Supplier,
+    UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
 )
+from catalogo.models import CategoriaProducto
 
 
 class Command(BaseCommand):
@@ -89,7 +90,7 @@ class Command(BaseCommand):
             }
             cat_objs = {}
             for name, code in categories.items():
-                c, _ = Category.objects.get_or_create(nombre=name, defaults={'codigo': code, 'descripcion': f'Categoría {name}'})
+                c, _ = CategoriaProducto.objects.get_or_create(nombre=name, defaults={'codigo': code, 'descripcion': f'Categoría {name}'})
                 cat_objs[name] = c
 
             uoms = [
@@ -227,16 +228,15 @@ class Command(BaseCommand):
                 }
             )
 
-            # Stocks por acueducto
             for ac in acueductos:
-                StockChemical.objects.get_or_create(producto=cloro, acueducto=ac, defaults={'cantidad': Decimal('100.000'), 'lote': 'L-CL-001', 'fecha_vencimiento': cloro.fecha_caducidad, 'ubicacion_fisica': 'Almacén principal'})
-                StockChemical.objects.get_or_create(producto=sulfato, acueducto=ac, defaults={'cantidad': Decimal('50.000'), 'lote': 'L-SUL-001', 'fecha_vencimiento': sulfato.fecha_caducidad, 'ubicacion_fisica': 'Almacén químico'})
-                StockPipe.objects.get_or_create(producto=pvc_pipe, acueducto=ac, defaults={'cantidad': Decimal('100.000'), 'ubicacion_fisica': 'Patio de materiales'})
-                StockPipe.objects.get_or_create(producto=pead_pipe, acueducto=ac, defaults={'cantidad': Decimal('50.000'), 'ubicacion_fisica': 'Patio de materiales'})
+                StockChemical.objects.get_or_create(producto=cloro, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('100.000'), 'lote': 'L-CL-001', 'fecha_vencimiento': cloro.fecha_caducidad})
+                StockChemical.objects.get_or_create(producto=sulfato, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('50.000'), 'lote': 'L-SUL-001', 'fecha_vencimiento': sulfato.fecha_caducidad})
+                StockPipe.objects.get_or_create(producto=pvc_pipe, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('100.000')})
+                StockPipe.objects.get_or_create(producto=pead_pipe, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('50.000')})
                 # Omitir stock de bombas si no existe el producto creado
                 if pump1:
-                    StockPumpAndMotor.objects.get_or_create(producto=pump1, acueducto=ac, defaults={'cantidad': 1, 'estado_operativo': 'OPERATIVO', 'ubicacion_fisica': 'Sala de máquinas'})
-                StockAccessory.objects.get_or_create(producto=valvula, acueducto=ac, defaults={'cantidad': Decimal('20.000'), 'ubicacion_fisica': 'Estantería A'})
+                    StockPumpAndMotor.objects.get_or_create(producto=pump1, ubicacion=ac.ubicacion, defaults={'cantidad': 1, 'estado_operativo': 'OPERATIVO'})
+                StockAccessory.objects.get_or_create(producto=valvula, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('20.000')})
 
             # Usuarios
             User = get_user_model()
@@ -259,7 +259,7 @@ class Command(BaseCommand):
             self.stdout.write(f'Organizaciones: {OrganizacionCentral.objects.count()}')
             self.stdout.write(f'Sucursales: {Sucursal.objects.count()}')
             self.stdout.write(f'Acueductos: {Acueducto.objects.count()}')
-            self.stdout.write(f'Categories: {Category.objects.count()}')
+            self.stdout.write(f'Categories: {CategoriaProducto.objects.count()}')
             self.stdout.write(f'UnitOfMeasure: {UnitOfMeasure.objects.count()}')
             self.stdout.write(f'Suppliers: {Supplier.objects.count()}')
             self.stdout.write(f'ChemicalProducts: {ChemicalProduct.objects.count()}')

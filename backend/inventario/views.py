@@ -16,7 +16,7 @@ from inventario.models import (
     UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
-    FichaTecnicaMotor, RegistroMantenimiento, OrdenCompra
+    FichaTecnicaMotor, RegistroMantenimiento
 )
 from catalogo.models import CategoriaProducto, Marca
 from django.contrib.auth import get_user_model
@@ -31,8 +31,7 @@ from inventario.serializers import (
     PumpAndMotorListSerializer, AccessoryListSerializer,
     MovimientoInventarioSerializer,
     OrganizacionCentralSerializer, SucursalSerializer, UserSerializer,
-    AlertaSerializer, NotificacionSerializer,
-    FichaTecnicaMotorSerializer, RegistroMantenimientoSerializer, OrdenCompraSerializer
+    FichaTecnicaMotorSerializer, RegistroMantenimientoSerializer
 )
 
 
@@ -613,35 +612,6 @@ class RefactoredReportesViewSet(viewsets.ViewSet):
 
 
 # ============================================================================
-# VIEWSETS DE ALERTAS Y NOTIFICACIONES
-# ============================================================================
-
-class AlertaViewSet(viewsets.ModelViewSet):
-    """ViewSet para alertas de stock."""
-    # serializer_class se define dinámicamente o asumiendo el nombre en inventario.serializers
-    permission_classes = [IsAuthenticated]
-    
-    def get_serializer_class(self):
-        from inventario.serializers import AlertaSerializer
-        return AlertaSerializer
-    
-    def get_queryset(self):
-        from inventario.models import Alerta
-        return Alerta.objects.all().select_related('acueducto', 'content_type')
-
-class NotificacionViewSet(viewsets.ModelViewSet):
-    """ViewSet para notificaciones."""
-    permission_classes = [IsAuthenticated]
-    
-    def get_serializer_class(self):
-        from inventario.serializers import NotificacionSerializer
-        return NotificacionSerializer
-    
-    def get_queryset(self):
-        from inventario.models import Notificacion
-        return Notificacion.objects.all().order_by('-creada_en')
-
-# ============================================================================
 # VIEWSETS DE MANTENIMIENTO Y ORDENES
 # ============================================================================
 
@@ -656,12 +626,3 @@ class RegistroMantenimientoViewSet(viewsets.ModelViewSet):
     serializer_class = RegistroMantenimientoSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ['ficha_tecnica', 'tipo_mantenimiento']
-
-class OrdenCompraViewSet(viewsets.ModelViewSet):
-    queryset = OrdenCompra.objects.all()
-    serializer_class = OrdenCompraSerializer
-    permission_classes = [IsAuthenticated]
-    filterset_fields = ['solicitante', 'aprobador', 'movimiento']
-    search_fields = ['codigo_orden', 'detalles']
-
-

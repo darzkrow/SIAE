@@ -1109,16 +1109,18 @@ class MovimientoInventario(models.Model):
                         elif self.ubicacion_origen:
                             self._update_stock(StockModel, self.ubicacion_origen, self.cantidad, 'restar')
 
-                    # Lógica para Orden de Compra y Ficha Técnica
+                    # Lógica para Orden de Compra/Transferencia (Modularizada en app 'compras')
                     if self.tipo_movimiento == self.T_TRANSFER:
-                        # Productos que generan Orden de Compra
-                        if self.content_type.model in ['pumpandmotor', 'chemicalproduct', 'pipe', 'accessory']:
+                        try:
+                            from compras.models import OrdenCompra
                             OrdenCompra.objects.create(
                                 movimiento=self,
                                 solicitante=self.creado_por,
-                                aprobado_por=self.aprobado_por,
-                                detalles=f"Transferencia de {self.producto} de {self.ubicacion_origen} a {self.ubicacion_destino}."
+                                aprobador=self.aprobado_por,
+                                notas=f"Transferencia de {self.producto} de {self.ubicacion_origen} a {self.ubicacion_destino}."
                             )
+                        except ImportError:
+                            pass
                         
                         # Lógica específica para Ficha Técnica de Motores/Bombas
                         if self.content_type.model == 'pumpandmotor':
@@ -1151,50 +1153,7 @@ class MovimientoInventario(models.Model):
 # SISTEMA DE ALERTAS Y NOTIFICACIONES
 # ============================================================================
 
-class Alerta(models.Model):
-    """Configuración de alertas de stock bajo."""
-    # Relación Genérica al Producto
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    producto = GenericForeignKey('content_type', 'object_id')
-    
-    acueducto = models.ForeignKey(Acueducto, on_delete=models.CASCADE)
-    umbral_minimo = models.DecimalField(max_digits=12, decimal_places=3)
-    activo = models.BooleanField(default=True)
-    creado_en = models.DateTimeField(auto_now_add=True)
-    actualizado_en = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = 'Alerta de Stock'
-        verbose_name_plural = 'Alertas de Stock'
-        unique_together = ['content_type', 'object_id', 'acueducto']
-
-    def __str__(self):
-        return f"Alerta {self.producto} - {self.acueducto} (< {self.umbral_minimo})"
-
-
-class Notificacion(models.Model):
-    """Notificaciones generadas por el sistema."""
-    mensaje = models.CharField(max_length=255)
-    tipo = models.CharField(max_length=50, default='INFO')  # INFO, WARNING, CRITICAL
-    leida = models.BooleanField(default=False)
-    enviada = models.BooleanField(default=False)  # Para emails/externos
-    creada_en = models.DateTimeField(auto_now_add=True)
-    
-    # Opcional: Relacionar con usuario si es específica
-    usuario = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        null=True, blank=True
-    )
-
-    class Meta:
-        verbose_name = 'Notificación'
-        verbose_name_plural = 'Notificaciones'
-        ordering = ['-creada_en']
-
-    def __str__(self):
-        return f"{self.mensaje} ({self.creada_en})"
+# Alerta and Notificacion moved to notificaciones app
 
 
 # ---------------------------------------------------------------------------
@@ -1342,40 +1301,5 @@ class RegistroMantenimiento(models.Model):
 # MODELO DE ORDEN DE COMPRA/TRANSFERENCIA
 # ============================================================================
 
-class OrdenCompra(models.Model):
-    """Orden de compra o transferencia generada por un movimiento de inventario."""
-    movimiento = models.OneToOneField(
-        'MovimientoInventario',
-        on_delete=models.CASCADE,
-        related_name='orden_compra'
-    )
-    codigo_orden = models.CharField(max_length=50, unique=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    solicitante = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='ordenes_solicitadas'
-    )
-    aprobador = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='ordenes_aprobadas'
-    )
-    detalles = models.TextField(help_text="Detalles de la orden, producto, cantidad, origen y destino.")
-
-    class Meta:
-        verbose_name = 'Orden de Compra/Transferencia'
-        verbose_name_plural = 'Órdenes de Compra/Transferencia'
-        ordering = ['-fecha_creacion']
-
-    def __str__(self):
-        return self.codigo_orden
-
-    def save(self, *args, **kwargs):
-        if not self.codigo_orden:
-            self.codigo_orden = f"OC-{self.movimiento.id}-{timezone.now().strftime('%Y%m%d')}"
-        super().save(*args, **kwargs)
+# OrdenCompra moved to compras app
 

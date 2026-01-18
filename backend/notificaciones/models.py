@@ -1,5 +1,8 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from institucion.models import Acueducto
 
 class ConfiguracionTelegram(models.Model):
     """
@@ -39,3 +42,48 @@ class DestinatarioTelegram(models.Model):
     class Meta:
         verbose_name = "Destinatario de Telegram"
         verbose_name_plural = "Destinatarios de Telegram"
+
+class Alerta(models.Model):
+    """Configuración de alertas de stock bajo."""
+    # Relación Genérica al Producto
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    producto = GenericForeignKey('content_type', 'object_id')
+    
+    acueducto = models.ForeignKey(Acueducto, on_delete=models.CASCADE)
+    umbral_minimo = models.DecimalField(max_digits=12, decimal_places=3)
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Alerta de Stock'
+        verbose_name_plural = 'Alertas de Stock'
+        unique_together = ['content_type', 'object_id', 'acueducto']
+
+    def __str__(self):
+        return f"Alerta {self.producto} - {self.acueducto} (< {self.umbral_minimo})"
+
+
+class Notificacion(models.Model):
+    """Notificaciones generadas por el sistema."""
+    mensaje = models.CharField(max_length=255)
+    tipo = models.CharField(max_length=50, default='INFO')  # INFO, WARNING, CRITICAL
+    leida = models.BooleanField(default=False)
+    enviada = models.BooleanField(default=False)  # Para emails/externos
+    creada_en = models.DateTimeField(auto_now_add=True)
+    
+    # Opcional: Relacionar con usuario si es específica
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+        ordering = ['-creada_en']
+
+    def __str__(self):
+        return f"{self.mensaje} ({self.creada_en})"
