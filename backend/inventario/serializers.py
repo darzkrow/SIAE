@@ -7,11 +7,12 @@ from decimal import Decimal
 
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
-    Category, UnitOfMeasure, Supplier,
+    UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
     FichaTecnicaMotor, RegistroMantenimiento, OrdenCompra
 )
+from catalogo.models import CategoriaProducto, Marca
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -65,7 +66,7 @@ class CategorySerializer(serializers.ModelSerializer):
     total_productos = serializers.SerializerMethodField()
     
     class Meta:
-        model = Category
+        model = CategoriaProducto
         fields = [
             'id', 'nombre', 'codigo', 'descripcion',
             'activo', 'orden', 'total_productos'
@@ -136,7 +137,7 @@ class ProductBaseSerializer(serializers.ModelSerializer):
     valor_total = serializers.SerializerMethodField()
     
     # Writable nested fields (IDs)
-    categoria = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+    categoria = serializers.PrimaryKeyRelatedField(queryset=CategoriaProducto.objects.all())
     unidad_medida = serializers.PrimaryKeyRelatedField(queryset=UnitOfMeasure.objects.all())
     proveedor = serializers.PrimaryKeyRelatedField(queryset=Supplier.objects.all())
     

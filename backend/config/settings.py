@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # Project apps
     'accounts',
+    'catalogo',
     'inventario',
     'notificaciones',
     'institucion',

@@ -5,12 +5,7 @@ from . import models
 # MODELOS AUXILIARES
 # ===========================================================================
 
-@admin.register(models.Category)
-class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'codigo', 'activo', 'orden']
-    list_filter = ['activo']
-    search_fields = ['nombre', 'codigo']
-    ordering = ['orden', 'nombre']
+# Categoría y Marca se administran en la app 'catalogo'
 
 @admin.register(models.UnitOfMeasure)
 class UnitOfMeasureAdmin(admin.ModelAdmin):

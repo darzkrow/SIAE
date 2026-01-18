@@ -4,7 +4,8 @@ Ejecutar con: python manage.py setup_initial_data
 """
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from inventario.models import Category, UnitOfMeasure, Supplier
+from inventario.models import UnitOfMeasure, Supplier
+from catalogo.models import CategoriaProducto
 
 
 class Command(BaseCommand):
@@ -63,7 +64,7 @@ class Command(BaseCommand):
         ]
         
         for cat_data in categorias:
-            categoria, created = Category.objects.get_or_create(
+            categoria, created = CategoriaProducto.objects.get_or_create(
                 codigo=cat_data['codigo'],
                 defaults=cat_data
             )

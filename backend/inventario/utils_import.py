@@ -5,9 +5,10 @@ from django.db import transaction
 from django.contrib.contenttypes.models import ContentType
 from inventario.models import (
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
-    Category, UnitOfMeasure, Supplier,
+    UnitOfMeasure, Supplier,
     Sucursal, Acueducto, OrganizacionCentral
 )
+from catalogo.models import CategoriaProducto
 
 class CSVImportProcessor:
     """Procesador para importar productos y entidades desde CSV."""
@@ -44,7 +45,7 @@ class CSVImportProcessor:
                 try:
                     # 1. Resolver FKs (Hierarchy/Master Data)
                     if 'categoria' in row:
-                        row['categoria'], _ = Category.objects.get_or_create(nombre=row['categoria'])
+                        row['categoria'], _ = CategoriaProducto.objects.get_or_create(nombre=row['categoria'])
                     if 'unidad_medida' in row:
                         row['unidad_medida'], _ = UnitOfMeasure.objects.get_or_create(nombre=row['unidad_medida'])
                     if 'proveedor' in row:

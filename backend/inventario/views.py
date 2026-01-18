@@ -13,11 +13,12 @@ from .filters import MovimientoInventarioFilter
 # Imports de modelos y serializers
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
-    Category, UnitOfMeasure, Supplier,
+    UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
     FichaTecnicaMotor, RegistroMantenimiento, OrdenCompra
 )
+from catalogo.models import CategoriaProducto, Marca
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from inventario.serializers import (
@@ -77,7 +78,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """ViewSet para categorías de productos."""
-    queryset = Category.objects.all()
+    queryset = CategoriaProducto.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

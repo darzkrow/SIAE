@@ -14,35 +14,14 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from institucion.models import Acueducto, Sucursal, OrganizacionCentral
 from geography.models import Ubicacion
-from geography.models import Ubicacion
+from catalogo.models import CategoriaProducto, Marca
 
 
 # ============================================================================
 # MODELOS AUXILIARES DEL NUEVO SISTEMA
 # ============================================================================
 
-class Category(models.Model):
-    """Categorías de productos para clasificación."""
-    nombre = models.CharField(max_length=150, unique=True)
-    codigo = models.CharField(
-        max_length=10,
-        unique=True,
-        help_text='Código para generar SKU (ej: QUI, TUB, BOM)'
-    )
-    descripcion = models.TextField(blank=True)
-    activo = models.BooleanField(default=True)
-    orden = models.IntegerField(default=0, help_text='Orden de visualización')
-
-    class Meta:
-        verbose_name = 'Categoría'
-        verbose_name_plural = 'Categorías'
-        ordering = ['orden', 'nombre']
-        indexes = [
-            models.Index(fields=['activo']),
-        ]
-
-    def __str__(self):
-        return self.nombre
+# Category removed, moved to catalogo app
 
 
 class UnitOfMeasure(models.Model):
@@ -115,7 +94,7 @@ class ProductBase(models.Model):
     
     # Clasificación
     categoria = models.ForeignKey(
-        Category,
+        CategoriaProducto,
         on_delete=models.PROTECT,
         related_name='%(class)s_productos'
     )
@@ -492,7 +471,11 @@ class PumpAndMotor(ProductBase):
 
     # Identificación
     tipo_equipo = models.CharField(max_length=30, choices=TipoEquipo.choices)
-    marca = models.CharField(max_length=150)
+    marca = models.ForeignKey(
+        Marca, 
+        on_delete=models.PROTECT,
+        related_name='equipos'
+    )
     modelo = models.CharField(max_length=150)
     numero_serie = models.CharField(
         max_length=150,
@@ -1220,7 +1203,7 @@ class Notificacion(models.Model):
 # ---------------------------------------------------------------------------
 
 
-class Categoria(Category):
+class Categoria(CategoriaProducto):
     class Meta:
         proxy = True
         verbose_name = 'Categoría (compat)'

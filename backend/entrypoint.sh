@@ -34,6 +34,22 @@ if [ "$(id -u)" = '0' ]; then
     echo "Collecting static files as appuser..."
     gosu appuser python manage.py collectstatic --noinput
     
+    echo "Loading initial data if empty..."
+    gosu appuser python manage.py shell -c "
+from geography.models import State
+from institucion.models import OrganizacionCentral
+import os
+import subprocess
+
+if State.objects.count() == 0:
+    print('Loading geography data...')
+    subprocess.run(['python', 'manage.py', 'loaddata', 'venezuela_full.json'])
+
+if OrganizacionCentral.objects.count() == 0:
+    print('Loading institutional data...')
+    subprocess.run(['python', 'manage.py', 'loaddata', 'organizacion_inicial.json'])
+"
+    
     echo "Starting server as appuser..."
     exec gosu appuser "$@"
 else
@@ -41,5 +57,22 @@ else
     echo "Running as non-root user $(id -u)..."
     python manage.py migrate --noinput
     python manage.py collectstatic --noinput
+    
+    echo "Loading initial data if empty..."
+    python manage.py shell -c "
+from geography.models import State
+from institucion.models import OrganizacionCentral
+import os
+import subprocess
+
+if State.objects.count() == 0:
+    print('Loading geography data...')
+    subprocess.run(['python', 'manage.py', 'loaddata', 'venezuela_full.json'])
+
+if OrganizacionCentral.objects.count() == 0:
+    print('Loading institutional data...')
+    subprocess.run(['python', 'manage.py', 'loaddata', 'organizacion_inicial.json'])
+"
+    
     exec "$@"
 fi
