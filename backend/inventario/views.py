@@ -14,7 +14,8 @@ from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
     Category, UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
-    StockChemical, StockPipe, StockPumpAndMotor, StockAccessory
+    StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
+    FichaTecnicaMotor, RegistroMantenimiento, OrdenCompra
 )
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -28,7 +29,8 @@ from inventario.serializers import (
     PumpAndMotorListSerializer, AccessoryListSerializer,
     MovimientoInventarioSerializer,
     OrganizacionCentralSerializer, SucursalSerializer, UserSerializer,
-    AlertaSerializer, NotificacionSerializer
+    AlertaSerializer, NotificacionSerializer,
+    FichaTecnicaMotorSerializer, RegistroMantenimientoSerializer, OrdenCompraSerializer
 )
 
 
@@ -632,4 +634,28 @@ class NotificacionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         from inventario.models import Notificacion
         return Notificacion.objects.all().order_by('-creada_en')
+
+# ============================================================================
+# VIEWSETS DE MANTENIMIENTO Y ORDENES
+# ============================================================================
+
+class FichaTecnicaMotorViewSet(viewsets.ModelViewSet):
+    queryset = FichaTecnicaMotor.objects.all()
+    serializer_class = FichaTecnicaMotorSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['equipo', 'estado_actual']
+
+class RegistroMantenimientoViewSet(viewsets.ModelViewSet):
+    queryset = RegistroMantenimiento.objects.all()
+    serializer_class = RegistroMantenimientoSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['ficha_tecnica', 'tipo_mantenimiento']
+
+class OrdenCompraViewSet(viewsets.ModelViewSet):
+    queryset = OrdenCompra.objects.all()
+    serializer_class = OrdenCompraSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['solicitante', 'aprobador', 'movimiento']
+    search_fields = ['codigo_orden', 'detalles']
+
 

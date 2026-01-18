@@ -9,7 +9,8 @@ from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
     Category, UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
-    StockChemical, StockPipe, StockPumpAndMotor, StockAccessory
+    StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
+    FichaTecnicaMotor, RegistroMantenimiento, OrdenCompra
 )
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -591,9 +592,36 @@ class AlertaSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+
 class NotificacionSerializer(serializers.ModelSerializer):
     """Serializer para notificaciones."""
     class Meta:
         from inventario.models import Notificacion
         model = Notificacion
+        fields = '__all__'
+
+
+# ============================================================================
+# SERIALIZERS DE MANTENIMIENTO Y OTRAS OPERACIONES
+# ============================================================================
+
+class FichaTecnicaMotorSerializer(serializers.ModelSerializer):
+    equipo_nombre = serializers.CharField(source='equipo.nombre', read_only=True)
+    equipo_serial = serializers.CharField(source='equipo.numero_serie', read_only=True)
+
+    class Meta:
+        model = FichaTecnicaMotor
+        fields = '__all__'
+
+class RegistroMantenimientoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RegistroMantenimiento
+        fields = '__all__'
+
+class OrdenCompraSerializer(serializers.ModelSerializer):
+    solicitante_username = serializers.CharField(source='solicitante.username', read_only=True)
+    aprobador_username = serializers.CharField(source='aprobador.username', read_only=True)
+
+    class Meta:
+        model = OrdenCompra
         fields = '__all__'

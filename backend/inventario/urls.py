@@ -41,6 +41,11 @@ router.register(r'reportes-v2', views.RefactoredReportesViewSet, basename='repor
 router.register(r'alertas', views.AlertaViewSet, basename='alerta')
 router.register(r'notificaciones', views.NotificacionViewSet, basename='notificacion')
 
+# Mantenimiento y Ordenes
+router.register(r'fichas-tecnicas', views.FichaTecnicaMotorViewSet, basename='ficha-tecnica')
+router.register(r'mantenimientos', views.RegistroMantenimientoViewSet, basename='mantenimiento')
+router.register(r'ordenes-compra', views.OrdenCompraViewSet, basename='orden-compra')
+
 # Importación
 router.register(r'import', CSVImportViewSet, basename='import')
 

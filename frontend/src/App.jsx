@@ -16,6 +16,9 @@ const Alertas = lazy(() => import('./pages/Alertas'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Administracion = lazy(() => import('./pages/Administracion'))
 
+// Error pages
+import { Error400, Error401, Error403, Error404, Error500 } from './pages/ErrorPage'
+
 // Loading component
 const LoadingFallback = () => (
     <div className="flex items-center justify-center h-screen">
@@ -80,6 +83,16 @@ function App() {
                                 <Administracion />
                             </ProtectedRoute>
                         } />
+
+                        {/* Error Pages */}
+                        <Route path="/error/400" element={<Error400 />} />
+                        <Route path="/error/401" element={<Error401 />} />
+                        <Route path="/error/403" element={<Error403 />} />
+                        <Route path="/error/404" element={<Error404 />} />
+                        <Route path="/error/500" element={<Error500 />} />
+
+                        {/* Catch all - 404 */}
+                        <Route path="*" element={<Error404 />} />
                     </Routes>
                 </Suspense>
             </AuthProvider>

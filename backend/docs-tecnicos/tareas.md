@@ -4,26 +4,26 @@ Este documento rastrea las tareas de desarrollo para el proyecto SIAE.
 
 ## Pendiente
 
-- [ ] **Implementar Notificaciones en Tiempo Real**:
-  - Configurar Celery y Redis.
-  - Crear tareas asíncronas para enviar notificaciones a Telegram.
-  - Implementar WebSockets con Django Channels para notificaciones en la interfaz de usuario.
-  - Crear consumidores de Channels para manejar la lógica de WebSockets.
+- [x] **Implementar Notificaciones en Tiempo Real**:
+  - [x] Configurar Celery y Redis.
+  - [x] Crear tareas asíncronas para enviar notificaciones a Telegram.
+  - [x] Implementar WebSockets con Django Channels para notificaciones en la interfaz de usuario.
+  - [x] Crear consumidores de Channels para manejar la lógica de WebSockets.
 
-- [ ] **Cargar Fixtures Geográficos**:
-  - Cargar el archivo `fixtures/geography.json` en la base de datos para poblar los modelos `State`, `Municipality` y `Parish`.
+- [x] **Cargar Fixtures Geográficos**:
+  - [x] Cargar el archivo `fixtures/geography.json` (usado `venezuela_full.json`) en la base de datos para poblar los modelos `State`, `Municipality` y `Parish`.
 
-- [ ] **Crear y Aplicar Migraciones**:
-  - Generar archivos de migración para las aplicaciones `geography` e `institucion`.
-  - Aplicar las migraciones a la base de datos para reflejar los nuevos modelos y las refactorizaciones.
+- [x] **Crear y Aplicar Migraciones**:
+  - [x] Generar archivos de migración para las aplicaciones `geography` e `institucion`.
+  - [x] Aplicar las migraciones a la base de datos para reflejar los nuevos modelos y las refactorizaciones.
 
-- [ ] **Desarrollar Endpoints de API**:
-  - Crear serializers y viewsets para los nuevos modelos (`Ubicacion`, `FichaTecnicaMotor`, `OrdenCompra`, etc.).
-  - Exponer los nuevos endpoints en la API.
+- [x] **Desarrollar Endpoints de API**:
+  - [x] Crear serializers y viewsets para los nuevos modelos (`Ubicacion`, `FichaTecnicaMotor`, `OrdenCompra`, etc.).
+  - [x] Exponer los nuevos endpoints en la API.
 
 - [ ] **Desarrollar Interfaz de Frontend**:
-  - Crear componentes de React para visualizar y gestionar las nuevas funcionalidades (transferencias, fichas técnicas, notificaciones).
-  - Integrar los nuevos endpoints de la API con el frontend.
+  - [ ] Crear componentes de React para visualizar y gestionar las nuevas funcionalidades (transferencias, fichas técnicas, notificaciones).
+  - [ ] Integrar los nuevos endpoints de la API con el frontend.
 
 ## En Progreso
 

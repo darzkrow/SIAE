@@ -22,3 +22,16 @@ class ParishSerializer(serializers.ModelSerializer):
     class Meta:
         model = Parish
         fields = ['id', 'name', 'municipality']
+
+
+class UbicacionSerializer(serializers.ModelSerializer):
+    parish_nombre = serializers.CharField(source='parish.name', read_only=True)
+    acueducto_nombre = serializers.CharField(source='acueducto.nombre', read_only=True)
+
+    class Meta:
+        from .models import Ubicacion
+        model = Ubicacion
+        fields = [
+            'id', 'nombre', 'tipo', 'parish', 'parish_nombre',
+            'acueducto', 'acueducto_nombre', 'descripcion', 'activa'
+        ]

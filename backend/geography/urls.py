@@ -7,6 +7,9 @@ router.register('states', StateViewSet, basename='states')
 router.register('municipalities', MunicipalityViewSet, basename='municipalities')
 router.register('parishes', ParishViewSet, basename='parishes')
 
+from .views import UbicacionViewSet
+router.register('ubicaciones', UbicacionViewSet, basename='ubicaciones')
+
 urlpatterns = [
     path('', include(router.urls)),
 ]

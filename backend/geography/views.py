@@ -20,3 +20,14 @@ class ParishViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Parish.objects.select_related('municipality__state').all()
     serializer_class = ParishSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class UbicacionViewSet(viewsets.ModelViewSet):
+    from .models import Ubicacion
+    from .serializers import UbicacionSerializer
+    
+    queryset = Ubicacion.objects.select_related('parish', 'acueducto').all()
+    serializer_class = UbicacionSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filterset_fields = ['tipo', 'activa', 'acueducto']
+    search_fields = ['nombre', 'descripcion']
