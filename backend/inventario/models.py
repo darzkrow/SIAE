@@ -930,7 +930,7 @@ class InventoryAudit(models.Model):
 class MovimientoInventario(SoftDeleteModel):
     T_ENTRADA = 'ENTRADA'
     T_SALIDA = 'SALIDA'
-    T_TRANSFER = 'TRANSFERENCIA'
+    T_TRANSFER = 'TRANSFER'
     T_AJUSTE = 'AJUSTE'
 
     TIPO_CHOICES = [

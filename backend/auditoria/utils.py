@@ -9,6 +9,10 @@ def log_action(instance, action, changes=None):
     request_data = get_current_request_data()
     user = request_data.get('user')
     
+    # Fallback si no hay usuario en local thread (ej: tests or system actions)
+    if not user and hasattr(instance, 'creado_por'):
+        user = instance.creado_por
+
     # Solo loguear si el usuario está autenticado (o si queremos loguear acciones del sistema)
     if user and not user.is_authenticated:
         user = None
