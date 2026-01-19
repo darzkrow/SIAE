@@ -14,8 +14,8 @@ export default function Catalogo() {
           InventoryService.categories.getAll(),
           InventoryService.marcas.getAll(),
         ]);
-        setCategorias(catRes.data || []);
-        setMarcas(marRes.data || []);
+        setCategorias(Array.isArray(catRes.data) ? catRes.data : (catRes.data?.results || []));
+        setMarcas(Array.isArray(marRes.data) ? marRes.data : (marRes.data?.results || []));
       } catch (e) {
         setError('No se pudo cargar el catálogo');
       } finally {

@@ -7,6 +7,7 @@ export default function PumpForm({ categorias = [], units = [], suppliers = [], 
     tipo_equipo: 'BOMBA_CENTRIFUGA', marca: '', modelo: '', numero_serie: '',
     potencia_hp: 0, voltaje: 110, fases: 'MONOFASICO'
   });
+  const [pumpCategory, setPumpCategory] = useState(null);
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length) {
@@ -28,6 +29,18 @@ export default function PumpForm({ categorias = [], units = [], suppliers = [], 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [units]);
+
+  // Lock category to 'Bombas y Motores' (codigo = 'BOM')
+  useEffect(() => {
+    if (Array.isArray(categorias) && categorias.length > 0) {
+      const bom = categorias.find(c => c.codigo === 'BOM');
+      if (bom) {
+        setPumpCategory(bom);
+        setData(prev => ({ ...prev, categoria: bom.id }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categorias]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -54,10 +67,18 @@ export default function PumpForm({ categorias = [], units = [], suppliers = [], 
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Categoría *</label>
-          <select name="categoria" value={data.categoria} onChange={handleChange} className="w-full border p-2 rounded" required>
-            <option value="">Seleccionar...</option>
-            {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          {pumpCategory ? (
+            <div>
+              <select name="categoria" value={pumpCategory.id} disabled className="w-full border p-2 rounded bg-gray-100 text-gray-600">
+                <option value={pumpCategory.id}>{pumpCategory.nombre}</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Fijada por tipo: Bombas y Motores</p>
+            </div>
+          ) : (
+            <select name="categoria" value={data.categoria} disabled className="w-full border p-2 rounded bg-gray-100 text-gray-600">
+              <option value="">Cargando categoría...</option>
+            </select>
+          )}
         </div>
         {/* Unidad se selecciona automáticamente como 'UNIDAD'; se oculta en el formulario */}
         <div>

@@ -10,9 +10,14 @@ export default function Auditoria() {
     const load = async () => {
       try {
         const res = await InventoryService.auditoria.logs();
-        setLogs(res.data || []);
+        const arr = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        setLogs(arr);
       } catch (e) {
-        setError('No se pudo cargar los logs de auditoría');
+        if (e.response?.status === 403) {
+          setError('No autorizado: requiere permisos de administrador');
+        } else {
+          setError('No se pudo cargar los logs de auditoría');
+        }
       } finally {
         setLoading(false);
       }

@@ -18,10 +18,11 @@ export default function Geografia() {
           InventoryService.geography.parishes(),
           InventoryService.geography.ubicaciones(),
         ]);
-        setStates(sRes.data || []);
-        setMunicipalities(mRes.data || []);
-        setParishes(pRes.data || []);
-        setUbicaciones(uRes.data || []);
+        const toArr = (d) => Array.isArray(d) ? d : (d?.results || []);
+        setStates(toArr(sRes.data));
+        setMunicipalities(toArr(mRes.data));
+        setParishes(toArr(pRes.data));
+        setUbicaciones(toArr(uRes.data));
       } catch (e) {
         setError('No se pudo cargar la geografía');
       } finally {

@@ -9,9 +9,14 @@ export default function NotificacionesList() {
   const load = async () => {
     try {
       const res = await InventoryService.notificaciones.getAll();
-      setItems(res.data || []);
+      const arr = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      setItems(arr);
     } catch (e) {
-      setError('No se pudo cargar las notificaciones');
+      if (e.response?.status === 403) {
+        setError('No autorizado para ver notificaciones');
+      } else {
+        setError('No se pudo cargar las notificaciones');
+      }
     } finally {
       setLoading(false);
     }

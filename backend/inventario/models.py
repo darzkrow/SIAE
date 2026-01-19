@@ -575,6 +575,18 @@ class PumpAndMotor(ProductBase):
         ]
 
     def save(self, *args, **kwargs):
+        # Asegurar que la categoría sea 'Bombas y Motores' (código BOM)
+        try:
+            bom = CategoriaProducto.objects.filter(codigo='BOM').first()
+        except Exception:
+            bom = None
+
+        if bom is None:
+            raise ValidationError({'categoria': 'Debe existir la categoría Bombas y Motores con código BOM.'})
+
+        if (not self.categoria_id) or (self.categoria_id != bom.id):
+            self.categoria = bom
+
         # Calcular potencia en kW automáticamente
         if self.potencia_hp:
             self.potencia_kw = (self.potencia_hp * Decimal('0.7457')).quantize(Decimal('0.01'))
