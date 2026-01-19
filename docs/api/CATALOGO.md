@@ -22,3 +22,9 @@ Create category:
 $payload = @{ nombre='Nueva'; codigo='NEW'; descripcion='Demo'; activo=$true; orden=99 } | ConvertTo-Json
 Invoke-RestMethod -Headers $headers -Uri "http://localhost/api/catalog/categorias/" -Method Post -ContentType "application/json" -Body $payload
 ```
+
+Create brand:
+```powershell
+$payload = @{ nombre='DemoBrand'; descripcion='Marca de prueba'; activo=$true } | ConvertTo-Json
+Invoke-RestMethod -Headers $headers -Uri "http://localhost/api/catalog/marcas/" -Method Post -ContentType "application/json" -Body $payload
+```

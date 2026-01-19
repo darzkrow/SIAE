@@ -26,3 +26,14 @@ Create user (admin):
 $payload = @{ username='jdoe'; email='jdoe@example.com'; password='Passw0rd!'; role='OPERADOR' } | ConvertTo-Json
 Invoke-RestMethod -Headers $headers -Uri "http://localhost/api/accounts/users/" -Method Post -ContentType "application/json" -Body $payload
 ```
+
+Update user (admin):
+```powershell
+$payload = @{ first_name='John'; last_name='Doe'; is_active=$true } | ConvertTo-Json
+Invoke-RestMethod -Headers $headers -Uri "http://localhost/api/accounts/users/2/" -Method Patch -ContentType "application/json" -Body $payload
+```
+
+Delete user (admin):
+```powershell
+Invoke-RestMethod -Headers $headers -Uri "http://localhost/api/accounts/users/2/" -Method Delete
+```

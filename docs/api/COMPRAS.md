@@ -21,3 +21,14 @@ Invoke-RestMethod -Headers $h -Uri "http://localhost/api/compras/ordenes/" -Meth
 # Aprobar
 Invoke-RestMethod -Headers $h -Uri "http://localhost/api/compras/ordenes/1/aprobar/" -Method Post
 ```
+
+Crear item de orden:
+```powershell
+$payload = @{ orden=1; producto_tipo='pipe'; producto_id=1; cantidad=50; precio_unitario=12.3 } | ConvertTo-Json
+Invoke-RestMethod -Headers $h -Uri "http://localhost/api/compras/items/" -Method Post -ContentType "application/json" -Body $payload
+```
+
+Filtrar órdenes por estado:
+```powershell
+Invoke-RestMethod -Headers $h -Uri "http://localhost/api/compras/ordenes/?status=CREADA" -Method Get | ConvertTo-Json -Depth 3
+```
