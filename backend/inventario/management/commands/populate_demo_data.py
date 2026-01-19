@@ -261,9 +261,19 @@ class Command(BaseCommand):
             # Usuarios
             User = get_user_model()
             self.stdout.write('Creando usuarios de ejemplo...')
-            admin, _ = User.objects.get_or_create(username='admin', defaults={'email': 'admin@gsih.com', 'is_superuser': True, 'is_staff': True})
+            admin, _ = User.objects.get_or_create(
+                username='admin',
+                defaults={'email': 'admin@gsih.com', 'is_superuser': True, 'is_staff': True, 'role': getattr(User, 'ROLE_ADMIN', 'ADMIN')}
+            )
+            # Ensure admin has correct role and password
+            updated = False
+            if getattr(admin, 'role', None) != getattr(User, 'ROLE_ADMIN', 'ADMIN'):
+                admin.role = getattr(User, 'ROLE_ADMIN', 'ADMIN')
+                updated = True
             if not admin.password:
                 admin.set_password('admin123')
+                updated = True
+            if updated:
                 admin.save()
 
             # Operadores por sucursal

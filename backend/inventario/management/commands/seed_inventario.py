@@ -12,6 +12,11 @@ class Command(BaseCommand):
         User = get_user_model()
         if not User.objects.filter(username='admin').exists():
             User.objects.create_superuser('admin', 'admin@example.com', 'admin')
+        # Ensure admin has ADMIN role
+        admin = User.objects.get(username='admin')
+        if getattr(admin, 'role', None) != getattr(User, 'ROLE_ADMIN', 'ADMIN'):
+            admin.role = getattr(User, 'ROLE_ADMIN', 'ADMIN')
+            admin.save()
             self.stdout.write(self.style.SUCCESS('Superuser "admin" created (password: admin)'))
         else:
             self.stdout.write('Superuser "admin" already exists')
