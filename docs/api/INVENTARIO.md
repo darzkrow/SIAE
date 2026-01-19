@@ -44,6 +44,14 @@ $payload = @{ tipo_movimiento='ENTRADA'; cantidad=10; product_type='pipe'; produ
 Invoke-RestMethod -Headers $h -Uri "http://localhost/api/movimientos/" -Method Post -ContentType "application/json" -Body $payload
 ```
 
+Aprobar/Rechazar movimiento (admin):
+```powershell
+# Aprobar
+Invoke-RestMethod -Headers $h -Uri "http://localhost/api/movimientos/1/aprobar/" -Method Post
+# Rechazar
+Invoke-RestMethod -Headers $h -Uri "http://localhost/api/movimientos/1/rechazar/" -Method Post
+```
+
 Crear producto químico (mínimo):
 ```powershell
 $payload = @{ nombre='Cloro'; descripcion='Hipoclorito'; categoria=1; unidad_medida=1; proveedor=1; stock_minimo=10; stock_actual=0; precio_unitario=5.5; es_peligroso=$true; nivel_peligrosidad='ALTA' } | ConvertTo-Json
