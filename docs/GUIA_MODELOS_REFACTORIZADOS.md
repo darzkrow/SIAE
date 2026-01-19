@@ -1,5 +1,13 @@
 # 📚 Guía de Uso: Sistema de Inventario Refactorizado
 
+Esta guía refleja la arquitectura refactorizada del backend (2026). Asegúrate de crear las entidades base (catálogos) antes de instanciar productos.
+
+Prerequisitos mínimos:
+- `CategoriaProducto` (ej.: TUB, BOM, ACC, QUI)
+- `UnitOfMeasure` (ej.: m, kg, u)
+- `Supplier` (proveedor)
+- `Marca` (para `PumpAndMotor`)
+
 ## 🎯 Descripción General
 
 Sistema de inventario robusto para empresas de Agua Potable y Saneamiento, implementado con **Abstract Base Classes** para máximo rendimiento.
@@ -112,6 +120,9 @@ print(tuberia.get_diametro_display())  # "110 Milímetros (mm)"
 #### 3. **PumpAndMotor** (Bombas y Motores)
 
 ```python
+from catalogo.models import Marca
+marca_pedrollo = Marca.objects.create(nombre='Pedrollo')
+
 bomba = PumpAndMotor.objects.create(
     nombre='Bomba Centrífuga 5HP',
     descripcion='Bomba para sistema de distribución',
@@ -124,7 +135,7 @@ bomba = PumpAndMotor.objects.create(
     
     # Campos específicos
     tipo_equipo='BOMBA_CENTRIFUGA',
-    marca='Pedrollo',
+    marca=marca_pedrollo,
     modelo='CPm-200',
     numero_serie='PED-2024-12345',
     
@@ -195,15 +206,22 @@ print(codo.get_dimension_display())  # "2 Pulgadas"
 
 ### Modelos de Stock
 
+Antes de crear stock, define una `Ubicacion` (app `geography`):
+```python
+from geography.models import Ubicacion
+ubicacion_principal = Ubicacion.objects.create(
+    nombre='Almacén Central', acueducto=acueducto_central, tipo='ALMACEN'
+)
+```
+
 #### StockChemical
 ```python
 stock_cloro = StockChemical.objects.create(
     producto=cloro,
-    acueducto=acueducto_central,
-    cantidad=Decimal('250.00'),
+    ubicacion=ubicacion_principal,
+    cantidad=Decimal('250.000'),
     lote='LOTE-2024-001',
-    fecha_vencimiento='2025-12-31',
-    ubicacion_fisica='Almacén A - Estante 3'
+    fecha_vencimiento='2025-12-31'
 )
 ```
 
@@ -211,9 +229,8 @@ stock_cloro = StockChemical.objects.create(
 ```python
 stock_tuberia = StockPipe.objects.create(
     producto=tuberia,
-    acueducto=acueducto_norte,
-    cantidad=Decimal('50'),  # 50 tubos
-    ubicacion_fisica='Patio de Tuberías - Zona B'
+    ubicacion=ubicacion_principal,
+    cantidad=Decimal('50.000')  # 50 tubos
 )
 # metros_totales se calcula automáticamente: 50 * 6.0 = 300m
 print(stock_tuberia.metros_totales)  # 300.00
@@ -223,10 +240,9 @@ print(stock_tuberia.metros_totales)  # 300.00
 ```python
 stock_bomba = StockPumpAndMotor.objects.create(
     producto=bomba,
-    acueducto=acueducto_central,
+    ubicacion=ubicacion_principal,
     cantidad=2,
-    estado_operativo='OPERATIVO',
-    ubicacion_fisica='Estación de Bombeo Principal'
+    estado_operativo='OPERATIVO'
 )
 ```
 
@@ -234,11 +250,40 @@ stock_bomba = StockPumpAndMotor.objects.create(
 ```python
 stock_valvula = StockAccessory.objects.create(
     producto=valvula,
-    acueducto=acueducto_sur,
-    cantidad=Decimal('4'),
-    ubicacion_fisica='Almacén B - Estante 5'
+    ubicacion=ubicacion_principal,
+    cantidad=Decimal('4.000')
 )
 ```
+
+---
+
+---
+
+## 📋 Valores válidos (choices)
+
+### Pipe
+- Material: PVC, PEAD, ACERO, HIERRO_DUCTIL, CEMENTO, COBRE, OTRO
+- UnidadDiametro: PULGADAS, MM
+- PresionNominal: PN6, PN10, PN16, PN20, PN25, SDR11, SDR17, SDR21, SDR26, SDR41
+- TipoUnion: SOLDABLE, ROSCADA, BRIDADA, CAMPANA, FUSION
+- TipoUso: POTABLE, SERVIDAS, RIEGO, PLUVIAL, INDUSTRIAL
+
+### PumpAndMotor
+- TipoEquipo: BOMBA_CENTRIFUGA, BOMBA_SUMERGIBLE, BOMBA_PERIFERICA, BOMBA_TURBINA, MOTOR_ELECTRICO, VARIADOR
+- Fases: MONOFASICO, TRIFASICO
+- unidad_caudal: L/S, M3/H
+
+### Accessory
+- TipoAccesorio: VALVULA, CODO, TEE, REDUCCION, TAPON, BRIDA, UNION, COLLAR, ADAPTADOR
+- SubtipoValvula: BOLA, COMPUERTA, RETENCION, MARIPOSA, GLOBO, ALIVIO, FLOTADOR
+- TipoConexion: BRIDADA, ROSCADA, SOLDABLE, CAMPANA, RAPIDA
+- unidad_diametro: PULGADAS, MM
+- presion_trabajo: PN6, PN10, PN16, PN20, PN25, 150LB, 300LB
+
+### ChemicalProduct
+- NivelPeligrosidad: BAJO, MEDIO, ALTO, MUY_ALTO
+- TipoPresentacion: SACO, TAMBOR, GRANEL, GALON, CILINDRO, OTRO
+- UnidadConcentracion: PORCENTAJE, G_L, MG_L, PPM
 
 ---
 

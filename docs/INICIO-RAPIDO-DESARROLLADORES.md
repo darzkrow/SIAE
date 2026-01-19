@@ -9,10 +9,10 @@
 ## ⚡ 5 MINUTOS PARA EMPEZAR
 
 ### 1. Clonar y Configurar
-```bash
+```powershell
 git clone <repo-url>
 cd proyecto-inventario
-docker-compose up --build
+docker compose up --build
 ```
 
 ### 2. Acceder a la Aplicación
@@ -66,27 +66,27 @@ proyecto-inventario/
 ## 🔧 COMANDOS ESENCIALES
 
 ### Docker
-```bash
+```powershell
 # Iniciar proyecto
-docker-compose up
+docker compose up
 
 # Iniciar en background
-docker-compose up -d
+docker compose up -d
 
 # Ver logs
-docker-compose logs -f
+docker compose logs -f
 
 # Detener
-docker-compose down
+docker compose down
 
 # Reconstruir
-docker-compose up --build
+docker compose up --build
 ```
 
 ### Backend
-```bash
+```powershell
 # Entrar al contenedor
-docker-compose exec backend bash
+docker compose exec backend bash
 
 # Hacer migraciones
 python manage.py makemigrations
@@ -103,9 +103,9 @@ python manage.py seed_inventario
 ```
 
 ### Frontend
-```bash
+```powershell
 # Entrar al contenedor
-docker-compose exec frontend bash
+docker compose exec frontend bash
 
 # Instalar dependencias
 npm install
@@ -171,7 +171,7 @@ GET    /api/audits/                # Ver auditoría
 ## 🚀 FLUJO DE DESARROLLO
 
 ### 1. Crear una Rama
-```bash
+```powershell
 git checkout -b feature/nombre-feature
 ```
 
@@ -182,14 +182,15 @@ git checkout -b feature/nombre-feature
 ### 3. Probar Cambios
 ```bash
 # Backend
-docker-compose exec backend python manage.py test
+docker compose exec backend python manage.py test inventario
+docker compose exec backend python manage.py test inventario geography institucion catalogo compras
 
 # Frontend
 docker-compose exec frontend npm run test
 ```
 
 ### 4. Hacer Commit
-```bash
+```powershell
 git add .
 git commit -m "Descripción clara del cambio"
 ```
@@ -207,26 +208,26 @@ git push origin feature/nombre-feature
 ### El proyecto no inicia
 ```bash
 # Limpiar y reconstruir
-docker-compose down
-docker-compose up --build
+docker compose down
+docker compose up --build
 ```
 
 ### Error de base de datos
 ```bash
 # Hacer migraciones
-docker-compose exec backend python manage.py migrate
+docker compose exec backend python manage.py migrate
 ```
 
 ### Frontend no carga
 ```bash
 # Instalar dependencias
-docker-compose exec frontend npm install
+docker compose exec frontend npm install
 ```
 
 ### Ver logs detallados
 ```bash
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
 
 ---

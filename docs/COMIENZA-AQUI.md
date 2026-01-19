@@ -1,4 +1,4 @@
-# 🚀 COMIENZA AQUÍ - Proyecto GSIH Inventario
+# 🚀 COMIENZA AQUÍ (Deprecado)
 
 **Fecha**: 8 de Enero de 2026  
 **Status**: ✅ 95% COMPLETADO - LISTO PARA PRODUCCIÓN  

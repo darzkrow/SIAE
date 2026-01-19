@@ -10,15 +10,24 @@
 
 La documentación del proyecto está organizada en dos directorios principales:
 
-- **`docs/`** - Documentación general y resúmenes
-- **`docs-tecnico/`** - Documentación técnica detallada
+- **`docs/`** - Documentación general, arquitectura y guías
+- **`docs-tecnico/`** - Documentación técnica detallada (API, validaciones)
 
 ---
 
 ## 🎯 DOCUMENTOS PRINCIPALES (LEER PRIMERO)
 
 ### 1. Estado Actual del Proyecto
-- **`docs/PROYECTO-COMPLETADO-95-PORCIENTO.md`** ⭐ LEER PRIMERO
+- **`docs/ARQUITECTURA-BACKEND.md`** ⭐ LEER PRIMERO
+  - Visión general de la refactorización 2026
+  - Apps y responsabilidades
+  - Modelos, stocks y movimientos
+  - Auditoría e integración con compras/geografía
+
+- **`docs/PRUEBAS-E-INTEGRACION.md`** ⭐ LEER SEGUNDO
+  - Estrategia de pruebas unitarias e integración
+  - Cómo ejecutar pruebas por app/conjunto
+  - Cobertura actual y próximos pasos
   - Resumen ejecutivo del proyecto
   - Progreso por fase
   - Funcionalidades implementadas
@@ -54,12 +63,13 @@ La documentación del proyecto está organizada en dos directorios principales:
 | Tareas Pendientes Finales | Lista completa de tareas pendientes | `docs/TAREAS-PENDIENTES-FINALES.md` |
 | Resumen Trabajo Completado | Resumen de todo el trabajo realizado | `docs/RESUMEN-TRABAJO-COMPLETADO.md` |
 
-### Guías de Ejecución
+### Guías de Ejecución y Desarrollo
 
 | Documento | Descripción | Ubicación |
 |-----------|-------------|-----------|
 | Guía Rápida Final | Comandos y pasos esenciales | `docs/GUIA-RAPIDA-FINAL.md` |
 | Guía de Ejecución | Cómo ejecutar el proyecto | `docs/03-GUIA-EJECUCION.md` |
+| Inicio Rápido Desarrolladores | Arranque backend/frontend y pruebas | `docs/INICIO-RAPIDO-DESARROLLADORES.md` |
 | Índice Rápido | Referencia rápida de documentos | `docs/INDICE-RAPIDO.md` |
 | Referencia Rápida Endpoints | Lista de endpoints disponibles | `docs/REFERENCIA-RAPIDA-ENDPOINTS.md` |
 
@@ -82,6 +92,8 @@ La documentación del proyecto está organizada en dos directorios principales:
 | Sistema de Aprobaciones | Especificación de Fase 4 - Aprobaciones | `docs-tecnico/SISTEMA-APROBACIONES.md` |
 | Integración Sistemas Externos | Especificación de Fase 4 - Integraciones | `docs-tecnico/INTEGRACION-SISTEMAS-EXTERNOS.md` |
 | Swagger/OpenAPI | Documentación de API con Swagger | `docs-tecnico/SWAGGER-OPENAPI.md` |
+| Modelos Refactorizados | Detalle de modelos y proxies | `docs/GUIA_MODELOS_REFACTORIZADOS.md` |
+| Guía de Migración | Mapas de nombres legacy y cambios | `docs/GUIA_MIGRACION.md` |
 | Tareas Proyecto Inventario | Lista completa de tareas del proyecto | `docs-tecnico/TAREAS_PROYECTO_INVENTARIO.md` |
 | Tareas Completadas Resumen | Resumen de tareas completadas | `docs-tecnico/TAREAS-COMPLETADAS-RESUMEN.md` |
 

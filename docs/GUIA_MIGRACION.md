@@ -1,4 +1,4 @@
-# 🔄 Guía de Migración: Sistema Antiguo → Sistema Refactorizado
+# 🔄 Guía de Migración: Sistema Antiguo → Sistema Refactorizado (2026)
 
 ## 📋 Resumen de Cambios
 
@@ -18,7 +18,18 @@
 
 ---
 
-## 🚀 Pasos de Migración
+## 🚀 Estrategia de Migración
+
+Para maximizar compatibilidad y reducir riesgo, la refactorización incluye proxies que aceptan nombres legacy sin duplicar tablas:
+
+Proxies disponibles:
+- `Categoria` → `CategoriaProducto`
+- `Tuberia` → `Pipe` (acepta `acueducto` y mapea a `Ubicacion` ALMACEN por defecto)
+- `Equipo` → `PumpAndMotor`
+- `StockTuberia` → `StockPipe`
+- `StockEquipo` → `StockPumpAndMotor`
+
+Esto permite que código antiguo continúe funcionando mientras se migra gradualmente.
 
 ### Fase 1: Preparación (Sin downtime)
 
@@ -31,12 +42,9 @@ pg_dump -U gsih_user -d gsih_inventario > backup_pre_migration.sql
 docker-compose exec db pg_dump -U gsih_user gsih_inventario > backup_pre_migration.sql
 ```
 
-#### 1.2 Renombrar models.py Original
-```bash
-cd inventario
-mv models.py models_legacy.py
-cp models_refactored_consolidated.py models.py
-```
+#### 1.2 Activar proxies y revisar dependencias
+- Verifica importaciones legacy y ajusta a proxies donde sea necesario.
+- Revisa restricciones de claves foráneas (ej. `Marca` requerida en `PumpAndMotor`).
 
 #### 1.3 Crear Migraciones
 ```bash
@@ -50,7 +58,7 @@ python manage.py makemigrations inventario
 
 #### 2.1 Crear Datos Auxiliares
 
-**Script**: `create_initial_data.py`
+**Script sugerido**: `create_initial_data.py`
 
 ```python
 from inventario.models import Category, UnitOfMeasure, Supplier
@@ -142,11 +150,17 @@ for tuberia_old in TuberiaLegacy.objects.all():
     
     # Migrar stocks
     for stock_old in StockTuberiaLegacy.objects.filter(tuberia=tuberia_old):
+        # Mapear acueducto a Ubicacion (ALMACEN) por defecto
+        from geography.models import Ubicacion
+        ubicacion, _ = Ubicacion.objects.get_or_create(
+            acueducto=stock_old.acueducto,
+            tipo=Ubicacion.TipoUbicacion.ALMACEN,
+            defaults={'nombre': f'Almacén General {stock_old.acueducto.nombre}'}
+        )
         stock_new = StockPipe.objects.create(
             producto=pipe_new,
-            acueducto=stock_old.acueducto,
-            cantidad=stock_old.cantidad,
-            ubicacion_fisica='Migrado desde sistema antiguo'
+            ubicacion=ubicacion,
+            cantidad=stock_old.cantidad
         )
         print(f"  Stock migrado: {stock_new.cantidad} en {stock_old.acueducto}")
 
@@ -192,12 +206,18 @@ for equipo_old in EquipoLegacy.objects.all():
     
     # Migrar stocks
     for stock_old in StockEquipoLegacy.objects.filter(equipo=equipo_old):
+        # Mapear acueducto a Ubicacion (ALMACEN)
+        from geography.models import Ubicacion
+        ubicacion, _ = Ubicacion.objects.get_or_create(
+            acueducto=stock_old.acueducto,
+            tipo=Ubicacion.TipoUbicacion.ALMACEN,
+            defaults={'nombre': f'Almacén General {stock_old.acueducto.nombre}'}
+        )
         stock_new = StockPumpAndMotor.objects.create(
             producto=pump_new,
-            acueducto=stock_old.acueducto,
+            ubicacion=ubicacion,
             cantidad=int(stock_old.cantidad),
-            estado_operativo='OPERATIVO',
-            ubicacion_fisica='Migrado desde sistema antiguo'
+            estado_operativo='OPERATIVO'
         )
 
 print(f"\nTotal equipos migrados: {PumpAndMotor.objects.count()}")
