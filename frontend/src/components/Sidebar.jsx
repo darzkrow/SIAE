@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Package, Droplets, Activity, BarChart3, AlertCircle, Users, Settings, LogOut } from 'lucide-react';
+import {
+    Menu,
+    X,
+    Home,
+    Package,
+    Droplets,
+    Activity,
+    BarChart3,
+    AlertCircle,
+    Users,
+    Settings,
+    LogOut,
+    BookOpen,
+    MapPin,
+    Bell,
+    Shield
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ children }) {
@@ -8,32 +24,77 @@ export default function Sidebar({ children }) {
     const location = useLocation();
     const { user, logout } = useAuth();
 
-    const menuItems = [
-        { path: '/', label: 'Dashboard', icon: Home },
-        { path: '/movimientos', label: 'Movimientos', icon: Package },
-        { path: '/stock', label: 'Stock', icon: Droplets },
-        { path: '/articulos', label: 'Artículos', icon: Activity },
-        { path: '/compras', label: 'Compras', icon: Package },
-        { path: '/alertas', label: 'Alertas', icon: AlertCircle },
-        { path: '/reportes', label: 'Reportes', icon: BarChart3 },
+    const sections = [
+        {
+            title: 'General',
+            items: [
+                { path: '/', label: 'Dashboard', icon: Home },
+                { path: '/reportes', label: 'Reportes', icon: BarChart3 },
+            ],
+        },
+        {
+            title: 'Inventario',
+            items: [
+                { path: '/movimientos', label: 'Movimientos', icon: Package },
+                { path: '/stock', label: 'Stock', icon: Droplets },
+                { path: '/articulos', label: 'Artículos', icon: Activity },
+            ],
+        },
+        {
+            title: 'Compras',
+            items: [
+                { path: '/compras', label: 'Órdenes de compra', icon: Package },
+            ],
+        },
+        {
+            title: 'Catálogo',
+            items: [
+                { path: '/catalogo', label: 'Catálogo', icon: BookOpen },
+            ],
+        },
+        {
+            title: 'Geografía',
+            items: [
+                { path: '/geografia', label: 'Geografía', icon: MapPin },
+            ],
+        },
+        {
+            title: 'Notificaciones',
+            items: [
+                { path: '/alertas', label: 'Alertas', icon: AlertCircle },
+                { path: '/notificaciones', label: 'Notificaciones', icon: Bell },
+            ],
+        },
+        {
+            title: 'Auditoría',
+            items: [
+                { path: '/auditoria', label: 'Logs', icon: Shield },
+            ],
+        },
     ];
 
     // Solo mostrar opciones admin si es admin
-    const adminItems = user?.is_admin ? [
-        { path: '/usuarios', label: 'Usuarios', icon: Users },
-        { path: '/administracion', label: 'Administración', icon: Settings }
-    ] : [];
-    const allMenuItems = [...menuItems, ...adminItems];
+    if (user?.is_admin) {
+        sections.push({
+            title: 'Administración',
+            items: [
+                { path: '/usuarios', label: 'Usuarios', icon: Users },
+                { path: '/administracion', label: 'Administración', icon: Settings },
+            ],
+        });
+    }
+
+    const allMenuItems = sections.flatMap(s => s.items);
 
     const isActive = (path) => location.pathname === path;
 
     return (
         <div className="flex h-screen bg-gray-100">
             {/* Sidebar */}
-            <div className={`${isOpen ? 'w-64' : 'w-20'} bg-gray-900 text-white transition-all duration-300 flex flex-col fixed h-screen z-50`}>
+            <div className={`${isOpen ? 'w-72' : 'w-20'} bg-gray-900 text-white transition-all duration-300 flex flex-col fixed h-screen z-50`}>
                 {/* Header */}
                 <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-                    {isOpen && <h1 className="text-xl font-bold">GSIH</h1>}
+                    {isOpen && <h1 className="text-xl font-bold tracking-wide">GSIH</h1>}
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="p-2 hover:bg-gray-800 rounded-lg transition"
@@ -43,25 +104,35 @@ export default function Sidebar({ children }) {
                 </div>
 
                 {/* Menu Items */}
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                    {allMenuItems.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                            <Link
-                                key={item.path}
-                                to={item.path}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                                    isActive(item.path)
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-300 hover:bg-gray-800'
-                                }`}
-                                title={!isOpen ? item.label : ''}
-                            >
-                                <Icon size={20} />
-                                {isOpen && <span>{item.label}</span>}
-                            </Link>
-                        );
-                    })}
+                <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+                    {sections.map((section) => (
+                        <div key={section.title}>
+                            {isOpen && (
+                                <div className="px-3 mb-2 text-xs uppercase tracking-wider text-gray-400">
+                                    {section.title}
+                                </div>
+                            )}
+                            <div className="space-y-1">
+                                {section.items.map((item) => {
+                                    const Icon = item.icon;
+                                    const active = isActive(item.path);
+                                    return (
+                                        <Link
+                                            key={item.path}
+                                            to={item.path}
+                                            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                                                active ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-300 hover:bg-gray-800'
+                                            }`}
+                                            title={!isOpen ? item.label : ''}
+                                        >
+                                            <Icon size={18} />
+                                            {isOpen && <span className="text-sm">{item.label}</span>}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </nav>
 
                 {/* User Info */}
@@ -85,7 +156,7 @@ export default function Sidebar({ children }) {
             </div>
 
             {/* Main Content */}
-            <div className={`${isOpen ? 'ml-64' : 'ml-20'} flex-1 flex flex-col transition-all duration-300`}>
+            <div className={`${isOpen ? 'ml-72' : 'ml-20'} flex-1 flex flex-col transition-all duration-300`}>
                 {/* Top Bar */}
                 <div className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-gray-800">

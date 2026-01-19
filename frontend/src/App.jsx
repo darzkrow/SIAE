@@ -17,6 +17,10 @@ const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Administracion = lazy(() => import('./pages/Administracion'))
 const Compras = lazy(() => import('./pages/Compras'))
 const OrdenDetalle = lazy(() => import('./pages/OrdenDetalle'))
+const Catalogo = lazy(() => import('./pages/Catalogo'))
+const Geografia = lazy(() => import('./pages/Geografia'))
+const Auditoria = lazy(() => import('./pages/Auditoria'))
+const NotificacionesList = lazy(() => import('./pages/NotificacionesList'))
 
 // Error pages
 import { Error400, Error401, Error403, Error404, Error500 } from './pages/ErrorPage'
@@ -93,6 +97,28 @@ function App() {
                         <Route path="/compras/orden/:id" element={
                             <ProtectedRoute>
                                 <OrdenDetalle />
+                            </ProtectedRoute>
+                        } />
+
+                        {/* Nuevas secciones */}
+                        <Route path="/catalogo" element={
+                            <ProtectedRoute>
+                                <Catalogo />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/geografia" element={
+                            <ProtectedRoute>
+                                <Geografia />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/auditoria" element={
+                            <ProtectedRoute>
+                                <Auditoria />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/notificaciones" element={
+                            <ProtectedRoute>
+                                <NotificacionesList />
                             </ProtectedRoute>
                         } />
 
