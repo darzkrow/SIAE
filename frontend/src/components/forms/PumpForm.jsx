@@ -14,12 +14,20 @@ export default function PumpForm({ categorias = [], units = [], suppliers = [], 
         ...prev,
         ...initialData,
         categoria: initialData.categoria?.id || initialData.categoria || '',
-        unidad_medida: initialData.unidad_medida?.id || initialData.unidad_medida || '',
         proveedor: initialData.proveedor?.id || initialData.proveedor || '',
         marca: initialData.marca?.id || initialData.marca || ''
       }));
     }
   }, [initialData]);
+
+  // Auto-select a sensible default unit (UNIDAD) for pumps/motors
+  useEffect(() => {
+    if (!data.unidad_medida && Array.isArray(units) && units.length > 0) {
+      const unidad = units.find(u => (u.tipo === 'UNIDAD') || /unidad/i.test(u.nombre));
+      setData(prev => ({ ...prev, unidad_medida: (unidad?.id ?? units[0].id) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [units]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,13 +59,7 @@ export default function PumpForm({ categorias = [], units = [], suppliers = [], 
             {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Unidad *</label>
-          <select name="unidad_medida" value={data.unidad_medida} onChange={handleChange} className="w-full border p-2 rounded" required>
-            <option value="">Seleccionar...</option>
-            {units.map(u => <option key={u.id} value={u.id}>{u.nombre} ({u.simbolo})</option>)}
-          </select>
-        </div>
+        {/* Unidad se selecciona automáticamente como 'UNIDAD'; se oculta en el formulario */}
         <div>
           <label className="block text-sm font-medium mb-1">Proveedor *</label>
           <select name="proveedor" value={data.proveedor} onChange={handleChange} className="w-full border p-2 rounded" required>
