@@ -209,7 +209,7 @@ export default function Alertas() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Gestión de Alertas</h1>
-                {user?.role === 'ADMIN' && (
+                {user?.is_admin && (
                     <button
                         onClick={() => setShowForm(!showForm)}
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
@@ -219,7 +219,7 @@ export default function Alertas() {
                 )}
             </div>
 
-            {showForm && user?.role === 'ADMIN' && (
+            {showForm && user?.is_admin && (
                 <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                     <h2 className="text-xl font-bold mb-4">
                         {editingId ? 'Editar Alerta' : 'Crear Nueva Alerta'}
@@ -369,7 +369,7 @@ export default function Alertas() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acueducto</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Minimo</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                                {user?.role === 'ADMIN' && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>}
+                                {user?.is_admin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -390,7 +390,7 @@ export default function Alertas() {
                                                 {alerta.activo ? 'Activa' : 'Inactiva'}
                                             </span>
                                         </td>
-                                        {user?.role === 'ADMIN' && (
+                                        {user?.is_admin && (
                                             <td className="px-6 py-4 text-sm flex gap-2">
                                                 <button onClick={() => handleDelete(alerta.id)} className="text-red-600 hover:text-red-900">
                                                     <Trash2 size={18} />

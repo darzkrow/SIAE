@@ -1,36 +1,40 @@
 import axios from 'axios';
-import { API_BASE_URL, API_PREFIX } from '../config';
+import { getApiUrl } from '../config';
 
-// Limpiar la URL base y asegurar que el prefijo se asigne correctamente
-const getBaseURL = () => {
-    let base = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
-    let prefix = API_PREFIX.startsWith('/') ? API_PREFIX : `/${API_PREFIX}`;
-
-    // Evitar duplicación si la base ya tiene el prefijo (caso común en despliegues)
-    if (base.endsWith(prefix)) {
-        return `${base}/`;
-    }
-
-    return `${base}${prefix}/`;
-};
-
+// Instancia centralizada de Axios
+// Todas las llamadas al backend pasan por aquí
 const api = axios.create({
-    baseURL: getBaseURL(),
+    baseURL: getApiUrl(), // Utiliza la URL centralizada (punto único de modificación)
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Interceptor para agregar token (si existe)
+// Interceptor para inyectar el token de autenticación
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token'); // Ajustar según donde se guarde el token
+        const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Token ${token}`;
         }
         return config;
     },
-    (error) => Promise.reject(error)
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Interceptor para manejar errores globales (ej: 401 Unauthorized)
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Opcional: Redirigir al login o limpiar sesión
+            // localStorage.removeItem('token');
+            // window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
 );
 
 export default api;

@@ -36,7 +36,11 @@ export const InventoryService = {
 
     // === AUXILIARES ===
     categories: {
-        getAll: () => api.get('categories/'),
+        // Catalogo app
+        getAll: () => api.get('catalog/categorias/'),
+    },
+    marcas: {
+        getAll: () => api.get('catalog/marcas/'),
     },
     units: {
         getAll: () => api.get('units/'),
@@ -96,15 +100,47 @@ export const InventoryService = {
     },
     // Alertas
     alertas: {
-        getAll: () => api.get('alertas/'),
-        create: (data) => api.post('alertas/', data),
-        update: (id, data) => api.put(`alertas/${id}/`, data),
-        delete: (id) => api.delete(`alertas/${id}/`),
+        // Notificaciones app
+        getAll: () => api.get('notificaciones/alertas/'),
+        create: (data) => api.post('notificaciones/alertas/', data),
+        update: (id, data) => api.put(`notificaciones/alertas/${id}/`, data),
+        delete: (id) => api.delete(`notificaciones/alertas/${id}/`),
     },
 
     // Notificaciones
     notificaciones: {
-        getAll: () => api.get('notificaciones/'),
-        markAsRead: (id) => api.patch(`notificaciones/${id}/`, { leida: true }),
-    }
+        getAll: () => api.get('notificaciones/notificaciones/'),
+        markAsRead: (id) => api.patch(`notificaciones/notificaciones/${id}/`, { leida: true }),
+    },
+
+    // === GEOGRAFÍA ===
+    geography: {
+        states: () => api.get('geography/states/'),
+        municipalities: () => api.get('geography/municipalities/'),
+        parishes: () => api.get('geography/parishes/'),
+        ubicaciones: () => api.get('geography/ubicaciones/'),
+    },
+
+    // === COMPRAS ===
+    compras: {
+        ordenes: {
+            getAll: () => api.get('compras/ordenes/'),
+            getById: (id) => api.get(`compras/ordenes/${id}/`),
+            create: (data) => api.post('compras/ordenes/', data),
+            update: (id, data) => api.put(`compras/ordenes/${id}/`, data),
+            delete: (id) => api.delete(`compras/ordenes/${id}/`),
+        },
+        items: {
+            getAll: () => api.get('compras/items/'),
+            getById: (id) => api.get(`compras/items/${id}/`),
+            create: (data) => api.post('compras/items/', data),
+            update: (id, data) => api.put(`compras/items/${id}/`, data),
+            delete: (id) => api.delete(`compras/items/${id}/`),
+        },
+    },
+
+    // === AUDITORÍA ===
+    auditoria: {
+        logs: () => api.get('auditoria/logs/'),
+    },
 };

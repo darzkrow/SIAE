@@ -1,0 +1,209 @@
+[
+    {
+        "model": "institucion.organizacioncentral",
+        "pk": 1,
+        "fields": {
+            "nombre": "Ministerio del Poder Popular de Atención de las Aguas (MINAGUAS)",
+            "rif": "G-20012345-0",
+            "parent": null
+        }
+    },
+    {
+        "model": "institucion.organizacioncentral",
+        "pk": 2,
+        "fields": {
+            "nombre": "FONAGUAS",
+            "rif": "G-20054321-0",
+            "parent": 1
+        }
+    },
+    {
+        "model": "institucion.organizacioncentral",
+        "pk": 3,
+        "fields": {
+            "nombre": "HIDROVEN (Casa Matriz)",
+            "rif": "G-20067890-1",
+            "parent": 1
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 1,
+        "fields": {
+            "nombre": "Hidrocapital",
+            "organizacion_central": 3,
+            "codigo": "CAPITAL",
+            "direccion": "Distrito Capital, Miranda y La Guaira"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 2,
+        "fields": {
+            "nombre": "Hidroandes",
+            "organizacion_central": 3,
+            "codigo": "ANDES",
+            "direccion": "Barinas y Trujillo"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 3,
+        "fields": {
+            "nombre": "Hidrocentro",
+            "organizacion_central": 3,
+            "codigo": "CENTRO",
+            "direccion": "Aragua, Carabobo y Cojedes"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 4,
+        "fields": {
+            "nombre": "Hidrocaribe",
+            "organizacion_central": 3,
+            "codigo": "CARIBE",
+            "direccion": "Anzoátegui, Nueva Esparta y Sucre"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 5,
+        "fields": {
+            "nombre": "Hidrolago",
+            "organizacion_central": 3,
+            "codigo": "LAGO",
+            "direccion": "Zulia"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 6,
+        "fields": {
+            "nombre": "Hidrofalcón",
+            "organizacion_central": 3,
+            "codigo": "FALCON",
+            "direccion": "Falcón"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 7,
+        "fields": {
+            "nombre": "Hidrosuroeste",
+            "organizacion_central": 3,
+            "codigo": "SUROESTE",
+            "direccion": "Táchira"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 8,
+        "fields": {
+            "nombre": "Hidropáez",
+            "organizacion_central": 3,
+            "codigo": "PAEZ",
+            "direccion": "Guárico"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 9,
+        "fields": {
+            "nombre": "Hidrollanos",
+            "organizacion_central": 3,
+            "codigo": "LLANOS",
+            "direccion": "Apure"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 10,
+        "fields": {
+            "nombre": "Hidrolara",
+            "organizacion_central": 3,
+            "codigo": "LARA",
+            "direccion": "Lara"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 11,
+        "fields": {
+            "nombre": "Hidrobolívar",
+            "organizacion_central": 3,
+            "codigo": "BOLIVAR",
+            "direccion": "Bolívar"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 12,
+        "fields": {
+            "nombre": "Hidrodelta",
+            "organizacion_central": 3,
+            "codigo": "DELTA",
+            "direccion": "Delta Amacuro"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 13,
+        "fields": {
+            "nombre": "Hidroamazonas",
+            "organizacion_central": 3,
+            "codigo": "AMAZONAS",
+            "direccion": "Amazonas"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 14,
+        "fields": {
+            "nombre": "Aguas de Mérida",
+            "organizacion_central": 3,
+            "codigo": "MERIDA",
+            "direccion": "Mérida"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 15,
+        "fields": {
+            "nombre": "Aguas de Monagas",
+            "organizacion_central": 3,
+            "codigo": "MONAGAS",
+            "direccion": "Monagas"
+        }
+    },
+    {
+        "model": "institucion.sucursal",
+        "pk": 16,
+        "fields": {
+            "nombre": "Aguas de Yaracuy",
+            "organizacion_central": 3,
+            "codigo": "YARACUY",
+            "direccion": "Yaracuy"
+        }
+    },
+    {
+        "model": "institucion.acueducto",
+        "pk": 1,
+        "fields": {
+            "nombre": "Acueducto Metropolitano",
+            "sucursal": 1,
+            "codigo": "METRO",
+            "ubicacion": "Caracas"
+        }
+    },
+    {
+        "model": "institucion.acueducto",
+        "pk": 2,
+        "fields": {
+            "nombre": "Acueducto Albarregas",
+            "sucursal": 14,
+            "codigo": "ALB",
+            "ubicacion": "Mérida"
+        }
+    }
+]

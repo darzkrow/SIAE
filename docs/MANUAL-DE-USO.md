@@ -60,9 +60,8 @@ Esta es la sección más crítica para mantener el inventario actualizado.
 4. Haga clic en **"Guardar Movimiento"**.
 
 > [!IMPORTANT]
-> **Sistema de Aprobaciones (Fase 4)**:
-> Por defecto, todos los nuevos movimientos se crean en estado **PENDIENTE**. El stock no se actualizará hasta que un usuario con rol **ADMIN** apruebe el movimiento.
-> Los administradores pueden ver los movimientos pendientes y seleccionar "Aprobar" para hacer efectiva la carga/descarga de stock.
+> **Aprobaciones**: Los movimientos pueden requerir aprobación (según configuración). Mientras estén **PENDIENTE**, no actualizan stock.
+> Un usuario con rol **ADMIN** puede aprobar/rechazar movimientos para hacer efectiva la carga/descarga.
 
 > [!WARNING]
 > El sistema valida automáticamente si hay stock suficiente para Salidas y Transferencias. Si no hay suficiente, el sistema mostrará un error y no permitirá guardar el movimiento.
@@ -76,7 +75,7 @@ En la sección **"Stock"** podrá visualizar las existencias actuales:
 - Use la **barra de búsqueda** para encontrar un artículo por nombre, código o marca.
    - 🔴 **Sin stock**: Existencia cero.
 
-### Historial y Auditoría (Fase 4)
+### Historial y Auditoría
 En la vista de detalles de cada artículo o a través del panel administrativo, puede consultar el **Historial de Movimientos**, que muestra todas las transacciones (aprobadas, pendientes o rechazadas) vinculadas a ese ítem, permitiendo una trazabilidad completa.
 
 ---
@@ -105,7 +104,7 @@ Gestión de las entidades base:
 - **Categorías**: Clasificación de productos.
 - **Unidades de Medida**: (kg, metros, unidades, galones).
 - **Proveedores**: Directorio de suministradores.
-- **Carga Masiva (Fase 4)**: Opción para importar catálogos de artículos, sucursales y acueductos desde archivos CSV. Las plantillas óptimas se encuentran en la carpeta `docs/plantillas_importacion/` del proyecto.
+- **Carga Masiva**: Importar catálogos (artículos, sucursales, acueductos) desde archivos CSV. Ver `docs/plantillas_importacion/`.
 
 ---
 

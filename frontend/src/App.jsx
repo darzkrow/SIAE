@@ -15,6 +15,15 @@ const Reportes = lazy(() => import('./pages/Reportes'))
 const Alertas = lazy(() => import('./pages/Alertas'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Administracion = lazy(() => import('./pages/Administracion'))
+const Compras = lazy(() => import('./pages/Compras'))
+const OrdenDetalle = lazy(() => import('./pages/OrdenDetalle'))
+const Catalogo = lazy(() => import('./pages/Catalogo'))
+const Geografia = lazy(() => import('./pages/Geografia'))
+const Auditoria = lazy(() => import('./pages/Auditoria'))
+const NotificacionesList = lazy(() => import('./pages/NotificacionesList'))
+
+// Error pages
+import { Error400, Error401, Error403, Error404, Error500 } from './pages/ErrorPage'
 
 // Loading component
 const LoadingFallback = () => (
@@ -80,6 +89,48 @@ function App() {
                                 <Administracion />
                             </ProtectedRoute>
                         } />
+                        <Route path="/compras" element={
+                            <ProtectedRoute>
+                                <Compras />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/compras/orden/:id" element={
+                            <ProtectedRoute>
+                                <OrdenDetalle />
+                            </ProtectedRoute>
+                        } />
+
+                        {/* Nuevas secciones */}
+                        <Route path="/catalogo" element={
+                            <ProtectedRoute>
+                                <Catalogo />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/geografia" element={
+                            <ProtectedRoute>
+                                <Geografia />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/auditoria" element={
+                            <ProtectedRoute>
+                                <Auditoria />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/notificaciones" element={
+                            <ProtectedRoute>
+                                <NotificacionesList />
+                            </ProtectedRoute>
+                        } />
+
+                        {/* Error Pages */}
+                        <Route path="/error/400" element={<Error400 />} />
+                        <Route path="/error/401" element={<Error401 />} />
+                        <Route path="/error/403" element={<Error403 />} />
+                        <Route path="/error/404" element={<Error404 />} />
+                        <Route path="/error/500" element={<Error500 />} />
+
+                        {/* Catch all - 404 */}
+                        <Route path="*" element={<Error404 />} />
                     </Routes>
                 </Suspense>
             </AuthProvider>

@@ -1,8 +1,13 @@
-# 📚 DOCUMENTACIÓN - PROYECTO GSIH
+# 📚 DOCUMENTACIÓN - PROYECTO GSIH (Arquitectura Refactorizada 2026)
 
 Bienvenido a la documentación del proyecto GSIH. Esta carpeta contiene toda la información necesaria para entender, instalar y desarrollar el sistema de inventario.
 
-## 📖 Documentos Disponibles
+## 📖 Documentos Clave (Refactor)
+
+- Arquitectura Backend: [docs/ARQUITECTURA-BACKEND.md](docs/ARQUITECTURA-BACKEND.md)
+- Pruebas e Integración: [docs/PRUEBAS-E-INTEGRACION.md](docs/PRUEBAS-E-INTEGRACION.md)
+- Guía Modelos Refactorizados: [docs/GUIA_MODELOS_REFACTORIZADOS.md](docs/GUIA_MODELOS_REFACTORIZADOS.md)
+- Guía de Migración desde Legacy: [docs/GUIA_MIGRACION.md](docs/GUIA_MIGRACION.md)
 
 ### 1. **01-TAREAS.md** - Lista de Tareas
 - Tareas organizadas por prioridad
@@ -100,13 +105,13 @@ Bienvenido a la documentación del proyecto GSIH. Esta carpeta contiene toda la 
 
 ## 🚀 Inicio Rápido
 
-```bash
+```powershell
 # 1. Instalar backend
 python -m venv venv
 venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed_inventario
+
 
 # 2. Instalar frontend
 cd frontend
@@ -121,6 +126,19 @@ python manage.py runserver
 cd frontend
 npm run dev
 ```
+
+## 🧪 Pruebas
+
+```powershell
+cd backend
+python manage.py test inventario
+# Conjunto de apps
+python manage.py test inventario geography institucion catalogo compras
+```
+
+## 🐳 Docker
+- Desarrollo: `docker-compose up`
+- Producción: ver [docker-compose.prod.yml](docker-compose.prod.yml) y [nginx/nginx.conf](nginx/nginx.conf)
 
 Accede a: http://localhost:5173
 
