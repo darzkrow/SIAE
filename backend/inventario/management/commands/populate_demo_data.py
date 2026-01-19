@@ -10,6 +10,7 @@ from inventario.models import (
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
 )
+from geography.models import Ubicacion
 from catalogo.models import CategoriaProducto
 
 
@@ -229,14 +230,33 @@ class Command(BaseCommand):
             )
 
             for ac in acueductos:
-                StockChemical.objects.get_or_create(producto=cloro, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('100.000'), 'lote': 'L-CL-001', 'fecha_vencimiento': cloro.fecha_caducidad})
-                StockChemical.objects.get_or_create(producto=sulfato, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('50.000'), 'lote': 'L-SUL-001', 'fecha_vencimiento': sulfato.fecha_caducidad})
-                StockPipe.objects.get_or_create(producto=pvc_pipe, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('100.000')})
-                StockPipe.objects.get_or_create(producto=pead_pipe, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('50.000')})
+                # Crear/usar una Ubicacion asociada al acueducto para stocks
+                almacen_nombre = f"Almacén {ac.codigo or ac.nombre}"
+                ubic, _ = Ubicacion.objects.get_or_create(
+                    nombre=almacen_nombre,
+                    acueducto=ac,
+                    defaults={
+                        'tipo': Ubicacion.TipoUbicacion.ALMACEN,
+                        'descripcion': f'Almacén principal de {ac.nombre}'
+                    }
+                )
+
+                StockChemical.objects.get_or_create(
+                    producto=cloro,
+                    ubicacion=ubic,
+                    defaults={'cantidad': Decimal('100.000'), 'lote': 'L-CL-001', 'fecha_vencimiento': cloro.fecha_caducidad}
+                )
+                StockChemical.objects.get_or_create(
+                    producto=sulfato,
+                    ubicacion=ubic,
+                    defaults={'cantidad': Decimal('50.000'), 'lote': 'L-SUL-001', 'fecha_vencimiento': sulfato.fecha_caducidad}
+                )
+                StockPipe.objects.get_or_create(producto=pvc_pipe, ubicacion=ubic, defaults={'cantidad': Decimal('100.000')})
+                StockPipe.objects.get_or_create(producto=pead_pipe, ubicacion=ubic, defaults={'cantidad': Decimal('50.000')})
                 # Omitir stock de bombas si no existe el producto creado
                 if pump1:
-                    StockPumpAndMotor.objects.get_or_create(producto=pump1, ubicacion=ac.ubicacion, defaults={'cantidad': 1, 'estado_operativo': 'OPERATIVO'})
-                StockAccessory.objects.get_or_create(producto=valvula, ubicacion=ac.ubicacion, defaults={'cantidad': Decimal('20.000')})
+                    StockPumpAndMotor.objects.get_or_create(producto=pump1, ubicacion=ubic, defaults={'cantidad': 1, 'estado_operativo': 'OPERATIVO'})
+                StockAccessory.objects.get_or_create(producto=valvula, ubicacion=ubic, defaults={'cantidad': Decimal('20.000')})
 
             # Usuarios
             User = get_user_model()
