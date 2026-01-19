@@ -248,6 +248,10 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
     'SCHEMA_PATH_PREFIX': r'/api/',
+    # Temporarily exclude non-accounts apps to isolate schema error
+    'EXCLUDE_PATHS': [
+        r'/api/(?!accounts/|geography/|auditoria/|catalogo/|compras/|notificaciones/|inventario/).*',
+    ],
     'SERVERS': [
         {'url': 'http://localhost:8000', 'description': 'Development server'},
         {'url': 'http://10.10.50.26', 'description': 'Production server (via Nginx)'},

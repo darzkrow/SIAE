@@ -25,8 +25,8 @@ class ParishSerializer(serializers.ModelSerializer):
 
 
 class UbicacionSerializer(serializers.ModelSerializer):
-    parish_nombre = serializers.CharField(source='parish.name', read_only=True)
-    acueducto_nombre = serializers.CharField(source='acueducto.nombre', read_only=True)
+    parish_nombre = serializers.SerializerMethodField()
+    acueducto_nombre = serializers.SerializerMethodField()
 
     class Meta:
         from .models import Ubicacion
@@ -35,3 +35,9 @@ class UbicacionSerializer(serializers.ModelSerializer):
             'id', 'nombre', 'tipo', 'parish', 'parish_nombre',
             'acueducto', 'acueducto_nombre', 'descripcion', 'activa'
         ]
+
+    def get_parish_nombre(self, obj):
+        return obj.parish.name if obj.parish else None
+
+    def get_acueducto_nombre(self, obj):
+        return obj.acueducto.nombre if obj.acueducto else None

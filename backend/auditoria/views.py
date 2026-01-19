@@ -3,10 +3,18 @@ from .models import AuditLog
 from rest_framework import serializers
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.username', read_only=True)
+    user_name = serializers.SerializerMethodField()
     class Meta:
         model = AuditLog
-        fields = '__all__'
+        fields = [
+            'id', 'user', 'user_name', 'action',
+            'content_type', 'object_id',
+            'object_repr', 'changes',
+            'ip_address', 'user_agent', 'timestamp'
+        ]
+
+    def get_user_name(self, obj):
+        return obj.user.username if obj.user else None
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """

@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import CustomUser
 from .serializers import CustomUserSerializer
 from inventario.permissions import CanManageUsers
+from drf_spectacular.utils import extend_schema
 
 class CustomAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
@@ -30,6 +31,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@extend_schema(exclude=True)
 def user_profile(request):
     """
     Endpoint para obtener el perfil del usuario autenticado

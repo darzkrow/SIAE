@@ -29,21 +29,27 @@ class OrganizacionCentralSerializer(serializers.ModelSerializer):
 
 class SucursalSerializer(serializers.ModelSerializer):
     """Serializer para sucursales."""
-    organizacion_central_nombre = serializers.CharField(source='organizacion_central.nombre', read_only=True)
+    organizacion_central_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = Sucursal
         fields = ['id', 'nombre', 'organizacion_central', 'organizacion_central_nombre', 'codigo', 'direccion', 'telefono']
 
+    def get_organizacion_central_nombre(self, obj):
+        return obj.organizacion_central.nombre if obj.organizacion_central else None
+
 class UserSerializer(serializers.ModelSerializer):
     """Serializer para usuarios."""
-    sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True, allow_null=True)
+    sucursal_nombre = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'sucursal', 'sucursal_nombre', 'is_active', 'password']
         read_only_fields = ['id']
+
+    def get_sucursal_nombre(self, obj):
+        return obj.sucursal.nombre if obj.sucursal else None
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -81,12 +87,15 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class UnitOfMeasureSerializer(serializers.ModelSerializer):
     """Serializer para unidades de medida."""
-    tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
+    tipo_display = serializers.SerializerMethodField()
     
     class Meta:
         model = UnitOfMeasure
         fields = ['id', 'nombre', 'simbolo', 'tipo', 'tipo_display', 'activo']
         read_only_fields = ['id']
+
+    def get_tipo_display(self, obj):
+        return obj.get_tipo_display()
 
 
 class SupplierSerializer(serializers.ModelSerializer):
@@ -109,13 +118,16 @@ class SupplierSerializer(serializers.ModelSerializer):
 
 class AcueductoSerializer(serializers.ModelSerializer):
     """Serializer para acueductos."""
-    sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True)
+    sucursal_nombre = serializers.SerializerMethodField()
     
     class Meta:
         from inventario.models import Acueducto
         model = Acueducto
         fields = ['id', 'nombre', 'sucursal', 'sucursal_nombre', 'ubicacion']
         read_only_fields = ['id']
+
+    def get_sucursal_nombre(self, obj):
+        return obj.sucursal.nombre if obj.sucursal else None
 
 
 # ============================================================================
@@ -130,9 +142,9 @@ class ProductBaseSerializer(serializers.ModelSerializer):
     proveedor_detail = SupplierSerializer(source='proveedor', read_only=True)
     
     # Display fields
-    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
-    unidad_medida_nombre = serializers.CharField(source='unidad_medida.nombre', read_only=True)
-    stock_status = serializers.CharField(source='get_stock_status', read_only=True)
+    categoria_nombre = serializers.SerializerMethodField()
+    unidad_medida_nombre = serializers.SerializerMethodField()
+    stock_status = serializers.SerializerMethodField()
     stock_percentage = serializers.SerializerMethodField()
     valor_total = serializers.SerializerMethodField()
     
@@ -149,6 +161,15 @@ class ProductBaseSerializer(serializers.ModelSerializer):
         """Valor total del stock."""
         return float(obj.stock_actual * obj.precio_unitario)
 
+    def get_stock_status(self, obj):
+        return obj.get_stock_status()
+
+    def get_categoria_nombre(self, obj):
+        return obj.categoria.nombre if obj.categoria else None
+
+    def get_unidad_medida_nombre(self, obj):
+        return obj.unidad_medida.nombre if obj.unidad_medida else None
+
 
 # ============================================================================
 # SERIALIZERS DE PRODUCTOS ESPECÍFICOS
@@ -156,22 +177,11 @@ class ProductBaseSerializer(serializers.ModelSerializer):
 
 class ChemicalProductSerializer(ProductBaseSerializer):
     """Serializer para productos químicos."""
-    nivel_peligrosidad_display = serializers.CharField(
-        source='get_nivel_peligrosidad_display', 
-        read_only=True
-    )
-    presentacion_display = serializers.CharField(
-        source='get_presentacion_display', 
-        read_only=True
-    )
-    unidad_concentracion_display = serializers.CharField(
-        source='get_unidad_concentracion_display', 
-        read_only=True
-    )
-    is_expired = serializers.BooleanField(read_only=True)
-    days_until_expiration = serializers.IntegerField(
-        read_only=True
-    )
+    nivel_peligrosidad_display = serializers.SerializerMethodField()
+    presentacion_display = serializers.SerializerMethodField()
+    unidad_concentracion_display = serializers.SerializerMethodField()
+    is_expired = serializers.SerializerMethodField()
+    days_until_expiration = serializers.SerializerMethodField()
     
     class Meta:
         model = ChemicalProduct
@@ -208,15 +218,30 @@ class ChemicalProductSerializer(ProductBaseSerializer):
             })
         return data
 
+    def get_nivel_peligrosidad_display(self, obj):
+        return obj.get_nivel_peligrosidad_display()
+
+    def get_presentacion_display(self, obj):
+        return obj.get_presentacion_display()
+
+    def get_unidad_concentracion_display(self, obj):
+        return obj.get_unidad_concentracion_display()
+
+    def get_is_expired(self, obj):
+        return obj.is_expired()
+
+    def get_days_until_expiration(self, obj):
+        return obj.days_until_expiration()
+
 
 class PipeSerializer(ProductBaseSerializer):
     """Serializer para tuberías."""
-    material_display = serializers.CharField(source='get_material_display', read_only=True)
-    unidad_diametro_display = serializers.CharField(source='get_unidad_diametro_display', read_only=True)
-    presion_nominal_display = serializers.CharField(source='get_presion_nominal_display', read_only=True)
-    tipo_union_display = serializers.CharField(source='get_tipo_union_display', read_only=True)
-    tipo_uso_display = serializers.CharField(source='get_tipo_uso_display', read_only=True)
-    diametro_display = serializers.CharField(source='get_diametro_display', read_only=True)
+    material_display = serializers.SerializerMethodField()
+    unidad_diametro_display = serializers.SerializerMethodField()
+    presion_nominal_display = serializers.SerializerMethodField()
+    tipo_union_display = serializers.SerializerMethodField()
+    tipo_uso_display = serializers.SerializerMethodField()
+    diametro_display = serializers.SerializerMethodField()
     
     class Meta:
         model = Pipe
@@ -245,12 +270,30 @@ class PipeSerializer(ProductBaseSerializer):
             'stock_status', 'stock_percentage', 'valor_total'
         ]
 
+    def get_material_display(self, obj):
+        return obj.get_material_display()
+
+    def get_unidad_diametro_display(self, obj):
+        return obj.get_unidad_diametro_display()
+
+    def get_presion_nominal_display(self, obj):
+        return obj.get_presion_nominal_display()
+
+    def get_tipo_union_display(self, obj):
+        return obj.get_tipo_union_display()
+
+    def get_tipo_uso_display(self, obj):
+        return obj.get_tipo_uso_display()
+
+    def get_diametro_display(self, obj):
+        return obj.get_diametro_display()
+
 
 class PumpAndMotorSerializer(ProductBaseSerializer):
     """Serializer para bombas y motores."""
-    tipo_equipo_display = serializers.CharField(source='get_tipo_equipo_display', read_only=True)
-    fases_display = serializers.CharField(source='get_fases_display', read_only=True)
-    potencia_display = serializers.CharField(source='get_potencia_display', read_only=True)
+    tipo_equipo_display = serializers.SerializerMethodField()
+    fases_display = serializers.SerializerMethodField()
+    potencia_display = serializers.SerializerMethodField()
     
     class Meta:
         model = PumpAndMotor
@@ -284,13 +327,22 @@ class PumpAndMotorSerializer(ProductBaseSerializer):
             'stock_status', 'stock_percentage', 'valor_total'
         ]
 
+    def get_tipo_equipo_display(self, obj):
+        return obj.get_tipo_equipo_display()
+
+    def get_fases_display(self, obj):
+        return obj.get_fases_display()
+
+    def get_potencia_display(self, obj):
+        return obj.get_potencia_display()
+
 
 class AccessorySerializer(ProductBaseSerializer):
     """Serializer para accesorios."""
-    tipo_accesorio_display = serializers.CharField(source='get_tipo_accesorio_display', read_only=True)
-    tipo_conexion_display = serializers.CharField(source='get_tipo_conexion_display', read_only=True)
-    material_display = serializers.CharField(source='get_material_display', read_only=True)
-    dimension_display = serializers.CharField(source='get_dimension_display', read_only=True)
+    tipo_accesorio_display = serializers.SerializerMethodField()
+    tipo_conexion_display = serializers.SerializerMethodField()
+    material_display = serializers.SerializerMethodField()
+    dimension_display = serializers.SerializerMethodField()
     
     class Meta:
         model = Accessory
@@ -318,6 +370,18 @@ class AccessorySerializer(ProductBaseSerializer):
             'stock_status', 'stock_percentage', 'valor_total'
         ]
 
+    def get_tipo_accesorio_display(self, obj):
+        return obj.get_tipo_accesorio_display()
+
+    def get_tipo_conexion_display(self, obj):
+        return obj.get_tipo_conexion_display()
+
+    def get_material_display(self, obj):
+        return obj.get_material_display()
+
+    def get_dimension_display(self, obj):
+        return obj.get_dimension_display()
+
 
 # ============================================================================
 # SERIALIZERS DE STOCK
@@ -326,7 +390,7 @@ class AccessorySerializer(ProductBaseSerializer):
 class StockChemicalSerializer(serializers.ModelSerializer):
     """Serializer para stock de químicos."""
     producto_detail = ChemicalProductSerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
+    acueducto_detail = serializers.SerializerMethodField()
     
     class Meta:
         model = StockChemical
@@ -338,11 +402,14 @@ class StockChemicalSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'fecha_ultima_actualizacion']
 
+    def get_acueducto_detail(self, obj):
+        return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
+
 
 class StockPipeSerializer(serializers.ModelSerializer):
     """Serializer para stock de tuberías."""
     producto_detail = PipeSerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
+    acueducto_detail = serializers.SerializerMethodField()
     
     class Meta:
         model = StockPipe
@@ -354,15 +421,15 @@ class StockPipeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'metros_totales', 'fecha_ultima_actualizacion']
 
+    def get_acueducto_detail(self, obj):
+        return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
+
 
 class StockPumpAndMotorSerializer(serializers.ModelSerializer):
     """Serializer para stock de bombas/motores."""
     producto_detail = PumpAndMotorSerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
-    estado_operativo_display = serializers.CharField(
-        source='get_estado_operativo_display', 
-        read_only=True
-    )
+    acueducto_detail = serializers.SerializerMethodField()
+    estado_operativo_display = serializers.SerializerMethodField()
     
     class Meta:
         model = StockPumpAndMotor
@@ -374,11 +441,17 @@ class StockPumpAndMotorSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'fecha_ultima_actualizacion']
 
+    def get_estado_operativo_display(self, obj):
+        return obj.get_estado_operativo_display()
+
+    def get_acueducto_detail(self, obj):
+        return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
+
 
 class StockAccessorySerializer(serializers.ModelSerializer):
     """Serializer para stock de accesorios."""
     producto_detail = AccessorySerializer(source='producto', read_only=True)
-    acueducto_detail = serializers.StringRelatedField(source='ubicacion.acueducto', read_only=True)
+    acueducto_detail = serializers.SerializerMethodField()
     
     class Meta:
         model = StockAccessory
@@ -389,6 +462,9 @@ class StockAccessorySerializer(serializers.ModelSerializer):
             'fecha_ultima_actualizacion'
         ]
         read_only_fields = ['id', 'fecha_ultima_actualizacion']
+
+    def get_acueducto_detail(self, obj):
+        return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
 
 
 
@@ -401,8 +477,8 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
     producto_str = serializers.SerializerMethodField()
     articulo_nombre = serializers.SerializerMethodField()
     creado_por_username = serializers.SerializerMethodField()
-    acueducto_origen_nombre = serializers.CharField(source='ubicacion_origen.acueducto.nombre', read_only=True, allow_null=True)
-    acueducto_destino_nombre = serializers.CharField(source='ubicacion_destino.acueducto.nombre', read_only=True, allow_null=True)
+    acueducto_origen_nombre = serializers.SerializerMethodField()
+    acueducto_destino_nombre = serializers.SerializerMethodField()
     
     # Aliases para compatibilidad con el frontend si usa los nombres viejos
     acueducto_origen = serializers.PrimaryKeyRelatedField(source='ubicacion_origen', read_only=True)
@@ -450,6 +526,16 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
     def get_product_id_read(self, obj):
         return obj.object_id
 
+    def get_acueducto_origen_nombre(self, obj):
+        if obj.ubicacion_origen and obj.ubicacion_origen.acueducto:
+            return obj.ubicacion_origen.acueducto.nombre
+        return None
+
+    def get_acueducto_destino_nombre(self, obj):
+        if obj.ubicacion_destino and obj.ubicacion_destino.acueducto:
+            return obj.ubicacion_destino.acueducto.nombre
+        return None
+
     def create(self, validated_data):
         product_type = validated_data.pop('product_type')
 
@@ -494,8 +580,8 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
 
 class ChemicalProductListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de químicos."""
-    stock_status = serializers.CharField(source='get_stock_status', read_only=True)
-    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    stock_status = serializers.SerializerMethodField()
+    categoria_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = ChemicalProduct
@@ -504,11 +590,17 @@ class ChemicalProductListSerializer(serializers.ModelSerializer):
             'stock_status', 'es_peligroso', 'fecha_caducidad', 'presentacion'
         ]
 
+    def get_stock_status(self, obj):
+        return obj.get_stock_status()
+
+    def get_categoria_nombre(self, obj):
+        return obj.categoria.nombre if obj.categoria else None
+
 
 class PipeListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de tuberías."""
-    stock_status = serializers.CharField(source='get_stock_status', read_only=True)
-    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    stock_status = serializers.SerializerMethodField()
+    categoria_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = Pipe
@@ -517,11 +609,17 @@ class PipeListSerializer(serializers.ModelSerializer):
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
+    def get_stock_status(self, obj):
+        return obj.get_stock_status()
+
+    def get_categoria_nombre(self, obj):
+        return obj.categoria.nombre if obj.categoria else None
+
 
 class PumpAndMotorListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de bombas."""
-    stock_status = serializers.CharField(source='get_stock_status', read_only=True)
-    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    stock_status = serializers.SerializerMethodField()
+    categoria_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = PumpAndMotor
@@ -530,11 +628,17 @@ class PumpAndMotorListSerializer(serializers.ModelSerializer):
             'potencia_hp', 'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
+    def get_stock_status(self, obj):
+        return obj.get_stock_status()
+
+    def get_categoria_nombre(self, obj):
+        return obj.categoria.nombre if obj.categoria else None
+
 
 class AccessoryListSerializer(serializers.ModelSerializer):
     """Serializer simple para listados de accesorios."""
-    stock_status = serializers.CharField(source='get_stock_status', read_only=True)
-    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    stock_status = serializers.SerializerMethodField()
+    categoria_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = Accessory
@@ -542,6 +646,12 @@ class AccessoryListSerializer(serializers.ModelSerializer):
             'id', 'sku', 'nombre', 'categoria_nombre', 'tipo_accesorio', 'tipo_conexion',
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
+
+    def get_stock_status(self, obj):
+        return obj.get_stock_status()
+
+    def get_categoria_nombre(self, obj):
+        return obj.categoria.nombre if obj.categoria else None
 
 
 
@@ -558,13 +668,19 @@ class AccessoryListSerializer(serializers.ModelSerializer):
 # ============================================================================
 
 class FichaTecnicaMotorSerializer(serializers.ModelSerializer):
-    equipo_nombre = serializers.CharField(source='equipo.nombre', read_only=True)
-    equipo_serial = serializers.CharField(source='equipo.numero_serie', read_only=True)
+    equipo_nombre = serializers.SerializerMethodField()
+    equipo_serial = serializers.SerializerMethodField()
 
     class Meta:
         from inventario.models import FichaTecnicaMotor
         model = FichaTecnicaMotor
         fields = '__all__'
+
+    def get_equipo_nombre(self, obj):
+        return obj.equipo.nombre if obj.equipo else None
+
+    def get_equipo_serial(self, obj):
+        return obj.equipo.numero_serie if obj.equipo else None
 
 class RegistroMantenimientoSerializer(serializers.ModelSerializer):
     class Meta:
