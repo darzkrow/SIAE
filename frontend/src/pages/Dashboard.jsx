@@ -146,7 +146,7 @@ export default function Dashboard() {
                         </div>
                     </div>
                      {/* Admin Panel */}
-                    {user?.role === 'ADMIN' && (
+                    {user?.is_admin && (
                         <div className="bg-white rounded-xl shadow-md p-6">
                             <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
                                 <PieChart className="text-indigo-500" />

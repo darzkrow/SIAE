@@ -184,7 +184,7 @@ export default function Articulos() {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-bold">Catálogo de Artículos</h1>
-                {user?.role === 'ADMIN' && (
+                {user?.is_admin && (
                     <button
                         onClick={() => setShowForm(!showForm)}
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
@@ -318,7 +318,7 @@ export default function Articulos() {
                                 <th className="px-4 py-2 text-left">Nombre</th>
                                 <th className="px-4 py-2 text-left">Categoría</th>
                                 <th className="px-4 py-2 text-left">Stock</th>
-                                {user?.role === 'ADMIN' && <th className="px-4 py-2 text-left">Acciones</th>}
+                                {user?.is_admin && <th className="px-4 py-2 text-left">Acciones</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -329,7 +329,7 @@ export default function Articulos() {
                                         <td className="px-4 py-2 font-medium">{item.nombre}</td>
                                         <td className="px-4 py-2 text-sm">{item.categoria_nombre || item.categoria?.nombre}</td>
                                         <td className="px-4 py-2 text-sm">{item.stock_actual} {item.unidad_medida_nombre || ''}</td>
-                                        {user?.role === 'ADMIN' && (
+                                        {user?.is_admin && (
                                             <td className="px-4 py-2 flex gap-2">
                                                 <button onClick={() => handleEdit(item)} className="text-blue-600"><Edit2 size={16} /></button>
                                                 <button onClick={() => handleDelete(item.id)} className="text-red-600"><Trash2 size={16} /></button>

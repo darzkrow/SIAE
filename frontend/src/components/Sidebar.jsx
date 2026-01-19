@@ -18,7 +18,7 @@ export default function Sidebar({ children }) {
     ];
 
     // Solo mostrar opciones admin si es admin
-    const adminItems = user?.role === 'ADMIN' ? [
+    const adminItems = user?.is_admin ? [
         { path: '/usuarios', label: 'Usuarios', icon: Users },
         { path: '/administracion', label: 'Administración', icon: Settings }
     ] : [];
@@ -69,7 +69,7 @@ export default function Sidebar({ children }) {
                         <div className="mb-4">
                             <p className="text-sm text-gray-400">Usuario</p>
                             <p className="font-semibold truncate">{user?.username}</p>
-                            <p className="text-xs text-gray-400">{user?.role === 'ADMIN' ? 'Administrador' : 'Operador'}</p>
+                            <p className="text-xs text-gray-400">{user?.is_admin ? 'Administrador' : 'Operador'}</p>
                             {user?.sucursal && <p className="text-xs text-gray-400 mt-1">{user.sucursal.nombre}</p>}
                         </div>
                     )}

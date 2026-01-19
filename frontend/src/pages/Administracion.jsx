@@ -25,7 +25,7 @@ export default function Administracion() {
     const [formData, setFormData] = useState({});
 
     useEffect(() => {
-        if (user?.role !== 'ADMIN') {
+        if (!user?.is_admin) {
             setError('No tienes permiso para acceder a esta sección');
             return;
         }

@@ -37,6 +37,7 @@ def user_profile(request):
     Endpoint para obtener el perfil del usuario autenticado
     """
     user = request.user
+    is_super = getattr(user, 'is_superuser', False)
     return Response({
         'id': user.id,
         'username': user.username,
@@ -49,10 +50,11 @@ def user_profile(request):
             'nombre': user.sucursal.nombre,
             'organizacion_central': user.sucursal.organizacion_central.nombre
         } if user.sucursal else None,
-        'is_admin': user.role == CustomUser.ROLE_ADMIN,
+        'is_superuser': is_super,
+        'is_admin': is_super or user.role == CustomUser.ROLE_ADMIN,
         'permissions': {
-            'can_manage_users': user.role == CustomUser.ROLE_ADMIN,
-            'can_approve_movements': user.role == CustomUser.ROLE_ADMIN,
-            'can_view_all_sucursales': user.role == CustomUser.ROLE_ADMIN,
+            'can_manage_users': is_super or user.role == CustomUser.ROLE_ADMIN,
+            'can_approve_movements': is_super or user.role == CustomUser.ROLE_ADMIN,
+            'can_view_all_sucursales': is_super or user.role == CustomUser.ROLE_ADMIN,
         }
     })
