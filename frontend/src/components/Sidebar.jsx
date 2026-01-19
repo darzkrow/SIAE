@@ -13,6 +13,7 @@ export default function Sidebar({ children }) {
         { path: '/movimientos', label: 'Movimientos', icon: Package },
         { path: '/stock', label: 'Stock', icon: Droplets },
         { path: '/articulos', label: 'Artículos', icon: Activity },
+        { path: '/compras', label: 'Compras', icon: Package },
         { path: '/alertas', label: 'Alertas', icon: AlertCircle },
         { path: '/reportes', label: 'Reportes', icon: BarChart3 },
     ];

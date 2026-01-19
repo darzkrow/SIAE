@@ -20,6 +20,7 @@ urlpatterns = [
     # API endpoints
     path('api/accounts/', include('accounts.urls')),
     path('api/catalog/', include('catalogo.urls')),
+    path('api/geography/', include('geography.urls')),
     path('api/compras/', include('compras.urls')),
     path('api/auditoria/', include('auditoria.urls')),
     path('api/notificaciones/', include('notificaciones.urls')),

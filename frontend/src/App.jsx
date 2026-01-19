@@ -15,6 +15,8 @@ const Reportes = lazy(() => import('./pages/Reportes'))
 const Alertas = lazy(() => import('./pages/Alertas'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Administracion = lazy(() => import('./pages/Administracion'))
+const Compras = lazy(() => import('./pages/Compras'))
+const OrdenDetalle = lazy(() => import('./pages/OrdenDetalle'))
 
 // Error pages
 import { Error400, Error401, Error403, Error404, Error500 } from './pages/ErrorPage'
@@ -81,6 +83,16 @@ function App() {
                         <Route path="/administracion" element={
                             <ProtectedRoute>
                                 <Administracion />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/compras" element={
+                            <ProtectedRoute>
+                                <Compras />
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/compras/orden/:id" element={
+                            <ProtectedRoute>
+                                <OrdenDetalle />
                             </ProtectedRoute>
                         } />
 
