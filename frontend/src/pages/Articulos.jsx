@@ -33,13 +33,20 @@ export default function Articulos() {
         proveedor: '',
         stock_minimo: 0,
         precio_unitario: 0,
-        // Específicos
-        material: 'PVC', // Pipe
-        diametro_nominal: 0, // Pipe
-        tipo_equipo: 'BOMBA_CENTRIFUGA', // Pump
-        potencia_hp: 0, // Pump
-        tipo_presentacion: 'SACO', // Chemical
-        es_peligroso: false // Chemical
+        // Pipe
+        material: 'PVC',
+        diametro_nominal: 0,
+        // Pump
+        tipo_equipo: 'BOMBA_CENTRIFUGA',
+        marca: '',
+        modelo: '',
+        numero_serie: '',
+        potencia_hp: 0,
+        voltaje: 110,
+        fases: 'MONOFASICO',
+        // Chemical
+        tipo_presentacion: 'SACO',
+        es_peligroso: false
     });
 
     useEffect(() => {
@@ -96,6 +103,14 @@ export default function Articulos() {
         if (!formData.nombre || !formData.categoria || !formData.unidad_medida || !formData.proveedor) {
             Swal.fire('Error', 'Complete los campos obligatorios', 'error');
             return false;
+        }
+        if (activeTab === 'pump') {
+            const requiredPump = ['tipo_equipo', 'marca', 'modelo', 'numero_serie', 'potencia_hp', 'voltaje', 'fases'];
+            const missing = requiredPump.filter(k => !formData[k] && formData[k] !== 0);
+            if (missing.length) {
+                Swal.fire('Error', 'Complete los datos de la bomba: tipo, marca, modelo, serial, potencia, voltaje y fases', 'error');
+                return false;
+            }
         }
         return true;
     };
@@ -156,8 +171,11 @@ export default function Articulos() {
         setFormData({
             nombre: '', descripcion: '', categoria: '', unidad_medida: '', proveedor: '',
             stock_minimo: 0, precio_unitario: 0,
+            // Pipe
             material: 'PVC', diametro_nominal: 0,
-            tipo_equipo: 'BOMBA_CENTRIFUGA', potencia_hp: 0,
+            // Pump
+            tipo_equipo: 'BOMBA_CENTRIFUGA', marca: '', modelo: '', numero_serie: '', potencia_hp: 0, voltaje: 110, fases: 'MONOFASICO',
+            // Chemical
             tipo_presentacion: 'SACO', es_peligroso: false
         });
         setEditingId(null);
@@ -267,8 +285,45 @@ export default function Articulos() {
                             {activeTab === 'pump' && (
                                 <>
                                     <div>
+                                        <label className="block text-sm font-medium mb-1">Tipo de equipo</label>
+                                        <select name="tipo_equipo" value={formData.tipo_equipo} onChange={handleFormChange} className="w-full border p-2 rounded">
+                                            <option value="BOMBA_CENTRIFUGA">Bomba Centrífuga</option>
+                                            <option value="BOMBA_SUMERGIBLE">Bomba Sumergible</option>
+                                            <option value="BOMBA_PERIFERICA">Bomba Periférica</option>
+                                            <option value="BOMBA_TURBINA">Bomba de Turbina</option>
+                                            <option value="MOTOR_ELECTRICO">Motor Eléctrico</option>
+                                            <option value="VARIADOR">Variador de Frecuencia</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Marca</label>
+                                        <select name="marca" value={formData.marca} onChange={handleFormChange} className="w-full border p-2 rounded">
+                                            <option value="">Seleccionar...</option>
+                                            {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Modelo</label>
+                                        <input name="modelo" value={formData.modelo} onChange={handleFormChange} className="w-full border p-2 rounded" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Número de serie</label>
+                                        <input name="numero_serie" value={formData.numero_serie} onChange={handleFormChange} className="w-full border p-2 rounded" />
+                                    </div>
+                                    <div>
                                         <label className="block text-sm font-medium mb-1">Potencia (HP)</label>
-                                        <input type="number" name="potencia_hp" value={formData.potencia_hp} onChange={handleFormChange} className="w-full border p-2 rounded" />
+                                        <input type="number" step="0.01" name="potencia_hp" value={formData.potencia_hp} onChange={handleFormChange} className="w-full border p-2 rounded" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Voltaje</label>
+                                        <input type="number" name="voltaje" value={formData.voltaje} onChange={handleFormChange} className="w-full border p-2 rounded" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Fases</label>
+                                        <select name="fases" value={formData.fases} onChange={handleFormChange} className="w-full border p-2 rounded">
+                                            <option value="MONOFASICO">Monofásico</option>
+                                            <option value="TRIFASICO">Trifásico</option>
+                                        </select>
                                     </div>
                                 </>
                             )}
