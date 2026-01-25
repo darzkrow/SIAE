@@ -53,6 +53,7 @@ class BaseInventarioTestCase(TestCase):
         )
         
         cls.categoria_tuberia = CategoriaProducto.objects.create(nombre='Tuberías', codigo='TUB')
+        cls.categoria_bomba = CategoriaProducto.objects.create(nombre='Bombas y Motores', codigo='BOM') # Requerido por validación
         cls.proveedor = Supplier.objects.create(nombre='Proveedor de Prueba')
         cls.unidad_longitud = UnitOfMeasure.objects.create(nombre='Metro', simbolo='m', tipo='LONGITUD')
         cls.unidad_unitaria = UnitOfMeasure.objects.create(nombre='Unidad', simbolo='u', tipo='UNIDAD') # Añadido

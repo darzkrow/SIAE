@@ -511,8 +511,11 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
         return None
 
     def get_producto_str(self, obj):
-        if obj.producto:
-            return str(obj.producto)
+        try:
+            if obj.producto:
+                return str(obj.producto)
+        except Exception:
+            pass
         return "Producto eliminado o no encontrado"
 
     def get_articulo_nombre(self, obj):
@@ -527,13 +530,19 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
         return obj.object_id
 
     def get_acueducto_origen_nombre(self, obj):
-        if obj.ubicacion_origen and obj.ubicacion_origen.acueducto:
-            return obj.ubicacion_origen.acueducto.nombre
+        try:
+            if obj.ubicacion_origen and obj.ubicacion_origen.acueducto:
+                return obj.ubicacion_origen.acueducto.nombre
+        except Exception:
+            pass
         return None
 
     def get_acueducto_destino_nombre(self, obj):
-        if obj.ubicacion_destino and obj.ubicacion_destino.acueducto:
-            return obj.ubicacion_destino.acueducto.nombre
+        try:
+            if obj.ubicacion_destino and obj.ubicacion_destino.acueducto:
+                return obj.ubicacion_destino.acueducto.nombre
+        except Exception:
+            pass
         return None
 
     def create(self, validated_data):
