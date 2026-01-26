@@ -11,6 +11,9 @@ from inventario.permissions import IsAdminOrReadOnly, IsAdminOrSameSucursal
 from inventario.serializers import AcueductoSerializer
 from .filters import MovimientoInventarioFilter
 from auditoria.mixins import AuditMixin, TrashBinMixin
+from inventario.base_viewsets import BaseAPIViewSet
+from inventario.dynamic_permissions import DynamicPermission
+from inventario.advanced_search import AdvancedSearchFilter
 # Imports de modelos y serializers
 from inventario.models import (
     OrganizacionCentral, Sucursal, Acueducto,
@@ -133,14 +136,14 @@ class AcueductoViewSet(viewsets.ModelViewSet):
 # VIEWSETS DE PRODUCTOS
 # ============================================================================
 
-class ChemicalProductViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
-    """ViewSet para productos químicos."""
+class ChemicalProductViewSet(BaseAPIViewSet):
+    """ViewSet para productos químicos con funcionalidad avanzada."""
     queryset = ChemicalProduct.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
     ).all()
     serializer_class = ChemicalProductSerializer
-    permission_classes = [IsAdminOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    permission_classes = [IsAuthenticated]
+    filter_backends = [AdvancedSearchFilter, DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'categoria', 'activo', 'es_peligroso',
         'nivel_peligrosidad', 'presentacion', 'proveedor'

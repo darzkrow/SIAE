@@ -1,8 +1,10 @@
 # Etapa 1: Construir la aplicación de React
-FROM node:18-alpine AS build
+FROM node:20-alpine AS build
 WORKDIR /app
 COPY frontend/package*.json ./
-RUN npm install
+COPY frontend/.npmrc ./
+# Install dependencies with legacy peer deps and ignore scripts to avoid husky issues
+RUN npm install --legacy-peer-deps --ignore-scripts
 COPY frontend/ ./
 RUN npm run build
 

@@ -38,9 +38,15 @@ export const InventoryService = {
     categories: {
         // Catalogo app
         getAll: () => api.get('catalog/categorias/'),
+        create: (data) => api.post('catalog/categorias/', data),
+        update: (id, data) => api.put(`catalog/categorias/${id}/`, data),
+        delete: (id) => api.delete(`catalog/categorias/${id}/`),
     },
     marcas: {
         getAll: () => api.get('catalog/marcas/'),
+        create: (data) => api.post('catalog/marcas/', data),
+        update: (id, data) => api.put(`catalog/marcas/${id}/`, data),
+        delete: (id) => api.delete(`catalog/marcas/${id}/`),
     },
     units: {
         getAll: () => api.get('units/'),

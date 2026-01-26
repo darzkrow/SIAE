@@ -2,33 +2,27 @@
 import os
 from pathlib import Path
 import environ
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Take environment variables from .env file
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 env = environ.Env(
-    # set casting, default value
     DEBUG=(bool, False)
 )
-# False if not in os.environ because of casting above
 DEBUG = env('DEBUG')
-
-# Raises Django's ImproperlyConfigured
-# exception if SECRET_KEY not in os.environ
 SECRET_KEY = env('SECRET_KEY')
 
-# Security Settings from Environment
 CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=False)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'backend', 'sigei.hidroven.gob.ve'])
 
-# CSRF Trust
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8080",
     "http://localhost:8181",
     "http://localhost",
     "http://sigei.hidroven.gob.ve",
     "http://sigei.hidroven.gob.ve:8181",
+    "https://sigei.hidroven.gob.ve",
+    "https://sigei.hidroven.gob.ve:8181",
+
 ]
 
 
@@ -91,12 +85,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database Configuration
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-import dj_database_url
-
-# Default to SQLite for development, but allow override with DATABASE_URL env var
-# In production, use: DATABASE_URL=postgresql://user:password@host:port/dbname
 DATABASES = {
     'default': dj_database_url.config(
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
@@ -116,31 +104,25 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Static files (production)
+
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
-    # add project-level static directories here if needed
 ]
 
-# Use WhiteNoise compressed manifest storage in production for efficient static serving
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Security settings enforced in production
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
     CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
-    SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False) # Deshabilitado por defecto hasta tener certs
+    SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False)
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-# Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
-
-# Email Configuration for Stock Alerts
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
@@ -149,11 +131,7 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@gsih.com')
 
-# Stock Alert Configuration
 STOCK_ALERT_EMAILS = os.environ.get('STOCK_ALERT_EMAILS', '').split(',') if os.environ.get('STOCK_ALERT_EMAILS') else []
-
-# CORS Configuration
-# https://github.com/adamchainz/django-cors-headers
 CORS_ALLOW_ALL_ORIGINS = env.bool('CORS_ALLOW_ALL_ORIGINS', default=DEBUG)
 
 if not CORS_ALLOW_ALL_ORIGINS:
@@ -221,16 +199,16 @@ REST_FRAMEWORK = {
     # Pagination
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
-    # Throttling (Rate Limiting)
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
-    ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/hour',  # Anonymous users: 100 requests per hour
-        'user': '1000/hour',  # Authenticated users: 1000 requests per hour
-        'login': '5/minute',  # Login endpoint: 5 attempts per minute
-    },
+    # Throttling (Rate Limiting) - Disabled for development
+    # 'DEFAULT_THROTTLE_CLASSES': [
+    #     'rest_framework.throttling.AnonRateThrottle',
+    #     'rest_framework.throttling.UserRateThrottle',
+    # ],
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'anon': '1000/hour',  # Anonymous users: 1000 requests per hour
+    #     'user': '10000/hour',  # Authenticated users: 10000 requests per hour
+    #     'login': '50/minute',  # Login endpoint: 50 attempts per minute
+    # },
     # API Documentation with drf-spectacular
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # Render formats

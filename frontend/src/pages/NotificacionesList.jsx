@@ -1,65 +1,200 @@
-import { useEffect, useState } from 'react';
-import { InventoryService } from '../services/inventory.service';
+import { useState, useEffect } from 'react';
+import { useNotifications } from '../components/adminlte';
+import { AdminLTEWidget } from '../components/adminlte';
+import { Bell, CheckCircle, AlertCircle, Info, AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function NotificacionesList() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const { notifications, clearAllNotifications } = useNotifications();
+    const [filter, setFilter] = useState('all'); // all, unread, read
 
-  const load = async () => {
-    try {
-      const res = await InventoryService.notificaciones.getAll();
-      const arr = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-      setItems(arr);
-    } catch (e) {
-      if (e.response?.status === 403) {
-        setError('No autorizado para ver notificaciones');
-      } else {
-        setError('No se pudo cargar las notificaciones');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    const filteredNotifications = notifications.filter(notification => {
+        if (filter === 'unread') return !notification.read;
+        if (filter === 'read') return notification.read;
+        return true;
+    });
 
-  useEffect(() => { load(); }, []);
+    const getIcon = (type) => {
+        switch (type) {
+            case 'success':
+                return <CheckCircle size={20} className="text-success" />;
+            case 'error':
+                return <AlertCircle size={20} className="text-danger" />;
+            case 'warning':
+                return <AlertTriangle size={20} className="text-warning" />;
+            case 'info':
+            default:
+                return <Info size={20} className="text-info" />;
+        }
+    };
 
-  const markAsRead = async (id) => {
-    try {
-      await InventoryService.notificaciones.markAsRead(id);
-      await load();
-    } catch (e) {
-      // ignore
-    }
-  };
+    const getTimeAgo = (timestamp) => {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
 
-  if (loading) return <div className="text-gray-600">Cargando notificaciones...</div>;
-  if (error) return <div className="text-red-600">{error}</div>;
+        if (days > 0) return `Hace ${days} día${days > 1 ? 's' : ''}`;
+        if (hours > 0) return `Hace ${hours} hora${hours > 1 ? 's' : ''}`;
+        if (minutes > 0) return `Hace ${minutes} minuto${minutes > 1 ? 's' : ''}`;
+        return 'Ahora mismo';
+    };
 
-  return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <h3 className="text-lg font-semibold mb-3">Notificaciones</h3>
-      <ul className="divide-y">
-        {items.map(n => (
-          <li key={n.id} className="py-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">{n.titulo || n.title || 'Notificación'}</p>
-              <p className="text-xs text-gray-600">{n.mensaje || n.message || ''}</p>
+    return (
+        <div>
+            {/* Header */}
+            <div className="row mb-4">
+                <div className="col-12">
+                    <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 className="h3 mb-0">
+                                <Bell className="mr-2" size={24} />
+                                Centro de Notificaciones
+                            </h1>
+                            <p className="text-muted mb-0">
+                                Gestiona todas tus notificaciones del sistema
+                            </p>
+                        </div>
+                        <div>
+                            <button 
+                                className="btn btn-outline-danger"
+                                onClick={clearAllNotifications}
+                                disabled={notifications.length === 0}
+                            >
+                                <Trash2 size={16} className="mr-2" />
+                                Limpiar Todo
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-1 rounded ${n.leida ? 'bg-gray-200 text-gray-700' : 'bg-blue-100 text-blue-700'}`}>
-                {n.leida ? 'Leída' : 'Nueva'}
-              </span>
-              {!n.leida && (
-                <button onClick={() => markAsRead(n.id)} className="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Marcar leída</button>
-              )}
+
+            {/* Stats */}
+            <div className="row mb-4">
+                <div className="col-lg-4 col-md-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Total Notificaciones"
+                        value={notifications.length}
+                        icon={Bell}
+                        color="info"
+                    />
+                </div>
+                <div className="col-lg-4 col-md-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="No Leídas"
+                        value={notifications.filter(n => !n.read).length}
+                        icon={AlertCircle}
+                        color="warning"
+                    />
+                </div>
+                <div className="col-lg-4 col-md-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Leídas"
+                        value={notifications.filter(n => n.read).length}
+                        icon={CheckCircle}
+                        color="success"
+                    />
+                </div>
             </div>
-          </li>
-        ))}
-        {items.length === 0 && (
-          <li className="py-3 text-gray-500">Sin notificaciones</li>
-        )}
-      </ul>
-    </div>
-  );
+
+            {/* Filters */}
+            <div className="row mb-4">
+                <div className="col-12">
+                    <div className="btn-group" role="group">
+                        <button
+                            type="button"
+                            className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                            onClick={() => setFilter('all')}
+                        >
+                            Todas ({notifications.length})
+                        </button>
+                        <button
+                            type="button"
+                            className={`btn ${filter === 'unread' ? 'btn-primary' : 'btn-outline-primary'}`}
+                            onClick={() => setFilter('unread')}
+                        >
+                            No Leídas ({notifications.filter(n => !n.read).length})
+                        </button>
+                        <button
+                            type="button"
+                            className={`btn ${filter === 'read' ? 'btn-primary' : 'btn-outline-primary'}`}
+                            onClick={() => setFilter('read')}
+                        >
+                            Leídas ({notifications.filter(n => n.read).length})
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Notifications List */}
+            <AdminLTEWidget
+                type="card"
+                title="Notificaciones"
+                color="primary"
+            >
+                {filteredNotifications.length === 0 ? (
+                    <div className="text-center py-5">
+                        <Bell size={48} className="text-muted mb-3" />
+                        <h5 className="text-muted">No hay notificaciones</h5>
+                        <p className="text-muted">
+                            {filter === 'all' 
+                                ? 'No tienes notificaciones en este momento.'
+                                : filter === 'unread'
+                                ? 'No tienes notificaciones sin leer.'
+                                : 'No tienes notificaciones leídas.'
+                            }
+                        </p>
+                    </div>
+                ) : (
+                    <div className="list-group list-group-flush">
+                        {filteredNotifications.map((notification) => (
+                            <div 
+                                key={notification.id} 
+                                className={`list-group-item list-group-item-action ${!notification.read ? 'bg-light' : ''}`}
+                            >
+                                <div className="d-flex align-items-start">
+                                    <div className="mr-3 mt-1">
+                                        {getIcon(notification.type)}
+                                    </div>
+                                    <div className="flex-grow-1">
+                                        <div className="d-flex justify-content-between align-items-start">
+                                            <h6 className="mb-1 font-weight-bold">
+                                                {notification.title}
+                                                {!notification.read && (
+                                                    <span className="badge badge-primary badge-sm ml-2">Nuevo</span>
+                                                )}
+                                            </h6>
+                                            <small className="text-muted">
+                                                {getTimeAgo(notification.id)}
+                                            </small>
+                                        </div>
+                                        <p className="mb-1 text-muted">
+                                            {notification.message}
+                                        </p>
+                                        {notification.actions && (
+                                            <div className="mt-2">
+                                                {notification.actions.map((action, index) => (
+                                                    <button
+                                                        key={index}
+                                                        type="button"
+                                                        className={`btn btn-sm ${action.variant || 'btn-outline-secondary'} mr-2`}
+                                                        onClick={action.onClick}
+                                                    >
+                                                        {action.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </AdminLTEWidget>
+        </div>
+    );
 }

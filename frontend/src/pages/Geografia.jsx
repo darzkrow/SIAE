@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { InventoryService } from '../services/inventory.service';
+import { AdminLTEWidget, useNotifications } from '../components/adminlte';
+import { MapPin, Building, Globe, Navigation } from 'lucide-react';
 
 export default function Geografia() {
+  const { addNotification } = useNotifications();
   const [states, setStates] = useState([]);
   const [municipalities, setMunicipalities] = useState([]);
   const [parishes, setParishes] = useState([]);
@@ -24,75 +27,237 @@ export default function Geografia() {
         setParishes(toArr(pRes.data));
         setUbicaciones(toArr(uRes.data));
       } catch (e) {
-        setError('No se pudo cargar la geografía');
+        console.error('Error loading geography data:', e);
+        setError('No se pudo cargar la información geográfica');
+        addNotification({
+          type: 'error',
+          title: 'Error de conexión',
+          message: 'No se pudo cargar la información geográfica',
+          duration: 5000
+        });
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, []);
+  }, [addNotification]);
 
-  if (loading) return <div className="text-gray-600">Cargando geografía...</div>;
-  if (error) return <div className="text-red-600">{error}</div>;
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="sr-only">Cargando...</span>
+          </div>
+          <p className="mt-3 text-muted">Cargando información geográfica...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="alert alert-danger" role="alert">
+        <h4 className="alert-heading">Error</h4>
+        <p>{error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <section className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-semibold mb-3">Estados</h3>
-        <ul className="space-y-1 text-sm">
-          {states.map(s => (
-            <li key={s.id} className="py-1 border-b">{s.nombre || s.name}</li>
-          ))}
-          {states.length === 0 && <li className="text-gray-500">Sin estados</li>}
-        </ul>
-      </section>
-
-      <section className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-semibold mb-3">Municipios</h3>
-        <ul className="space-y-1 text-sm">
-          {municipalities.map(m => (
-            <li key={m.id} className="py-1 border-b">{m.nombre || m.name}</li>
-          ))}
-          {municipalities.length === 0 && <li className="text-gray-500">Sin municipios</li>}
-        </ul>
-      </section>
-
-      <section className="bg-white rounded-lg shadow p-4">
-        <h3 className="text-lg font-semibold mb-3">Parroquias</h3>
-        <ul className="space-y-1 text-sm">
-          {parishes.map(p => (
-            <li key={p.id} className="py-1 border-b">{p.nombre || p.name}</li>
-          ))}
-          {parishes.length === 0 && <li className="text-gray-500">Sin parroquias</li>}
-        </ul>
-      </section>
-
-      <section className="bg-white rounded-lg shadow p-4 lg:col-span-2">
-        <h3 className="text-lg font-semibold mb-3">Ubicaciones</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left border-b">
-                <th className="py-2 px-3">Nombre</th>
-                <th className="py-2 px-3">Dirección</th>
-                <th className="py-2 px-3">Acueducto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ubicaciones.map(u => (
-                <tr key={u.id} className="border-b hover:bg-gray-50">
-                  <td className="py-2 px-3">{u.nombre || u.name}</td>
-                  <td className="py-2 px-3 text-gray-600">{u.direccion || u.address || '-'}</td>
-                  <td className="py-2 px-3">{u.acueducto_nombre || u.acueducto || '-'}</td>
-                </tr>
-              ))}
-              {ubicaciones.length === 0 && (
-                <tr><td className="py-3 px-3 text-gray-500" colSpan={3}>Sin ubicaciones</td></tr>
-              )}
-            </tbody>
-          </table>
+    <div>
+      {/* Header */}
+      <div className="row mb-4">
+        <div className="col-12">
+          <h1 className="h3 mb-0">
+            <Globe className="mr-2" size={24} />
+            Información Geográfica
+          </h1>
+          <p className="text-muted mb-0">
+            Estados, municipios, parroquias y ubicaciones del sistema
+          </p>
         </div>
-      </section>
+      </div>
+
+      {/* Statistics Row */}
+      <div className="row mb-4">
+        <div className="col-lg-3 col-6">
+          <AdminLTEWidget 
+            type="metric" 
+            title="Estados" 
+            value={states.length}
+            icon={Globe}
+            color="info"
+          />
+        </div>
+        <div className="col-lg-3 col-6">
+          <AdminLTEWidget 
+            type="metric" 
+            title="Municipios" 
+            value={municipalities.length}
+            icon={Building}
+            color="success"
+          />
+        </div>
+        <div className="col-lg-3 col-6">
+          <AdminLTEWidget 
+            type="metric" 
+            title="Parroquias" 
+            value={parishes.length}
+            icon={Navigation}
+            color="warning"
+          />
+        </div>
+        <div className="col-lg-3 col-6">
+          <AdminLTEWidget 
+            type="metric" 
+            title="Ubicaciones" 
+            value={ubicaciones.length}
+            icon={MapPin}
+            color="danger"
+          />
+        </div>
+      </div>
+
+      <div className="row">
+        {/* Estados */}
+        <div className="col-lg-6 col-md-12 mb-4">
+          <AdminLTEWidget type="card" title="Estados" icon={Globe} color="info">
+            <div className="table-responsive" style={{ maxHeight: '300px' }}>
+              <table className="table table-sm table-striped">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {states.length === 0 ? (
+                    <tr>
+                      <td colSpan="2" className="text-center text-muted py-3">
+                        <Globe size={24} className="mb-2" />
+                        <p>No hay estados registrados</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    states.map(s => (
+                      <tr key={s.id}>
+                        <td><span className="badge badge-light">{s.id}</span></td>
+                        <td className="font-weight-bold">{s.nombre || s.name}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </AdminLTEWidget>
+        </div>
+
+        {/* Municipios */}
+        <div className="col-lg-6 col-md-12 mb-4">
+          <AdminLTEWidget type="card" title="Municipios" icon={Building} color="success">
+            <div className="table-responsive" style={{ maxHeight: '300px' }}>
+              <table className="table table-sm table-striped">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {municipalities.length === 0 ? (
+                    <tr>
+                      <td colSpan="2" className="text-center text-muted py-3">
+                        <Building size={24} className="mb-2" />
+                        <p>No hay municipios registrados</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    municipalities.map(m => (
+                      <tr key={m.id}>
+                        <td><span className="badge badge-light">{m.id}</span></td>
+                        <td className="font-weight-bold">{m.nombre || m.name}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </AdminLTEWidget>
+        </div>
+
+        {/* Parroquias */}
+        <div className="col-lg-6 col-md-12 mb-4">
+          <AdminLTEWidget type="card" title="Parroquias" icon={Navigation} color="warning">
+            <div className="table-responsive" style={{ maxHeight: '300px' }}>
+              <table className="table table-sm table-striped">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parishes.length === 0 ? (
+                    <tr>
+                      <td colSpan="2" className="text-center text-muted py-3">
+                        <Navigation size={24} className="mb-2" />
+                        <p>No hay parroquias registradas</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    parishes.map(p => (
+                      <tr key={p.id}>
+                        <td><span className="badge badge-light">{p.id}</span></td>
+                        <td className="font-weight-bold">{p.nombre || p.name}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </AdminLTEWidget>
+        </div>
+
+        {/* Ubicaciones */}
+        <div className="col-lg-6 col-md-12 mb-4">
+          <AdminLTEWidget type="card" title="Ubicaciones" icon={MapPin} color="danger">
+            <div className="table-responsive" style={{ maxHeight: '300px' }}>
+              <table className="table table-sm table-striped">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Dirección</th>
+                    <th>Acueducto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ubicaciones.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" className="text-center text-muted py-3">
+                        <MapPin size={24} className="mb-2" />
+                        <p>No hay ubicaciones registradas</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    ubicaciones.map(u => (
+                      <tr key={u.id}>
+                        <td className="font-weight-bold">{u.nombre || u.name}</td>
+                        <td className="text-muted">{u.direccion || u.address || '-'}</td>
+                        <td>
+                          <span className="badge badge-info">
+                            {u.acueducto_nombre || u.acueducto || '-'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </AdminLTEWidget>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,22 +1,32 @@
 import { useState, useEffect } from 'react';
 import { InventoryService } from '../services/inventory.service';
-import { Plus, Filter } from 'lucide-react';
+import { AdminLTEWidget, useNotifications } from '../components/adminlte';
+import { Plus, Filter, Package, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function Movimientos() {
+    const { addNotification } = useNotifications();
     const [movimientos, setMovimientos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [stats, setStats] = useState({
+        total: 0,
+        entradas: 0,
+        salidas: 0,
+        transferencias: 0
+    });
 
     // Filtros
     const [filtros, setFiltros] = useState({
         tipo_movimiento: '',
+        fecha_desde: '',
+        fecha_hasta: ''
     });
 
     // Formulario
     const [formData, setFormData] = useState({
         tipo_movimiento: 'ENTRADA',
-        product_type: 'chemical', // Default
+        product_type: 'chemical',
         product_id: '',
         acueducto_origen: '',
         acueducto_destino: '',
@@ -29,65 +39,78 @@ export default function Movimientos() {
     const [acueductos, setAcueductos] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
 
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null);
-
-    // Cargar Movimientos y Acueductos al inicio
+    // Cargar datos iniciales
     useEffect(() => {
-        const fetchInitialData = async () => {
-            try {
-                const [movRes, acuRes] = await Promise.all([
-                    InventoryService.movimientos.getAll(),
-                    InventoryService.acueductos.getAll()
-                ]);
-                setMovimientos(movRes.data.results || movRes.data);
-                setAcueductos(acuRes.data.results || acuRes.data);
-            } catch (err) {
-                console.error("Error fetching initial data", err);
-                setError("Error al cargar datos iniciales. Asegúrese que el servidor backend esté corriendo.");
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchInitialData();
     }, []);
 
-    // Cargar productos cuando cambia el tipo de producto seleccionado
+    const fetchInitialData = async () => {
+        try {
+            const [movRes, acuRes] = await Promise.all([
+                InventoryService.movimientos.getAll(),
+                InventoryService.acueductos.getAll()
+            ]);
+            
+            const movimientos = movRes.data.results || movRes.data;
+            setMovimientos(movimientos);
+            setAcueductos(acuRes.data.results || acuRes.data);
+            
+            // Calcular estadísticas
+            const stats = {
+                total: movimientos.length,
+                entradas: movimientos.filter(m => m.tipo_movimiento === 'ENTRADA').length,
+                salidas: movimientos.filter(m => m.tipo_movimiento === 'SALIDA').length,
+                transferencias: movimientos.filter(m => m.tipo_movimiento === 'TRANSFERENCIA').length
+            };
+            setStats(stats);
+            
+        } catch (err) {
+            console.error("Error fetching initial data", err);
+            addNotification({
+                type: 'error',
+                title: 'Error de conexión',
+                message: 'No se pudieron cargar los movimientos. Verifique la conexión con el servidor.',
+                duration: 5000
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Cargar productos cuando cambia el tipo
     useEffect(() => {
         if (!showForm) return;
-
-        const fetchProducts = async () => {
-            setLoadingProducts(true);
-            setProductsList([]);
-            try {
-                let res;
-                switch (formData.product_type) {
-                    case 'chemical':
-                        res = await InventoryService.chemicals.getAll();
-                        break;
-                    case 'pipe':
-                        res = await InventoryService.pipes.getAll();
-                        break;
-                    case 'pump':
-                        res = await InventoryService.pumps.getAll();
-                        break;
-                    case 'accessory':
-                        res = await InventoryService.accessories.getAll();
-                        break;
-                    default:
-                        res = { data: [] };
-                }
-                setProductsList(res.data.results || res.data);
-            } catch (err) {
-                console.error("Error fetching products", err);
-                // No mostrar error global, solo log
-            } finally {
-                setLoadingProducts(false);
-            }
-        };
-
         fetchProducts();
     }, [formData.product_type, showForm]);
+
+    const fetchProducts = async () => {
+        setLoadingProducts(true);
+        setProductsList([]);
+        try {
+            let res;
+            switch (formData.product_type) {
+                case 'chemical':
+                    res = await InventoryService.chemicals.getAll();
+                    break;
+                case 'pipe':
+                    res = await InventoryService.pipes.getAll();
+                    break;
+                case 'pump':
+                    res = await InventoryService.pumps.getAll();
+                    break;
+                case 'accessory':
+                    res = await InventoryService.accessories.getAll();
+                    break;
+                default:
+                    res = { data: [] };
+            }
+            setProductsList(res.data.results || res.data);
+        } catch (err) {
+            console.error("Error fetching products", err);
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
@@ -96,17 +119,14 @@ export default function Movimientos() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(null);
-        setSuccess(null);
 
-        // Validaciones básicas
+        // Validaciones
         if (formData.tipo_movimiento === 'TRANSFERENCIA' &&
             formData.acueducto_origen === formData.acueducto_destino) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Acueducto Inválido',
-                text: 'El acueducto destino no puede ser igual al origen',
-                confirmButtonColor: '#3085d6'
+                text: 'El acueducto destino no puede ser igual al origen'
             });
             return;
         }
@@ -115,7 +135,7 @@ export default function Movimientos() {
             Swal.fire({
                 icon: 'warning',
                 title: 'Faltan datos',
-                text: 'Seleccione un producto',
+                text: 'Seleccione un producto'
             });
             return;
         }
@@ -133,271 +153,349 @@ export default function Movimientos() {
 
             await InventoryService.movimientos.create(payload);
 
-            Swal.fire({
-                icon: 'success',
+            addNotification({
+                type: 'success',
                 title: '¡Éxito!',
-                text: 'Movimiento registrado exitosamente',
-                timer: 2000,
-                showConfirmButton: false
+                message: 'Movimiento registrado exitosamente',
+                duration: 3000
             });
 
-            // Reset parcial
+            // Reset form
             setFormData(prev => ({
                 ...prev,
                 cantidad: '',
                 razon: '',
-                product_id: '' // Limpiar selección de producto pero mantener tipo
+                product_id: ''
             }));
             setShowForm(false);
 
-            // Recargar movimientos
-            const movRes = await InventoryService.movimientos.getAll();
-            setMovimientos(movRes.data.results || movRes.data);
+            // Recargar datos
+            fetchInitialData();
 
         } catch (err) {
             console.error("Error creating movement", err);
-            const msg = err.response?.data?.detail
-                || JSON.stringify(err.response?.data)
-                || 'Error al crear el movimiento';
-            Swal.fire({
-                icon: 'error',
+            const msg = err.response?.data?.detail || 'Error al crear el movimiento';
+            addNotification({
+                type: 'error',
                 title: 'Error',
-                text: msg,
-                confirmButtonColor: '#ef4444'
+                message: msg,
+                duration: 5000
             });
         }
     };
 
-    const getTipoMovimientoColor = (tipo) => {
+    const getTipoBadgeClass = (tipo) => {
         switch (tipo) {
-            case 'ENTRADA': return 'bg-green-100 text-green-800';
-            case 'SALIDA': return 'bg-red-100 text-red-800';
-            case 'TRANSFERENCIA': return 'bg-blue-100 text-blue-800';
-            case 'AJUSTE': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'ENTRADA': return 'badge-success';
+            case 'SALIDA': return 'badge-danger';
+            case 'TRANSFERENCIA': return 'badge-info';
+            case 'AJUSTE': return 'badge-warning';
+            default: return 'badge-secondary';
         }
     };
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full p-10">
+            <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando movimientos...</p>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="sr-only">Cargando...</span>
+                    </div>
+                    <p className="mt-3 text-muted">Cargando movimientos...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold">Movimientos de Inventario</h1>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                >
-                    <Plus size={20} /> Nuevo Movimiento
-                </button>
+        <div>
+            {/* Header */}
+            <div className="row mb-4">
+                <div className="col-12">
+                    <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 className="h3 mb-0">
+                                <Package className="mr-2" size={24} />
+                                Movimientos de Inventario
+                            </h1>
+                            <p className="text-muted mb-0">
+                                Gestión y seguimiento de movimientos de stock
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowForm(!showForm)}
+                            className="btn btn-primary"
+                        >
+                            <Plus size={16} className="mr-2" />
+                            Nuevo Movimiento
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-                    {error}
+            {/* Stats */}
+            <div className="row mb-4">
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Total Movimientos"
+                        value={stats.total}
+                        icon={Package}
+                        color="info"
+                    />
                 </div>
-            )}
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Entradas"
+                        value={stats.entradas}
+                        icon={TrendingUp}
+                        color="success"
+                    />
+                </div>
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Salidas"
+                        value={stats.salidas}
+                        icon={TrendingUp}
+                        color="danger"
+                    />
+                </div>
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Transferencias"
+                        value={stats.transferencias}
+                        icon={TrendingUp}
+                        color="warning"
+                    />
+                </div>
+            </div>
 
+            {/* Form */}
             {showForm && (
-                <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                    <h2 className="text-xl font-bold mb-4">Registrar Nuevo Movimiento</h2>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Fila 1 */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Movimiento *</label>
-                                <select
-                                    name="tipo_movimiento"
-                                    value={formData.tipo_movimiento}
-                                    onChange={handleFormChange}
-                                    className="w-full px-3 py-2 border rounded-lg"
-                                >
-                                    <option value="ENTRADA">Entrada</option>
-                                    <option value="SALIDA">Salida</option>
-                                    <option value="TRANSFERENCIA">Transferencia</option>
-                                    <option value="AJUSTE">Ajuste</option>
-                                </select>
-                            </div>
-
-                            {/* Selector de Tipo de Producto */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Producto *</label>
-                                <select
-                                    name="product_type"
-                                    value={formData.product_type}
-                                    onChange={(e) => {
-                                        setFormData(prev => ({ ...prev, product_type: e.target.value, product_id: '' }));
-                                    }}
-                                    className="w-full px-3 py-2 border rounded-lg bg-gray-50"
-                                >
-                                    <option value="chemical">Químico</option>
-                                    <option value="pipe">Tubería</option>
-                                    <option value="pump">Bomba/Motor</option>
-                                    <option value="accessory">Accesorio</option>
-                                </select>
-                            </div>
-
-                            {/* Selector de Producto Específico */}
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Producto ({formData.product_type}) *
-                                    {loadingProducts && <span className="text-xs text-blue-500 ml-2">Cargando lista...</span>}
-                                </label>
-                                <select
-                                    name="product_id"
-                                    value={formData.product_id}
-                                    onChange={handleFormChange}
-                                    className="w-full px-3 py-2 border rounded-lg"
-                                    disabled={loadingProducts}
-                                >
-                                    <option value="">-- Seleccionar Producto --</option>
-                                    {productsList.map(p => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.nombre} {p.sku ? `(${p.sku})` : ''} - {p.marca || ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Cantidad */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
-                                <input
-                                    type="number"
-                                    name="cantidad"
-                                    value={formData.cantidad}
-                                    onChange={handleFormChange}
-                                    min="1"
-                                    className="w-full px-3 py-2 border rounded-lg"
-                                    required
-                                />
-                            </div>
-
-                            {/* Logica condicional de Acueductos */}
-                            {(formData.tipo_movimiento === 'SALIDA' || formData.tipo_movimiento === 'TRANSFERENCIA' || formData.tipo_movimiento === 'AJUSTE') && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Acueducto Origen *</label>
+                <AdminLTEWidget
+                    type="card"
+                    title="Registrar Nuevo Movimiento"
+                    color="primary"
+                >
+                    <form onSubmit={handleSubmit}>
+                        <div className="row">
+                            <div className="col-md-6">
+                                <div className="form-group">
+                                    <label>Tipo de Movimiento *</label>
                                     <select
-                                        name="acueducto_origen"
-                                        value={formData.acueducto_origen}
+                                        name="tipo_movimiento"
+                                        value={formData.tipo_movimiento}
                                         onChange={handleFormChange}
-                                        className="w-full px-3 py-2 border rounded-lg"
+                                        className="form-control"
                                         required
                                     >
-                                        <option value="">Seleccionar...</option>
-                                        {acueductos.map(a => (
-                                            <option key={a.id} value={a.id}>{a.nombre}</option>
-                                        ))}
+                                        <option value="ENTRADA">Entrada</option>
+                                        <option value="SALIDA">Salida</option>
+                                        <option value="TRANSFERENCIA">Transferencia</option>
+                                        <option value="AJUSTE">Ajuste</option>
                                     </select>
                                 </div>
-                            )}
-
-                            {(formData.tipo_movimiento === 'ENTRADA' || formData.tipo_movimiento === 'TRANSFERENCIA') && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Acueducto Destino *</label>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="form-group">
+                                    <label>Tipo de Producto *</label>
                                     <select
-                                        name="acueducto_destino"
-                                        value={formData.acueducto_destino}
-                                        onChange={handleFormChange}
-                                        className="w-full px-3 py-2 border rounded-lg"
-                                        required
+                                        name="product_type"
+                                        value={formData.product_type}
+                                        onChange={(e) => {
+                                            setFormData(prev => ({ 
+                                                ...prev, 
+                                                product_type: e.target.value, 
+                                                product_id: '' 
+                                            }));
+                                        }}
+                                        className="form-control"
                                     >
-                                        <option value="">Seleccionar...</option>
-                                        {acueductos.map(a => (
-                                            <option key={a.id} value={a.id}>{a.nombre}</option>
-                                        ))}
+                                        <option value="chemical">Químico</option>
+                                        <option value="pipe">Tubería</option>
+                                        <option value="pump">Bomba/Motor</option>
+                                        <option value="accessory">Accesorio</option>
                                     </select>
                                 </div>
-                            )}
-
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Razón / Comentarios</label>
-                                <textarea
-                                    name="razon"
-                                    value={formData.razon}
-                                    onChange={handleFormChange}
-                                    rows="2"
-                                    className="w-full px-3 py-2 border rounded-lg"
-                                />
                             </div>
                         </div>
 
-                        <div className="flex gap-3 justify-end mt-4">
+                        <div className="row">
+                            <div className="col-12">
+                                <div className="form-group">
+                                    <label>
+                                        Producto ({formData.product_type}) *
+                                        {loadingProducts && <small className="text-info ml-2">Cargando...</small>}
+                                    </label>
+                                    <select
+                                        name="product_id"
+                                        value={formData.product_id}
+                                        onChange={handleFormChange}
+                                        className="form-control"
+                                        disabled={loadingProducts}
+                                        required
+                                    >
+                                        <option value="">-- Seleccionar Producto --</option>
+                                        {productsList.map(p => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.nombre} {p.sku ? `(${p.sku})` : ''} - {p.marca || ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="col-md-6">
+                                <div className="form-group">
+                                    <label>Cantidad *</label>
+                                    <input
+                                        type="number"
+                                        name="cantidad"
+                                        value={formData.cantidad}
+                                        onChange={handleFormChange}
+                                        className="form-control"
+                                        min="1"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                {(formData.tipo_movimiento === 'SALIDA' || 
+                                  formData.tipo_movimiento === 'TRANSFERENCIA' || 
+                                  formData.tipo_movimiento === 'AJUSTE') && (
+                                    <div className="form-group">
+                                        <label>Acueducto Origen *</label>
+                                        <select
+                                            name="acueducto_origen"
+                                            value={formData.acueducto_origen}
+                                            onChange={handleFormChange}
+                                            className="form-control"
+                                            required
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            {acueductos.map(a => (
+                                                <option key={a.id} value={a.id}>{a.nombre}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                                {(formData.tipo_movimiento === 'ENTRADA' || 
+                                  formData.tipo_movimiento === 'TRANSFERENCIA') && (
+                                    <div className="form-group">
+                                        <label>Acueducto Destino *</label>
+                                        <select
+                                            name="acueducto_destino"
+                                            value={formData.acueducto_destino}
+                                            onChange={handleFormChange}
+                                            className="form-control"
+                                            required
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            {acueductos.map(a => (
+                                                <option key={a.id} value={a.id}>{a.nombre}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Razón / Comentarios</label>
+                            <textarea
+                                name="razon"
+                                value={formData.razon}
+                                onChange={handleFormChange}
+                                className="form-control"
+                                rows="3"
+                            />
+                        </div>
+
+                        <div className="d-flex justify-content-end">
                             <button
                                 type="button"
                                 onClick={() => setShowForm(false)}
-                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                                className="btn btn-secondary mr-2"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
-                                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                                className="btn btn-primary"
                             >
                                 Guardar Movimiento
                             </button>
                         </div>
                     </form>
-                </div>
+                </AdminLTEWidget>
             )}
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cant.</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destino</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {movimientos.length === 0 ? (
+            {/* Movimientos Table */}
+            <AdminLTEWidget
+                type="table"
+                title="Historial de Movimientos"
+                icon={Calendar}
+                onRefresh={fetchInitialData}
+            >
+                <div className="table-responsive">
+                    <table className="table table-striped">
+                        <thead>
                             <tr>
-                                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                                    No hay movimientos recientes
-                                </td>
+                                <th>Tipo</th>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Origen</th>
+                                <th>Destino</th>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
                             </tr>
-                        ) : (
-                            movimientos.map(mov => (
-                                <tr key={mov.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTipoMovimientoColor(mov.tipo_movimiento)}`}>
-                                            {mov.tipo_movimiento}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {mov.producto_str || 'Producto desconocido'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                        {mov.cantidad}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {mov.acueducto_origen_nombre || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {mov.acueducto_destino_nombre || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(mov.fecha_movimiento).toLocaleDateString()}
+                        </thead>
+                        <tbody>
+                            {movimientos.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="text-center text-muted py-4">
+                                        <AlertCircle size={24} className="mb-2" />
+                                        <p>No hay movimientos registrados</p>
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            ) : (
+                                movimientos.map(mov => (
+                                    <tr key={mov.id}>
+                                        <td>
+                                            <span className={`badge ${getTipoBadgeClass(mov.tipo_movimiento)}`}>
+                                                {mov.tipo_movimiento}
+                                            </span>
+                                        </td>
+                                        <td className="font-weight-bold">
+                                            {mov.producto_str || 'Producto desconocido'}
+                                        </td>
+                                        <td className="font-weight-bold">
+                                            {mov.cantidad}
+                                        </td>
+                                        <td className="text-muted">
+                                            {mov.acueducto_origen_nombre || '-'}
+                                        </td>
+                                        <td className="text-muted">
+                                            {mov.acueducto_destino_nombre || '-'}
+                                        </td>
+                                        <td className="text-muted">
+                                            {new Date(mov.fecha_movimiento).toLocaleDateString('es-ES')}
+                                        </td>
+                                        <td className="text-muted">
+                                            {mov.usuario_nombre || '-'}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </AdminLTEWidget>
         </div>
     );
 }

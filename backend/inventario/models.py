@@ -12,15 +12,40 @@ from decimal import Decimal
 import uuid
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 from institucion.models import Acueducto, Sucursal, OrganizacionCentral
 from geography.models import Ubicacion
 from catalogo.models import CategoriaProducto, Marca
 from auditoria.models import SoftDeleteModel
 
+# Optional import for JSON schema validation
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
+
 
 # ============================================================================
 # MODELOS AUXILIARES DEL NUEVO SISTEMA
 # ============================================================================
+
+class Tag(models.Model):
+    """Tags for categorizing and organizing inventory items."""
+    name = models.CharField(max_length=50, unique=True)
+    color = models.CharField(max_length=7, default='#007bff', help_text='Hex color code for the tag')
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
 
 # Category removed, moved to catalogo app
 
@@ -105,6 +130,11 @@ class ProductBase(SoftDeleteModel):
         related_name='%(class)s_productos'
     )
     
+    # Enhanced functionality fields
+    tags = models.ManyToManyField(Tag, blank=True, related_name='%(class)s_products')
+    custom_fields = models.JSONField(default=dict, blank=True, help_text='Custom fields for flexible data storage')
+    search_vector = SearchVectorField(null=True, blank=True)
+    
     # Stock y Precio
     stock_actual = models.DecimalField(
         max_digits=12,
@@ -150,6 +180,10 @@ class ProductBase(SoftDeleteModel):
     class Meta:
         abstract = True
         ordering = ['sku']
+        indexes = [
+            GinIndex(fields=['search_vector']),
+            models.Index(fields=['creado_en', 'activo']),
+        ]
 
     def __str__(self):
         return f"{self.sku} - {self.nombre}"
@@ -170,6 +204,56 @@ class ProductBase(SoftDeleteModel):
         
         self.full_clean()
         super().save(*args, **kwargs)
+        
+        # Update search vector after saving
+        self.update_search_vector()
+
+    def update_search_vector(self):
+        """Update the search vector with searchable content."""
+        from django.db import connection
+        
+        # Only update search vector if using PostgreSQL
+        if connection.vendor != 'postgresql':
+            return
+        
+        from django.contrib.postgres.search import SearchVector
+        
+        # Build search vector from relevant fields
+        search_content = [
+            self.sku or '',
+            self.nombre or '',
+            self.descripcion or '',
+            self.notas or '',
+        ]
+        
+        # Add category name if available
+        if self.categoria:
+            search_content.append(self.categoria.nombre or '')
+        
+        # Add supplier name if available
+        if self.proveedor:
+            search_content.append(self.proveedor.nombre or '')
+        
+        # Add tag names
+        tag_names = ' '.join(self.tags.values_list('name', flat=True))
+        if tag_names:
+            search_content.append(tag_names)
+        
+        # Add custom fields values (only string values)
+        if self.custom_fields:
+            for key, value in self.custom_fields.items():
+                if isinstance(value, str):
+                    search_content.append(value)
+        
+        # Update search vector
+        search_text = ' '.join(filter(None, search_content))
+        if search_text.strip():
+            # Use raw SQL to update search vector to avoid recursion
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"UPDATE {self._meta.db_table} SET search_vector = to_tsvector('spanish', %s) WHERE id = %s",
+                    [search_text, self.pk]
+                )
 
     def generate_sku(self):
         """
@@ -219,6 +303,21 @@ class ProductBase(SoftDeleteModel):
         if self.stock_minimo > 0:
             return float((self.stock_actual / self.stock_minimo) * 100)
         return 100.0
+
+    def get_custom_field(self, field_name, default=None):
+        """Get a custom field value."""
+        return self.custom_fields.get(field_name, default)
+
+    def set_custom_field(self, field_name, value):
+        """Set a custom field value."""
+        if not self.custom_fields:
+            self.custom_fields = {}
+        self.custom_fields[field_name] = value
+
+    def remove_custom_field(self, field_name):
+        """Remove a custom field."""
+        if self.custom_fields and field_name in self.custom_fields:
+            del self.custom_fields[field_name]
 
 
 # ============================================================================
@@ -1309,6 +1408,392 @@ class RegistroMantenimiento(models.Model):
 
     def __str__(self):
         return f"Mantenimiento de {self.ficha_tecnica.equipo.nombre} el {self.fecha}"
+
+# ============================================================================
+# SISTEMA DE CONFIGURACIÓN
+# ============================================================================
+
+class SystemConfiguration(models.Model):
+    """
+    System configuration model for managing application settings.
+    Supports environment-specific configurations and audit trail.
+    """
+    
+    class Category(models.TextChoices):
+        GENERAL = 'general', 'General'
+        SECURITY = 'security', 'Seguridad'
+        NOTIFICATIONS = 'notifications', 'Notificaciones'
+        EMAIL = 'email', 'Email'
+        MAINTENANCE = 'maintenance', 'Mantenimiento'
+        PERFORMANCE = 'performance', 'Rendimiento'
+        INTEGRATION = 'integration', 'Integración'
+        UI = 'ui', 'Interfaz de Usuario'
+    
+    class Environment(models.TextChoices):
+        DEVELOPMENT = 'development', 'Desarrollo'
+        TESTING = 'testing', 'Pruebas'
+        STAGING = 'staging', 'Staging'
+        PRODUCTION = 'production', 'Producción'
+        ALL = 'all', 'Todos los Entornos'
+    
+    key = models.CharField(
+        max_length=100, 
+        help_text='Unique configuration key (e.g., "email.smtp_host")'
+    )
+    value = models.JSONField(
+        help_text='Configuration value in JSON format'
+    )
+    description = models.TextField(
+        blank=True,
+        help_text='Human-readable description of this configuration'
+    )
+    category = models.CharField(
+        max_length=50, 
+        choices=Category.choices,
+        default=Category.GENERAL,
+        help_text='Configuration category for organization'
+    )
+    environment = models.CharField(
+        max_length=20,
+        choices=Environment.choices,
+        default=Environment.ALL,
+        help_text='Environment where this configuration applies'
+    )
+    is_sensitive = models.BooleanField(
+        default=False,
+        help_text='Whether this configuration contains sensitive data (passwords, keys, etc.)'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Whether this configuration is currently active'
+    )
+    validation_schema = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='JSON schema for validating the configuration value'
+    )
+    modified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='User who last modified this configuration'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Configuración del Sistema'
+        verbose_name_plural = 'Configuraciones del Sistema'
+        unique_together = ('key', 'environment')
+        ordering = ['category', 'key', 'environment']
+        indexes = [
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['environment', 'is_active']),
+            models.Index(fields=['key', 'environment']),
+            models.Index(fields=['is_sensitive']),
+        ]
+    
+    def __str__(self):
+        env_suffix = f" ({self.environment})" if self.environment != self.Environment.ALL else ""
+        return f"{self.key}{env_suffix}"
+    
+    def clean(self):
+        """Validate configuration data."""
+        from django.core.exceptions import ValidationError
+        
+        # Validate key format (should be dot-separated)
+        if not self.key or '.' not in self.key:
+            raise ValidationError({
+                'key': 'Configuration key should follow dot notation (e.g., "email.smtp_host")'
+            })
+        
+        # Validate against schema if provided and jsonschema is available
+        if HAS_JSONSCHEMA and self.validation_schema and self.value is not None:
+            try:
+                jsonschema.validate(self.value, self.validation_schema)
+            except jsonschema.ValidationError as e:
+                raise ValidationError({
+                    'value': f'Configuration value does not match schema: {e.message}'
+                })
+            except jsonschema.SchemaError as e:
+                raise ValidationError({
+                    'validation_schema': f'Invalid validation schema: {e.message}'
+                })
+        elif not HAS_JSONSCHEMA and self.validation_schema:
+            # Warn that validation schema is ignored if jsonschema is not available
+            pass
+    
+    def save(self, *args, **kwargs):
+        """Override save to perform validation and create audit trail."""
+        self.full_clean()
+        
+        # Track if this is an update
+        is_update = self.pk is not None
+        old_value = None
+        
+        if is_update:
+            try:
+                old_instance = SystemConfiguration.objects.get(pk=self.pk)
+                old_value = old_instance.value
+            except SystemConfiguration.DoesNotExist:
+                is_update = False
+        
+        super().save(*args, **kwargs)
+        
+        # Create audit trail entry
+        self._create_audit_entry(is_update, old_value)
+    
+    def _create_audit_entry(self, is_update, old_value):
+        """Create audit trail entry for configuration changes."""
+        try:
+            from auditoria.models import AuditLog
+            from django.contrib.contenttypes.models import ContentType
+            
+            action = 'UPDATE' if is_update else 'CREATE'
+            changes = {}
+            
+            if is_update and old_value != self.value:
+                changes = {
+                    'old_value': old_value,
+                    'new_value': self.value,
+                    'key': self.key,
+                    'environment': self.environment
+                }
+            elif not is_update:
+                changes = {
+                    'key': self.key,
+                    'value': self.value,
+                    'environment': self.environment,
+                    'category': self.category
+                }
+            
+            if changes:  # Only create audit if there are actual changes
+                AuditLog.objects.create(
+                    user=self.modified_by,
+                    action=action,
+                    content_type=ContentType.objects.get_for_model(self),
+                    object_id=self.pk,
+                    object_repr=str(self),
+                    changes=changes
+                )
+        except ImportError:
+            # AuditLog model not available, skip audit trail
+            pass
+        except Exception:
+            # Don't fail the save if audit trail creation fails
+            pass
+    
+    @classmethod
+    def get_config(cls, key, environment=None, default=None):
+        """
+        Get configuration value for a specific key and environment.
+        
+        Args:
+            key: Configuration key
+            environment: Target environment (defaults to current environment)
+            default: Default value if configuration not found
+            
+        Returns:
+            Configuration value or default
+        """
+        if environment is None:
+            # Try to detect current environment from Django settings
+            from django.conf import settings
+            environment = getattr(settings, 'ENVIRONMENT', cls.Environment.PRODUCTION)
+        
+        # Try environment-specific configuration first
+        try:
+            config = cls.objects.get(
+                key=key, 
+                environment=environment, 
+                is_active=True
+            )
+            return config.value
+        except cls.DoesNotExist:
+            pass
+        
+        # Fall back to 'all environments' configuration
+        try:
+            config = cls.objects.get(
+                key=key, 
+                environment=cls.Environment.ALL, 
+                is_active=True
+            )
+            return config.value
+        except cls.DoesNotExist:
+            return default
+    
+    @classmethod
+    def set_config(cls, key, value, environment=None, category=None, description='', 
+                   is_sensitive=False, validation_schema=None, modified_by=None):
+        """
+        Set configuration value for a specific key and environment.
+        
+        Args:
+            key: Configuration key
+            value: Configuration value
+            environment: Target environment
+            category: Configuration category
+            description: Human-readable description
+            is_sensitive: Whether the configuration is sensitive
+            validation_schema: JSON schema for validation
+            modified_by: User making the change
+            
+        Returns:
+            SystemConfiguration instance
+        """
+        if environment is None:
+            environment = cls.Environment.ALL
+        
+        if category is None:
+            category = cls.Category.GENERAL
+        
+        config, created = cls.objects.update_or_create(
+            key=key,
+            environment=environment,
+            defaults={
+                'value': value,
+                'category': category,
+                'description': description,
+                'is_sensitive': is_sensitive,
+                'validation_schema': validation_schema or {},
+                'modified_by': modified_by,
+                'is_active': True
+            }
+        )
+        
+        return config
+    
+    @classmethod
+    def get_by_category(cls, category, environment=None, include_sensitive=False):
+        """
+        Get all configurations for a specific category.
+        
+        Args:
+            category: Configuration category
+            environment: Target environment
+            include_sensitive: Whether to include sensitive configurations
+            
+        Returns:
+            QuerySet of SystemConfiguration objects
+        """
+        queryset = cls.objects.filter(category=category, is_active=True)
+        
+        if environment:
+            queryset = queryset.filter(
+                models.Q(environment=environment) | 
+                models.Q(environment=cls.Environment.ALL)
+            )
+        
+        if not include_sensitive:
+            queryset = queryset.filter(is_sensitive=False)
+        
+        return queryset.order_by('key')
+    
+    @classmethod
+    def export_configurations(cls, environment=None, include_sensitive=False):
+        """
+        Export configurations as a dictionary for backup/import.
+        
+        Args:
+            environment: Target environment (None for all)
+            include_sensitive: Whether to include sensitive configurations
+            
+        Returns:
+            Dictionary with configuration data
+        """
+        queryset = cls.objects.filter(is_active=True)
+        
+        if environment:
+            queryset = queryset.filter(environment=environment)
+        
+        if not include_sensitive:
+            queryset = queryset.filter(is_sensitive=False)
+        
+        export_data = {
+            'export_timestamp': timezone.now().isoformat(),
+            'environment': environment or 'all',
+            'include_sensitive': include_sensitive,
+            'configurations': []
+        }
+        
+        for config in queryset:
+            config_data = {
+                'key': config.key,
+                'value': config.value,
+                'description': config.description,
+                'category': config.category,
+                'environment': config.environment,
+                'is_sensitive': config.is_sensitive,
+                'validation_schema': config.validation_schema
+            }
+            export_data['configurations'].append(config_data)
+        
+        return export_data
+    
+    @classmethod
+    def import_configurations(cls, import_data, modified_by=None, overwrite=False):
+        """
+        Import configurations from exported data.
+        
+        Args:
+            import_data: Dictionary with configuration data
+            modified_by: User performing the import
+            overwrite: Whether to overwrite existing configurations
+            
+        Returns:
+            Dictionary with import results
+        """
+        results = {
+            'created': 0,
+            'updated': 0,
+            'skipped': 0,
+            'errors': []
+        }
+        
+        configurations = import_data.get('configurations', [])
+        
+        for config_data in configurations:
+            try:
+                key = config_data['key']
+                environment = config_data.get('environment', cls.Environment.ALL)
+                
+                # Check if configuration already exists
+                existing = cls.objects.filter(key=key, environment=environment).first()
+                
+                if existing and not overwrite:
+                    results['skipped'] += 1
+                    continue
+                
+                # Create or update configuration
+                config, created = cls.objects.update_or_create(
+                    key=key,
+                    environment=environment,
+                    defaults={
+                        'value': config_data['value'],
+                        'description': config_data.get('description', ''),
+                        'category': config_data.get('category', cls.Category.GENERAL),
+                        'is_sensitive': config_data.get('is_sensitive', False),
+                        'validation_schema': config_data.get('validation_schema', {}),
+                        'modified_by': modified_by,
+                        'is_active': True
+                    }
+                )
+                
+                if created:
+                    results['created'] += 1
+                else:
+                    results['updated'] += 1
+                    
+            except Exception as e:
+                results['errors'].append({
+                    'key': config_data.get('key', 'unknown'),
+                    'error': str(e)
+                })
+        
+        return results
+
 
 # ============================================================================
 # MODELO DE ORDEN DE COMPRA/TRANSFERENCIA
