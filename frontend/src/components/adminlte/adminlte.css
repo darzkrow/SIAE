@@ -3,8 +3,8 @@
 /* Import AdminLTE3 core styles */
 @import 'admin-lte/dist/css/adminlte.min.css';
 
-/* Import Bootstrap styles */
-@import 'bootstrap/dist/css/bootstrap.min.css';
+/* Bootstrap is already included via AdminLTE */
+/* @import 'bootstrap/dist/css/bootstrap.min.css'; */
 
 /* Custom overrides for AdminLTE3 integration */
 .wrapper {
