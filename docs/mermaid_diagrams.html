@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIAE - Diagramas de Arquitectura</title>
+    <title>SIAE - Diagramas de Arquitectura Completos</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <style>
         * {
@@ -21,7 +21,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
@@ -54,6 +54,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         nav ul {
@@ -68,10 +69,10 @@
             background: white;
             border: 2px solid #667eea;
             color: #667eea;
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 25px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             transition: all 0.3s ease;
         }
@@ -127,6 +128,7 @@
             border-radius: 10px;
             margin: 20px 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
         }
 
         @keyframes fadeIn {
@@ -163,28 +165,43 @@
         .info-box strong {
             color: #2196F3;
         }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box strong {
+            color: #856404;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <header>
-            <h1>🏗️ SIAE - Arquitectura del Sistema</h1>
+            <h1>🏗️ SIAE - Arquitectura Completa del Sistema</h1>
             <p>Sistema Integrado de Administración de Equipos</p>
-            <p style="font-size: 0.9em; margin-top: 10px;">Subalmacén & QR Codes Implementation</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Subalmacén & QR Codes - Diagramas Interactivos</p>
         </header>
 
         <nav>
             <ul>
-                <li><button onclick="showDiagram('general')" class="active">Arquitectura General</button></li>
-                <li><button onclick="showDiagram('modelos')">Modelos de Datos</button></li>
-                <li><button onclick="showDiagram('subalmacen')">Subalmacén</button></li>
-                <li><button onclick="showDiagram('inventario')">Inventario</button></li>
-                <li><button onclick="showDiagram('flujo-qr')">Flujo QR</button></li>
-                <li><button onclick="showDiagram('estados')">Estados</button></li>
-                <li><button onclick="showDiagram('capas')">Capas</button></li>
-                <li><button onclick="showDiagram('permisos')">Permisos</button></li>
-                <li><button onclick="showDiagram('componentes')">Componentes</button></li>
+                <li><button onclick="showDiagram('general')" class="active">🏗️ Arquitectura</button></li>
+                <li><button onclick="showDiagram('modelos')">🗄️ Jerarquía</button></li>
+                <li><button onclick="showDiagram('subalmacen')">🗺️ Subalmacén</button></li>
+                <li><button onclick="showDiagram('inventario')">📦 Inventario</button></li>
+                <li><button onclick="showDiagram('flujo-qr')">🔄 Flujo QR</button></li>
+                <li><button onclick="showDiagram('estados')">🎯 Estados</button></li>
+                <li><button onclick="showDiagram('capas')">🏛️ Capas</button></li>
+                <li><button onclick="showDiagram('endpoints')">📡 Endpoints</button></li>
+                <li><button onclick="showDiagram('permisos')">🔐 Permisos</button></li>
+                <li><button onclick="showDiagram('geografia')">🌍 Geografía</button></li>
+                <li><button onclick="showDiagram('componentes')">📦 Componentes</button></li>
+                <li><button onclick="showDiagram('flujo-datos')">💾 Flujo Datos</button></li>
             </ul>
         </nav>
 
@@ -192,7 +209,8 @@
             <!-- Arquitectura General -->
             <div id="general" class="diagram-section active">
                 <h2>📊 Arquitectura General del Sistema</h2>
-                <p>Vista completa de la arquitectura en capas del sistema SIAE.</p>
+                <p>Vista completa de la arquitectura en capas del sistema SIAE, mostrando la interacción entre frontend,
+                    API, lógica de negocio y base de datos.</p>
 
                 <pre class="mermaid">
 graph TB
@@ -202,24 +220,30 @@ graph TB
         QRScanner[QR Scanner]
     end
     
-    subgraph API["API Layer"]
+    subgraph API["API Layer - DRF"]
         RESTAPI[REST API]
         Auth[Authentication]
         Perms[Permissions]
     end
     
-    subgraph Business["Business Logic"]
+    subgraph Business["Business Logic Layer"]
         InstView[Institucion ViewSets]
         InvView[Inventario ViewSets]
         QRGen[QR Generator]
         ApprovalFlow[Approval Workflow]
     end
     
-    subgraph Data["Data Layer"]
+    subgraph Data["Data Layer - PostgreSQL"]
         OrgModels[Organizational Models]
         InvModels[Inventory Models]
         GeoModels[Geography Models]
         AuditModels[Audit Models]
+    end
+    
+    subgraph External["External Services"]
+        QRLib[qrcode Library]
+        Pillow[Pillow Image]
+        Media[Media Storage]
     end
     
     UI --> RESTAPI
@@ -235,17 +259,24 @@ graph TB
     InstView --> ApprovalFlow
     InvView --> OrgModels
     
+    QRGen --> QRLib
+    QRGen --> Pillow
+    QRGen --> Media
+    
     InstView --> OrgModels
     InstView --> GeoModels
     InvView --> InvModels
     ApprovalFlow --> AuditModels
+    
+    OrgModels -.-> InvModels
+    GeoModels -.-> OrgModels
                 </pre>
             </div>
 
             <!-- Modelos de Datos -->
             <div id="modelos" class="diagram-section">
                 <h2>🗄️ Jerarquía Organizacional</h2>
-                <p>Estructura jerárquica de la organización.</p>
+                <p>Estructura jerárquica de la organización desde Empresa hasta Almacén Regional.</p>
 
                 <pre class="mermaid">
 erDiagram
@@ -259,6 +290,7 @@ erDiagram
         string codigo
         string rif
         bool activo
+        datetime created_at
     }
     
     Vicepresidencia {
@@ -267,6 +299,7 @@ erDiagram
         string codigo
         string tipo
         bool activo
+        datetime created_at
     }
     
     UnidadOrganizacional {
@@ -274,6 +307,7 @@ erDiagram
         string nombre
         string codigo
         bool activo
+        datetime created_at
     }
     
     AlmacenRegional {
@@ -281,18 +315,22 @@ erDiagram
         string nombre
         string prefijo
         string ubicacion
+        int capacidad_maxima
         bool activo
+        datetime created_at
     }
                 </pre>
             </div>
 
             <!-- Subalmacén -->
             <div id="subalmacen" class="diagram-section">
-                <h2>🗺️ Modelo Subalmacén <span class="badge">NUEVO</span></h2>
-                <p>Modelo con integración geográfica completa.</p>
+                <h2>🗺️ Modelo Subalmacén con Ubicación Geográfica <span class="badge">NUEVO</span></h2>
+                <p>Modelo completo de Subalmacén con integración geográfica (Estado, Municipio, Parroquia) y gestión por
+                    Sucursal.</p>
 
                 <div class="info-box">
-                    <strong>Características:</strong> Ubicación geográfica, coordenadas GPS, responsable, capacidad.
+                    <strong>Características:</strong> Ubicación geográfica completa, coordenadas GPS, responsable
+                    asignado, capacidad definida.
                 </div>
 
                 <pre class="mermaid">
@@ -301,6 +339,7 @@ erDiagram
     Subalmacen ||--o| Municipality : pertenece_a
     Subalmacen ||--o| Parish : localizado_en
     Subalmacen ||--|| Sucursal : gestionado_por
+    Subalmacen ||--o| User : responsable
     
     Subalmacen {
         int id PK
@@ -310,6 +349,7 @@ erDiagram
         string coordenadas_gps
         int capacidad
         bool activo
+        datetime created_at
     }
     
     State {
@@ -326,13 +366,19 @@ erDiagram
         int id PK
         string name
     }
+    
+    Sucursal {
+        int id PK
+        string nombre
+        string codigo
+    }
                 </pre>
             </div>
 
             <!-- Inventario -->
             <div id="inventario" class="diagram-section">
                 <h2>📦 Sistema de Inventario y Traslados</h2>
-                <p>Gestión de activos y solicitudes de traslado.</p>
+                <p>Gestión de activos, solicitudes de traslado y sistema de aprobación dual.</p>
 
                 <pre class="mermaid">
 erDiagram
@@ -340,13 +386,17 @@ erDiagram
     ActivoInventario ||--o{ SolicitudTraslado : genera
     SolicitudTraslado ||--|| AlmacenRegional : origen
     SolicitudTraslado ||--|| AlmacenRegional : destino
+    SolicitudTraslado ||--o| AprobacionTraslado : aprobacion_origen
+    SolicitudTraslado ||--o| AprobacionTraslado : aprobacion_destino
     SolicitudTraslado ||--|| User : solicitante
+    AprobacionTraslado ||--|| User : aprobador
     
     ActivoInventario {
         int id PK
         string codigo_actual UK
         string tipo_activo
         string estado
+        datetime created_at
     }
     
     SolicitudTraslado {
@@ -356,17 +406,26 @@ erDiagram
         string prioridad
         image qr_code
         url qr_url
+        datetime qr_generado_en
+    }
+    
+    AprobacionTraslado {
+        int id PK
+        string tipo_aprobacion
+        string decision
+        datetime fecha_decision
     }
                 </pre>
             </div>
 
             <!-- Flujo QR -->
             <div id="flujo-qr" class="diagram-section">
-                <h2>🔄 Flujo de Aprobación con QR <span class="badge">NUEVO</span></h2>
-                <p>Proceso de aprobación dual mediante QR.</p>
+                <h2>🔄 Flujo de Aprobación con QR Codes <span class="badge">NUEVO</span></h2>
+                <p>Secuencia completa del proceso de aprobación dual mediante escaneo de códigos QR.</p>
 
                 <div class="info-box">
-                    <strong>Proceso:</strong> Crear → Generar QR → Aprobar Origen → Aprobar Destino → Ejecutar
+                    <strong>Proceso:</strong> Crear solicitud → Generar QR → Aprobar Origen (QR) → Aprobar Destino (QR)
+                    → Ejecutar traslado automático
                 </div>
 
                 <pre class="mermaid">
@@ -378,47 +437,52 @@ sequenceDiagram
     participant D as Database
     participant M as Mobile
     
-    U->>F: Crear Solicitud
-    F->>A: POST /solicitudes/
-    A->>D: Guardar
-    D-->>A: ID Creado
+    U->>F: Crear Solicitud Traslado
+    F->>A: POST /solicitudes-traslado/
+    A->>D: Guardar Solicitud
+    D-->>A: Solicitud Creada
     
     A->>Q: generar_qr_code()
-    Q->>Q: Crear URL
-    Q->>Q: Generar QR
-    Q->>D: Guardar QR
-    D-->>Q: OK
+    Q->>Q: Crear URL aprobacion
+    Q->>Q: Generar imagen QR
+    Q->>D: Guardar QR en media
+    D-->>Q: QR guardado
     Q-->>A: QR generado
     
-    A-->>F: Solicitud + QR
-    F-->>U: Mostrar QR
+    A-->>F: Solicitud mas QR URL
+    F-->>U: Mostrar QR Code
     
-    Note over U,M: Escanear QR Origen
+    Note over U,M: Gerente Origen escanea QR
     
-    M->>A: POST /aprobar-origen/
-    A->>D: Validar
-    A->>D: Crear Aprobacion
-    D-->>A: OK
-    A-->>M: Aprobado
+    M->>M: Escanear QR Code
+    M->>A: POST aprobar-origen
+    A->>D: Validar permisos
+    D-->>A: Usuario autorizado
+    A->>D: Crear Aprobacion ORIGEN
+    A->>D: Estado APROBADA_ORIGEN
+    D-->>A: Actualizado
+    A-->>M: Aprobacion exitosa
     
-    Note over U,M: Escanear QR Destino
+    Note over U,M: Gerente Destino escanea QR
     
-    M->>A: POST /aprobar-destino/
-    A->>D: Validar
-    A->>D: Ejecutar Traslado
-    D-->>A: Completado
-    A-->>M: Traslado OK
+    M->>A: POST aprobar-destino
+    A->>D: Validar estado
+    A->>D: Crear Aprobacion DESTINO
+    A->>D: Estado APROBADA_COMPLETA
+    A->>D: Ejecutar traslado
+    D-->>A: Traslado ejecutado
+    A-->>M: Aprobacion completa
                 </pre>
             </div>
 
             <!-- Estados -->
             <div id="estados" class="diagram-section">
-                <h2>🎯 Máquina de Estados</h2>
-                <p>Ciclo de vida de solicitudes de traslado.</p>
+                <h2>🎯 Máquina de Estados - Workflow de Solicitudes</h2>
+                <p>Ciclo de vida completo de una solicitud de traslado con aprobación dual.</p>
 
                 <pre class="mermaid">
 stateDiagram-v2
-    [*] --> PENDIENTE
+    [*] --> PENDIENTE: Crear Solicitud
     
     PENDIENTE --> APROBADA_ORIGEN: Aprobar Origen
     PENDIENTE --> RECHAZADA: Rechazar
@@ -426,52 +490,75 @@ stateDiagram-v2
     APROBADA_ORIGEN --> APROBADA_DESTINO: Aprobar Destino
     APROBADA_ORIGEN --> RECHAZADA: Rechazar
     
-    APROBADA_DESTINO --> APROBADA_COMPLETA: Validar
+    APROBADA_DESTINO --> APROBADA_COMPLETA: Validacion dual OK
     
-    APROBADA_COMPLETA --> EN_TRANSITO: Ejecutar
+    APROBADA_COMPLETA --> EN_TRANSITO: Ejecutar Traslado
     
-    EN_TRANSITO --> COMPLETADA: Confirmar
+    EN_TRANSITO --> COMPLETADA: Confirmar recepcion
     
     RECHAZADA --> [*]
     COMPLETADA --> [*]
+    
+    note right of PENDIENTE
+        QR Code generado
+        automaticamente
+    end note
+    
+    note right of APROBADA_ORIGEN
+        Primera aprobacion
+        via QR scan
+    end note
+    
+    note right of APROBADA_DESTINO
+        Segunda aprobacion
+        via QR scan
+    end note
                 </pre>
             </div>
 
             <!-- Capas -->
             <div id="capas" class="diagram-section">
                 <h2>🏛️ Arquitectura de Capas</h2>
-                <p>Separación de responsabilidades.</p>
+                <p>Separación de responsabilidades en capas bien definidas.</p>
 
                 <pre class="mermaid">
 graph TB
     subgraph Presentation["Presentation Layer"]
         A1[React Components]
         A2[Mobile PWA]
-        A3[QR Scanner]
+        A3[QR Scanner Component]
     end
     
     subgraph Gateway["API Gateway"]
         B1[Django REST Framework]
         B2[URL Routing]
-        B3[Authentication]
+        B3[Authentication JWT]
         B4[Permissions]
     end
     
     subgraph Logic["Business Logic"]
         C1[ViewSets]
         C2[Serializers]
-        C3[QR Generator]
-        C4[Approval Workflow]
+        C3[QR Generator Service]
+        C4[Approval Workflow Engine]
+        C5[Validation Rules]
     end
     
-    subgraph DataAccess["Data Access"]
+    subgraph DataAccess["Data Access Layer"]
         D1[Django ORM]
         D2[Query Optimization]
+        D3[select_related]
     end
     
     subgraph DB["Database"]
         E1[(PostgreSQL)]
         E2[Indexes]
+        E3[Constraints]
+    end
+    
+    subgraph Storage["External Storage"]
+        F1[Media Files]
+        F2[QR Code Images]
     end
     
     A1 --> B1
@@ -486,43 +573,135 @@ graph TB
     C1 --> C2
     C1 --> C3
     C1 --> C4
+    C2 --> C5
     
     C1 --> D1
+    C3 --> F1
+    
     D1 --> D2
-    D2 --> E1
+    D2 --> D3
+    D3 --> E1
+    
     E1 --> E2
+    E1 --> E3
+    
+    C3 --> F2
+                </pre>
+            </div>
+
+            <!-- Endpoints -->
+            <div id="endpoints" class="diagram-section">
+                <h2>📡 API Endpoints</h2>
+
+                <h3>Subalmacén Endpoints</h3>
+                <pre class="mermaid">
+graph LR
+    A[Client] -->|GET| B[/subalmacenes/]
+    A -->|POST| B
+    A -->|GET| C[/subalmacenes/:id/]
+    A -->|PUT| C
+    A -->|DELETE| C
+    A -->|GET| D[/por-estado/:id/]
+    A -->|GET| E[/por-sucursal/:id/]
+    
+    B --> F[SubalmacenViewSet]
+    C --> F
+    D --> F
+    E --> F
+    
+    F --> G[SubalmacenSerializer]
+    G --> H[(Database)]
+                </pre>
+
+                <h3>Aprobación con QR</h3>
+                <pre class="mermaid">
+graph LR
+    A[Mobile App] -->|POST| B[/aprobar-origen/]
+    A -->|POST| C[/aprobar-destino/]
+    A -->|POST| D[/rechazar/]
+    A -->|GET| E[/qr-code/]
+    
+    B --> F[SolicitudTrasladoViewSet]
+    C --> F
+    D --> F
+    E --> F
+    
+    F --> G{Validar Permisos}
+    G -->|OK| H[Crear Aprobacion]
+    G -->|Fail| I[403 Forbidden]
+    
+    H --> J[Actualizar Estado]
+    J --> K{Ejecutar Traslado?}
+    K -->|Si| L[Mover Activo]
+    K -->|No| M[Esperar aprobacion]
                 </pre>
             </div>
 
             <!-- Permisos -->
             <div id="permisos" class="diagram-section">
                 <h2>🔐 Sistema de Permisos</h2>
-                <p>Control de acceso basado en roles.</p>
+                <p>Control de acceso basado en roles y validaciones específicas.</p>
 
                 <pre class="mermaid">
 graph TB
     A[Usuario] --> B{Rol}
     
     B -->|Admin| C[Todos los permisos]
-    B -->|Gerente| D[Aprobar traslados]
-    B -->|Responsable| E[Gestionar subalmacen]
-    B -->|Regular| F[Ver y solicitar]
+    B -->|Gerente Almacen| D[Aprobar traslados]
+    B -->|Responsable Subalmacen| E[Gestionar subalmacen]
+    B -->|Usuario Regular| F[Ver y solicitar]
     
     D --> G{Validacion}
     G -->|Origen| H[Es gerente origen]
     G -->|Destino| I[Es gerente destino]
+    
+    E --> J{Validacion}
+    J --> K[Es responsable]
+                </pre>
+            </div>
+
+            <!-- Geografía -->
+            <div id="geografia" class="diagram-section">
+                <h2>🌍 Integración Geográfica</h2>
+                <p>Sistema de ubicación geográfica para Subalmacenes.</p>
+
+                <div class="info-box">
+                    <strong>Funcionalidad:</strong> Filtrado por estado, municipio y parroquia. Coordenadas GPS para
+                    mapas interactivos.
+                </div>
+
+                <pre class="mermaid">
+graph TB
+    A[Subalmacen] --> B[Estado]
+    A --> C[Municipio]
+    A --> D[Parroquia]
+    
+    B --> E[Filtrar por Estado]
+    C --> F[Filtrar por Municipio]
+    D --> G[Filtrar por Parroquia]
+    
+    A --> H[Coordenadas GPS]
+    H --> I[Mapa Interactivo]
+    
+    A --> J[get_ubicacion_completa]
+    J --> K["Zulia Maracaibo San Francisco"]
+    
+    style A fill:#667eea,color:#fff
+    style H fill:#28a745,color:#fff
+    style J fill:#ffc107,color:#000
                 </pre>
             </div>
 
             <!-- Componentes -->
             <div id="componentes" class="diagram-section">
                 <h2>📦 Componentes del Sistema</h2>
-                <p>Organización de componentes y herencia.</p>
+                <p>Organización de componentes y sus relaciones de herencia.</p>
 
                 <pre class="mermaid">
 graph TB
     subgraph Core["Core Models"]
         A[TimeStampedModel]
+        B[SoftDeleteModel]
     end
     
     subgraph Inst["Institucion App"]
@@ -532,6 +711,7 @@ graph TB
         F[AlmacenRegional]
         G[Subalmacen]
         H[SolicitudTraslado]
+        I[AprobacionTraslado]
     end
     
     subgraph Inv["Inventario App"]
@@ -543,6 +723,13 @@ graph TB
         L[State]
         M[Municipality]
         N[Parish]
+        O[Ubicacion]
+    end
+    
+    subgraph Aud["Auditoria App"]
+        P[AuditoriaAcceso]
+        Q[AuditoriaAprobacion]
+        R[AuditoriaEstadoActivo]
     end
     
     A -.hereda.-> C
@@ -561,6 +748,69 @@ graph TB
     
     H --> F
     H --> J
+    H --> I
+    
+    I --> P
+    I --> Q
+    H --> R
+                </pre>
+            </div>
+
+            <!-- Flujo de Datos -->
+            <div id="flujo-datos" class="diagram-section">
+                <h2>💾 Flujo de Datos Completo</h2>
+                <p>Flujo completo desde la creación de solicitud hasta la ejecución del traslado.</p>
+
+                <div class="warning-box">
+                    <strong>Importante:</strong> Este flujo muestra todos los pasos críticos del sistema, incluyendo
+                    validaciones y actualizaciones de estado.
+                </div>
+
+                <pre class="mermaid">
+flowchart TD
+    Start([Usuario crea solicitud]) --> A[Frontend: Formulario]
+    A --> B[API: POST solicitudes]
+    B --> C{Validar datos}
+    C -->|Error| D[Retornar 400]
+    C -->|OK| E[Crear SolicitudTraslado]
+    
+    E --> F[Generar QR Code]
+    F --> G[Crear URL de aprobacion]
+    G --> H[Generar imagen QR]
+    H --> I[Guardar en media]
+    I --> J[Actualizar solicitud]
+    
+    J --> K[Retornar solicitud]
+    K --> L[Frontend: Mostrar QR]
+    
+    L --> M{Gerente Origen escanea}
+    M --> N[Mobile: Leer QR URL]
+    N --> O[API: POST aprobar-origen]
+    O --> P{Validar permisos}
+    P -->|No autorizado| Q[403 Forbidden]
+    P -->|Autorizado| R[Crear Aprobacion ORIGEN]
+    
+    R --> S[Estado APROBADA_ORIGEN]
+    S --> T[Notificar gerente destino]
+    
+    T --> U{Gerente Destino escanea}
+    U --> V[API: POST aprobar-destino]
+    V --> W{Validar estado}
+    W -->|Error| X[400 Bad Request]
+    W -->|OK| Y[Crear Aprobacion DESTINO]
+    
+    Y --> Z[Estado APROBADA_COMPLETA]
+    Z --> AA[Ejecutar traslado automatico]
+    AA --> AB[Actualizar almacen_actual]
+    AB --> AC[Crear HistorialMovimiento]
+    AC --> AD[Estado COMPLETADA]
+    
+    AD --> End([Traslado completado])
+    
+    style Start fill:#667eea,color:#fff
+    style End fill:#28a745,color:#fff
+    style F fill:#ffc107,color:#000
+    style AA fill:#dc3545,color:#fff
                 </pre>
             </div>
         </div>
@@ -592,7 +842,9 @@ graph TB
             event.target.classList.add('active');
 
             // Re-render mermaid diagrams
-            mermaid.contentLoaded();
+            setTimeout(() => {
+                mermaid.contentLoaded();
+            }, 100);
         }
     </script>
 </body>
