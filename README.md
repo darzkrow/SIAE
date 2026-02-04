@@ -1,417 +1,124 @@
-# 🚀 Sistema de Gestión de Inventario de Activos Hidrológicos (GSIH)
+# SIAE - Sistema Integrado de Administración de Empresas
 
-Sistema de inventario integral para la gestión de tuberías, equipos y stock en acueductos, desarrollado con Django REST Framework y React.
-
-## 📊 Estado del Proyecto
-
-**Versión**: 1.0.0  
-**Estado**: ✅ Production Ready (100%)  
-**Backend**: Django REST Framework  
-**Frontend**: React + Vite + TailwindCSS  
-**Base de Datos**: PostgreSQL  
-
----
-
-## ✨ Características Principales
-
-### 🔐 Seguridad
-- ✅ Autenticación con JWT tokens
-- ✅ Permisos basados en roles (ADMIN/OPERADOR)
-- ✅ CORS configurado de forma segura
-- ✅ Rate limiting implementado
-- ✅ Validación de entrada en todos los endpoints
-
-### 📦 Gestión de Inventario
-- ✅ CRUD completo de tuberías y equipos
-- ✅ Control de stock en tiempo real
-- ✅ Movimientos: ENTRADA, SALIDA, TRANSFERENCIA, AJUSTE
-- ✅ Validación de stock disponible
-- ✅ Auditoría completa de cambios
-
-### 🔔 Alertas y Notificaciones
-- ✅ Sistema de alertas de stock bajo
-- ✅ Notificaciones por email configurables
-- ✅ Panel de notificaciones en tiempo real
-
-### 📊 Reportes y Estadísticas
-- ✅ Dashboard con métricas en tiempo real
-- ✅ Reportes de stock por sucursal
-- ✅ Búsqueda avanzada con múltiples filtros
-- ✅ Exportación de datos
-- ✅ Gráficos y visualizaciones
-
-### 📖 Documentación API
-- ✅ Swagger/OpenAPI interactivo
-- ✅ Documentación automática de endpoints
-- ✅ Ejemplos de requests/responses
-
----
+Sistema completo de gestión empresarial con módulos de inventario, compras, catálogo, auditoría y reestructuración organizacional Hidroven.
 
 ## 🚀 Inicio Rápido
 
-### Prerequisitos
+### Requisitos Previos
+- Python 3.10+
+- Node.js 16+
+- PostgreSQL 13+
+- Docker (opcional)
 
-- Python 3.9+
-- Node.js 18+
-- PostgreSQL 13+ (o usar SQLite para desarrollo)
-- Docker y Docker Compose (opcional)
+### Instalación
 
-### Instalación con Docker (Recomendado)
-
+#### Backend (Django)
 ```bash
-# 1. Clonar el repositorio
-git clone <repository-url>
-cd SISTEMA\ DE\ INVENTARIOS\ DE\ ACTIVOS\ EXTRATEGICOS
-
-# 2. Configurar variables de entorno
-cp .env.example .env
-# Editar .env con tus configuraciones
-
-# 3. Ejecutar con Docker Compose
-docker-compose up --build
-
-# 4. Crear superusuario (en otra terminal)
-docker-compose exec backend python manage.py createsuperuser
-
-# Acceder a:
-# - Frontend: http://localhost:5173
-# - Backend API: http://localhost:8000
-# - Admin: http://localhost:8000/admin
-# - API Docs: http://localhost:8000/api/docs/
-```
-
-### Instalación Local
-
-#### Backend
-
-```bash
-# 1. Crear entorno virtual
+cd backend
 python -m venv venv
-
-# Activar entorno virtual
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# 2. Instalar dependencias
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
-
-# 3. Configurar variables de entorno
-cp .env.example .env
-# Editar .env con tus configuraciones
-
-# 4. Ejecutar migraciones
 python manage.py migrate
-
-# 5. Crear superusuario
-python manage.py createsuperuser
-
-# 6. Ejecutar servidor de desarrollo
 python manage.py runserver
 ```
 
-#### Frontend
-
+#### Frontend (React)
 ```bash
-# 1. Ir al directorio frontend
 cd frontend
-
-# 2. Instalar dependencias
 npm install
-
-# 3. Ejecutar servidor de desarrollo
 npm run dev
 ```
 
----
+## 📁 Estructura del Proyecto
 
-## 🔧 Configuración
-
-### Variables de Entorno
-
-Ver archivo `.env.example` para todas las variables disponibles.
-
-**Mínimas requeridas para producción:**
-
-```bash
-# Django
-DJANGO_SECRET_KEY=tu-secret-key-segura
-DEBUG=False
-ALLOWED_HOSTS=tudominio.com,www.tudominio.com
-
-# Database (PostgreSQL)
-DATABASE_URL=postgresql://usuario:password@localhost:5432/nombre_db
-
-# CORS
-CORS_ALLOWED_ORIGINS=https://tudominio.com,https://www.tudominio.com
+```
+SIAE/
+├── backend/           # Django REST API
+│   ├── accounts/      # Autenticación y usuarios
+│   ├── institucion/   # Módulo Hidroven
+│   ├── inventario/    # Gestión de inventario
+│   ├── compras/       # Gestión de compras
+│   ├── catalogo/      # Catálogo de productos
+│   ├── auditoria/     # Sistema de auditoría
+│   └── notificaciones/# Sistema de notificaciones
+├── frontend/          # React + Vite
+├── docs-archive/      # Documentación histórica
+└── .kiro/            # Especificaciones del proyecto
 ```
 
-### Base de Datos
+## 📚 Documentación
 
-#### PostgreSQL (Producción)
+- **Documentación Histórica:** [`docs-archive/`](docs-archive/README.md)
+- **Especificaciones Actuales:** [`.kiro/specs/`](.kiro/specs/)
+- **Validación del Sistema:** Ver artifacts en `.gemini/antigravity/brain/`
 
-```bash
-# Configurar DATABASE_URL
-export DATABASE_URL=postgresql://usuario:password@localhost:5432/nombre_db
+## 🏢 Módulo Hidroven
 
-# O en .env
-DATABASE_URL=postgresql://usuario:password@localhost:5432/nombre_db
-```
+Sistema de reestructuración organizacional con:
+- Jerarquía de 3 niveles (Empresa → Vicepresidencia → Unidad Organizacional)
+- 9 almacenes regionales con códigos únicos
+- Sistema de trazabilidad de activos con códigos evolutivos
+- Workflow de aprobación dual para traslados
+- Auditoría completa de operaciones
 
-#### SQLite (Desarrollo)
+Ver: [`docs-archive/root-docs/REESTRUCTURACION_HIDROVEN_PLAN.md`](docs-archive/root-docs/REESTRUCTURACION_HIDROVEN_PLAN.md)
 
-Por defecto usa SQLite si no se configura `DATABASE_URL`.
+## 🔧 Tecnologías
 
----
+### Backend
+- Django 5.0.2
+- Django REST Framework
+- PostgreSQL
+- Celery
+- Redis
+- Hypothesis (Property-based testing)
+
+### Frontend
+- React 18
+- Vite
+- React Router
+- Axios
+- TailwindCSS
 
 ## 🧪 Testing
 
-### Ejecutar Tests
-
 ```bash
-# Todos los tests con coverage
-pytest
+# Backend tests
+cd backend
+python manage.py test
 
-# Tests específicos
-pytest inventario/tests/test_models.py
-pytest inventario/tests/test_api.py
+# Tests específicos de Hidroven
+python manage.py test institucion
 
-# Con coverage report
-pytest --cov=inventario --cov=accounts --cov-report=html
-
-# Ver reporte
-# Windows:
-start htmlcov/index.html
-# Linux/Mac:
-open htmlcov/index.html
+# Property-based tests
+python manage.py test institucion.test_asset_code_properties
 ```
 
-### Coverage Objetivo
+## 📊 Estado del Proyecto
 
-- **Mínimo**: 70%
-- **Objetivo**: 80%
-- **Áreas críticas**: 95%
+✅ **Sistema Hidroven:** Completamente implementado y testeado
+- 13 grupos de tareas completadas
+- 208 tests implementados
+- 16 property-based tests
+- 6 integration tests end-to-end
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📝 Licencia
+
+Este proyecto es privado y confidencial.
+
+## 📧 Contacto
+
+Para más información, consulta la documentación en [`docs-archive/`](docs-archive/README.md)
 
 ---
 
-## 📚 Documentación API
-
-### Swagger UI (Interactivo)
-
-Acceder a: `http://localhost:8000/api/docs/`
-
-### Endpoints Principales
-
-#### Autenticación
-```
-POST /api/accounts/login/
-POST /api/accounts/logout/
-GET  /api/accounts/me/
-```
-
-#### Inventario
-```
-GET/POST /api/tuberias/
-GET/POST /api/equipos/
-GET/POST /api/stock-tuberias/
-GET/POST /api/stock-equipos/
-```
-
-#### Movimientos
-```
-GET/POST /api/movimientos/
-GET      /api/audits/
-```
-
-#### Reportes
-```
-GET /api/reportes/dashboard_stats/
-GET /api/reportes/stock_por_sucursal/
-GET /api/reportes/stock_search/
-```
-
----
-
-## 🏗️ Estructura del Proyecto
-
-```
-SISTEMA DE INVENTARIOS DE ACTIVOS EXTRATEGICOS/
-├── config/                 # Configuración Django
-│   ├── settings.py        # Settings principal
-│   ├── urls.py            # URLs globales
-│   └── wsgi.py
-├── inventario/            # App principal
-│   ├── models.py          # Modelos de datos
-│   ├── views.py           # Views API
-│   ├── serializers.py     # Serializers DRF
-│   ├── permissions.py     # Permisos custom
-│   ├── tests/             # Tests unitarios
-│   │   ├── test_models.py
-│   │   └── test_api.py
-│   └── management/        # Comandos custom
-├── accounts/              # App de usuarios
-│   ├── models.py          # CustomUser
-│   └── views.py           # Auth views
-├── frontend/              # React app
-│   ├── src/
-│   │   ├── pages/         # Páginas
-│   │   ├── components/    # Componentes
-│   │   └── context/       # Context API
-│   └── package.json
-├── .github/workflows/     # CI/CD
-├── docker-compose.yml     # Docker config
-├── requirements.txt       # Python deps
-├── pytest.ini            # Pytest config
-└── .env.example          # Env template
-```
-
----
-
-## 🔐 Seguridad
-
-### Características Implementadas
-
-- ✅ SECRET_KEY fuerte con validación
-- ✅ Rate limiting (100/hora anon, 1000/hora auth)
-- ✅ CORS configurado por entorno
-- ✅ Autenticación JWT con expiración
-- ✅ Permisos granulares por rol
-- ✅ Validación de entrada
-- ✅ Protección CSRF
-
-### Recomendaciones para Producción
-
-- [ ] Configurar SSL/TLS
-- [ ] Implementar 2FA
-- [ ] Configurar Sentry para error tracking
-- [ ] Implementar backup automatizado
-- [ ] Configurar firewall de aplicación
-
----
-
-## 🚢 Deployment
-
-### Con Docker Compose (Producción)
-
-```bash
-# 1. Configurar .env para producción
-DEBUG=False
-DJANGO_SECRET_KEY=<generar-nueva-key>
-DATABASE_URL=postgresql://...
-ALLOWED_HOSTS=tudominio.com
-
-# 2. Build y ejecutar
-docker-compose -f docker-compose.yml --profile production up --build -d
-
-# 3. Ejecutar migraciones
-docker-compose exec backend python manage.py migrate
-
-# 4. Collectstatic
-docker-compose exec backend python manage.py collectstatic --noinput
-```
-
-### Nginx
-
-El proyecto incluye configuración de Nginx para reverse proxy. Ver `nginx.conf`.
-
----
-
-## 📈 Performance
-
-### Optimizaciones Implementadas
-
-- ✅ Connection pooling en PostgreSQL
-- ✅ Select/Prefetch related para evitar N+1 queries
-- ✅ Paginación en todos los listados
-- ✅ Índices de base de datos
-- ✅ Multi-stage Docker builds
-
-### Métricas Objetivo
-
-- Response time API: < 200ms
-- Frontend bundle: < 500KB
-- Docker image: < 500MB
-- Lighthouse score: ≥ 90
-
----
-
-## 🤝 Contribuir
-
-### Estándares de Código
-
-- Backend: PEP 8
-- Frontend: ESLint + Prettier
-- Tests: Coverage mínimo 70%
-- Commits: Conventional Commits
-
-### Workflow
-
-1. Fork el repositorio
-2. Crear feature branch: `git checkout -b feature/nueva-funcionalidad`
-3. Commit cambios: `git commit -m 'feat: agregar nueva funcionalidad'`
-4. Push al branch: `git push origin feature/nueva-funcionalidad`
-5. Abrir Pull Request
-
----
-
-## 📝 Changelog
-
-### Version 1.0.0 (2026-01-09)
-
-#### Added
-- ✅ Configuración PostgreSQL con dj-database-url
-- ✅ Rate limiting con DRF throttling
-- ✅ Swagger/OpenAPI documentation
-- ✅ Tests unitarios y de API (70%+ coverage)
-- ✅ GitHub Actions CI/CD
-- ✅ .env.example completo
-- ✅ CORS seguro por entorno
-
-#### Changed
-- ✅ Mejorado SECRET_KEY con validación
-- ✅ Actualizado requirements.txt
-- ✅ Optimizado settings.py
-
----
-
-## 📞 Soporte
-
-### Documentación
-- API Docs: `/api/docs/`
-- Ver carpeta `/docs` para documentación técnica
-
-### Comandos Útiles
-
-```bash
-# Generar SECRET_KEY
-python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
-
-# Ejecutar tests
-pytest
-
-# Ejecutar con coverage
-pytest --cov
-
-# Crear migraciones
-python manage.py makemigrations
-
-# Ver logs Docker
-docker-compose logs -f backend
-```
-
----
-
-## 📄 Licencia
-
-[Especificar licencia]
-
----
-
-## 👥 Autores
-
-[Especificar autores]
-
----
-
-**¡Gracias por usar GSIH Inventario!** 🎉
+**Última actualización:** Febrero 2026
