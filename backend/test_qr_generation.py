@@ -12,7 +12,7 @@ from institucion.models import (
     AlmacenRegional, SolicitudTraslado, Subalmacen,
     OrganizacionCentral, Sucursal
 )
-from inventario.models import ActivoInventario
+from inventario.models import ChemicalProduct
 from geography.models import State
 
 User = get_user_model()
@@ -81,25 +81,27 @@ def test_qr_generation():
     print(f"   📦 Origen: {almacen_origen.nombre}")
     print(f"   📦 Destino: {almacen_destino.nombre}")
     
-    # 3. Obtener o crear activo
-    print("\n3️⃣ Obteniendo activo de inventario...")
-    activo, created = ActivoInventario.objects.get_or_create(
-        codigo_actual='ACT-TEST-001',
+    # 3. Obtener o crear producto químico
+    print("\n3️⃣ Obteniendo producto de inventario...")
+    producto, created = ChemicalProduct.objects.get_or_create(
+        sku='CHEM-TEST-001',
         defaults={
-            'tipo_activo': 'EQUIPO',
-            'almacen_actual': almacen_origen,
-            'estado': 'OPERATIVO'
+            'nombre': 'Producto Químico Test',
+            'descripcion': 'Producto de prueba para QR',
+            'stock_actual': 100,
+            'stock_minimo': 10,
+            'precio_unitario': 50.00,
+            'activo': True
         }
     )
     if created:
-        print(f"   ✅ Activo creado: {activo.codigo_actual}")
+        print(f"   ✅ Producto creado: {producto.sku}")
     else:
-        print(f"   ℹ️  Activo existente: {activo.codigo_actual}")
+        print(f"   ℹ️  Producto existente: {producto.sku}")
     
     # 4. Crear solicitud de traslado
     print("\n4️⃣ Creando solicitud de traslado...")
     solicitud = SolicitudTraslado.objects.create(
-        activo=activo,
         almacen_origen=almacen_origen,
         almacen_destino=almacen_destino,
         solicitante=user,
@@ -149,7 +151,7 @@ def test_qr_generation():
     print(f"Estado: {solicitud.estado}")
     print(f"Origen: {almacen_origen.nombre}")
     print(f"Destino: {almacen_destino.nombre}")
-    print(f"Activo: {activo.codigo_actual}")
+    print(f"Producto: {producto.sku}")
     print(f"QR Generado: {'✅ SÍ' if solicitud.qr_code else '❌ NO'}")
     
     if solicitud.qr_code:
