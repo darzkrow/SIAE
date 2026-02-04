@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'notificaciones',
     'institucion',
     'geography',
+    'jazzmin',
 ]
 
 MIDDLEWARE = [
