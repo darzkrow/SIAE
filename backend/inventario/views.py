@@ -1,4 +1,5 @@
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets
+from core.viewsets import BaseModelViewSet, SoftDeleteViewSet, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -43,14 +44,14 @@ from inventario.serializers import (
 # VIEWSETS DE MODELOS ORGANIZACIONALES
 # ============================================================================
 
-class OrganizacionCentralViewSet(viewsets.ModelViewSet):
+class OrganizacionCentralViewSet(BaseModelViewSet):
     """ViewSet para organizaciones centrales."""
     queryset = OrganizacionCentral.objects.all()
     serializer_class = OrganizacionCentralSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
     search_fields = ['nombre', 'rif']
 
-class SucursalViewSet(viewsets.ModelViewSet):
+class SucursalViewSet(BaseModelViewSet):
     """ViewSet para sucursales."""
     queryset = Sucursal.objects.select_related('organizacion_central').all()
     serializer_class = SucursalSerializer
@@ -59,7 +60,7 @@ class SucursalViewSet(viewsets.ModelViewSet):
     filterset_fields = ['organizacion_central']
     search_fields = ['nombre', 'codigo']
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(BaseModelViewSet):
     """ViewSet para gestión de usuarios."""
     queryset = User.objects.select_related('sucursal').all()
     serializer_class = UserSerializer
@@ -79,7 +80,7 @@ class UserViewSet(viewsets.ModelViewSet):
 # VIEWSETS DE MODELOS AUXILIARES
 # ============================================================================
 
-class CategoryViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class CategoryViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet para categorías de productos."""
     queryset = CategoriaProducto.objects.all()
     serializer_class = CategorySerializer
@@ -91,7 +92,7 @@ class CategoryViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     ordering = ['orden', 'nombre']
 
 
-class UnitOfMeasureViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class UnitOfMeasureViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet para unidades de medida."""
     queryset = UnitOfMeasure.objects.all()
     serializer_class = UnitOfMeasureSerializer
@@ -103,7 +104,7 @@ class UnitOfMeasureViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     ordering = ['tipo', 'nombre']
 
 
-class SupplierViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class SupplierViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet para proveedores."""
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
@@ -115,7 +116,7 @@ class SupplierViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     ordering = ['nombre']
 
 
-class AcueductoViewSet(viewsets.ModelViewSet):
+class AcueductoViewSet(BaseModelViewSet):
     """ViewSet para acueductos."""
 
     queryset = Acueducto.objects.all()
@@ -206,7 +207,7 @@ class ChemicalProductViewSet(BaseAPIViewSet):
         return Response(serializer.data)
 
 
-class PipeViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class PipeViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet para tuberías."""
     queryset = Pipe.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
@@ -259,7 +260,7 @@ class PipeViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class PumpAndMotorViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class PumpAndMotorViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet para bombas y motores."""
     queryset = PumpAndMotor.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
@@ -311,7 +312,7 @@ class PumpAndMotorViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class AccessoryViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class AccessoryViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet para accesorios."""
     queryset = Accessory.objects.select_related(
         'categoria', 'unidad_medida', 'proveedor'
@@ -361,7 +362,7 @@ class AccessoryViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
 # VIEWSETS DE STOCK
 # ============================================================================
 
-class StockChemicalViewSet(viewsets.ModelViewSet):
+class StockChemicalViewSet(BaseModelViewSet):
     """ViewSet para stock de químicos."""
     queryset = StockChemical.objects.select_related(
         'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
@@ -387,7 +388,7 @@ class StockChemicalViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
 
-class StockPipeViewSet(viewsets.ModelViewSet):
+class StockPipeViewSet(BaseModelViewSet):
     """ViewSet para stock de tuberías."""
     queryset = StockPipe.objects.select_related(
         'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
@@ -412,7 +413,7 @@ class StockPipeViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
 
-class StockPumpAndMotorViewSet(viewsets.ModelViewSet):
+class StockPumpAndMotorViewSet(BaseModelViewSet):
     """ViewSet para stock de bombas/motores."""
     queryset = StockPumpAndMotor.objects.select_related(
         'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
@@ -437,7 +438,7 @@ class StockPumpAndMotorViewSet(viewsets.ModelViewSet):
         return queryset.none()
 
 
-class StockAccessoryViewSet(viewsets.ModelViewSet):
+class StockAccessoryViewSet(BaseModelViewSet):
     """ViewSet para stock de accesorios."""
     queryset = StockAccessory.objects.select_related(
         'producto', 'producto__categoria', 'ubicacion__acueducto', 'ubicacion__acueducto__sucursal'
@@ -467,7 +468,7 @@ class StockAccessoryViewSet(viewsets.ModelViewSet):
 # VIEWSET DE MOVIMIENTOS
 # ============================================================================
 
-class MovimientoInventarioViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class MovimientoInventarioViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet para movimientos de inventario."""
     # queryset se define dinámicamente o se importa
     serializer_class = MovimientoInventarioSerializer
@@ -712,13 +713,13 @@ class RefactoredReportesViewSet(viewsets.ViewSet):
 # VIEWSETS DE MANTENIMIENTO Y ORDENES
 # ============================================================================
 
-class FichaTecnicaMotorViewSet(viewsets.ModelViewSet):
+class FichaTecnicaMotorViewSet(BaseModelViewSet):
     queryset = FichaTecnicaMotor.objects.all()
     serializer_class = FichaTecnicaMotorSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ['equipo', 'estado_actual']
 
-class RegistroMantenimientoViewSet(viewsets.ModelViewSet):
+class RegistroMantenimientoViewSet(BaseModelViewSet):
     queryset = RegistroMantenimiento.objects.all()
     serializer_class = RegistroMantenimientoSerializer
     permission_classes = [IsAuthenticated]

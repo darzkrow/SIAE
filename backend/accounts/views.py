@@ -4,6 +4,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from core.viewsets import BaseModelViewSet
 from .models import CustomUser
 from .serializers import CustomUserSerializer
 from inventario.permissions import CanManageUsers
@@ -24,7 +25,8 @@ class CustomAuthToken(ObtainAuthToken):
             'sucursal_id': user.sucursal.id if user.sucursal else None
         })
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(BaseModelViewSet):
+    """ViewSet para gestión de usuarios"""
     queryset = CustomUser.objects.all()
     serializer_class = CustomUserSerializer
     permission_classes = [CanManageUsers]

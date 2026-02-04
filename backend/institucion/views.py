@@ -2,7 +2,8 @@
 API Views for Hidroven Organizational Restructuring.
 Provides both new hierarchical API endpoints and backward compatibility.
 """
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets
+from core.viewsets import BaseModelViewSet, SoftDeleteViewSet, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q, Count, Prefetch
@@ -36,7 +37,7 @@ User = get_user_model()
 # NEW HIERARCHICAL API VIEWSETS
 # ============================================================================
 
-class EmpresaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class EmpresaViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for Empresa (root company) management."""
     
     queryset = Empresa.objects.all()
@@ -77,7 +78,7 @@ class EmpresaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return Response(status_info)
 
 
-class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for Vicepresidencia management."""
     
     queryset = Vicepresidencia.objects.all()
@@ -95,7 +96,7 @@ class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         ).prefetch_related('unidades_organizacionales')
 
 
-class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for UnidadOrganizacional management."""
     
     queryset = UnidadOrganizacional.objects.all()
@@ -107,7 +108,7 @@ class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewS
     ordering = ['vicepresidencia', 'tipo', 'nombre']
 
 
-class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for AlmacenRegional management."""
     
     queryset = AlmacenRegional.objects.all()
@@ -123,7 +124,7 @@ class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
 # BACKWARD COMPATIBILITY VIEWSETS
 # ============================================================================
 
-class OrganizacionCentralViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class OrganizacionCentralViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """Backward compatibility ViewSet for OrganizacionCentral."""
     
     queryset = OrganizacionCentral.objects.all()
@@ -139,7 +140,7 @@ class OrganizacionCentralViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSe
         return super().get_queryset().select_related('parent').prefetch_related('sucursales')
 
 
-class SucursalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class SucursalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """Backward compatibility ViewSet for Sucursal."""
     
     queryset = Sucursal.objects.all()
@@ -155,7 +156,7 @@ class SucursalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return super().get_queryset().select_related('organizacion_central').prefetch_related('acueductos')
 
 
-class AcueductoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class AcueductoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """Backward compatibility ViewSet for Acueducto."""
     
     queryset = Acueducto.objects.all()
@@ -171,7 +172,7 @@ class AcueductoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return super().get_queryset().select_related('sucursal__organizacion_central')
 
 
-class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for ActivoInventario management with asset tracking."""
     
     queryset = ActivoInventario.objects.all()
@@ -183,7 +184,7 @@ class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     ordering = ['-fecha_ingreso']
 
 
-class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for SolicitudTraslado management with dual approval workflow."""
     
     queryset = SolicitudTraslado.objects.all()
@@ -195,7 +196,7 @@ class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet)
     ordering = ['-fecha_solicitud']
 
 
-class HistorialMovimientoActivoViewSet(viewsets.ReadOnlyModelViewSet):
+class HistorialMovimientoActivoViewSet(BaseModelViewSet):
     """Read-only ViewSet for HistorialMovimientoActivo (immutable audit trail)."""
     
     queryset = HistorialMovimientoActivo.objects.all()
@@ -207,7 +208,7 @@ class HistorialMovimientoActivoViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ['-fecha_movimiento']
 
 
-class MigracionOrganizacionalViewSet(viewsets.ReadOnlyModelViewSet):
+class MigracionOrganizacionalViewSet(BaseModelViewSet):
     """ViewSet for monitoring organizational migration status."""
     
     queryset = MigracionOrganizacional.objects.all()
