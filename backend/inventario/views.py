@@ -1,5 +1,4 @@
-from rest_framework import viewsets
-from core.viewsets import BaseModelViewSet, SoftDeleteViewSet, filters, status
+from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Sum, F, Count
 from decimal import Decimal
 from inventario.models import Acueducto
+from core.viewsets import BaseModelViewSet, SoftDeleteViewSet
 # Importar permisos existentes
 from inventario.permissions import IsAdminOrReadOnly, IsAdminOrSameSucursal
 from inventario.serializers import AcueductoSerializer
