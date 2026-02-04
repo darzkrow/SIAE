@@ -53,7 +53,7 @@ class SubalmacenAdmin(admin.ModelAdmin):
 @admin.register(Empresa)
 class EmpresaAdmin(admin.ModelAdmin):
     list_display = ['codigo', 'nombre', 'activo']
-    search_fields = ['nombre', 'codigo']
+    search_fields = ['nombre', 'prefijo']
 
 
 @admin.register(Vicepresidencia)
@@ -72,7 +72,7 @@ class UnidadOrganizacionalAdmin(admin.ModelAdmin):
 
 @admin.register(AlmacenRegional)
 class AlmacenRegionalAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'nombre', 'unidad_organizacional', 'activo']
+    list_display = ['prefijo', 'nombre', 'unidad_organizacional', 'activo']
     list_filter = ['unidad_organizacional', 'activo']
     search_fields = ['nombre', 'codigo']
 
@@ -94,13 +94,13 @@ class SolicitudTrasladoAdmin(admin.ModelAdmin):
 
 @admin.register(AprobacionTraslado)
 class AprobacionTrasladoAdmin(admin.ModelAdmin):
-    list_display = ['solicitud', 'tipo_aprobacion', 'aprobador', 'decision', 'fecha_aprobacion']
+    list_display = ['solicitud', 'tipo_aprobacion', 'aprobador', 'decision', 'fecha_decision']
     list_filter = ['tipo_aprobacion', 'decision']
 
 
 @admin.register(OrganizacionCentral)
 class OrganizacionCentralAdmin(admin.ModelAdmin):
-    list_display = ['codigo', 'nombre']
+    list_display = ['nombre', 'rif']
     search_fields = ['nombre', 'codigo']
 
 

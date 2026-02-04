@@ -29,28 +29,28 @@ class ChemicalProductAdmin(admin.ModelAdmin):
     list_display = ['sku', 'nombre', 'es_peligroso', 'stock_actual', 'activo']
     list_filter = ['categoria', 'es_peligroso', 'nivel_peligrosidad', 'presentacion', 'activo']
     search_fields = ['sku', 'nombre', 'numero_un']
-    readonly_fields = ['sku', 'creado_en', 'actualizado_en']
+    readonly_fields = ['sku', 'created_at', 'updated_at']
 
 @admin.register(models.Pipe)
 class PipeAdmin(admin.ModelAdmin):
     list_display = ['sku', 'nombre', 'material', 'diametro_nominal', 'stock_actual']
     list_filter = ['categoria', 'material', 'tipo_uso', 'activo']
     search_fields = ['sku', 'nombre']
-    readonly_fields = ['sku', 'presion_psi', 'creado_en', 'actualizado_en']
+    readonly_fields = ['sku', 'presion_psi', 'created_at', 'updated_at']
 
 @admin.register(models.PumpAndMotor)
 class PumpAndMotorAdmin(admin.ModelAdmin):
     list_display = ['sku', 'nombre', 'tipo_equipo', 'marca', 'potencia_hp']
     list_filter = ['categoria', 'tipo_equipo', 'marca', 'activo']
     search_fields = ['sku', 'nombre', 'numero_serie']
-    readonly_fields = ['sku', 'potencia_kw', 'creado_en', 'actualizado_en']
+    readonly_fields = ['sku', 'potencia_kw', 'created_at', 'updated_at']
 
 @admin.register(models.Accessory)
 class AccessoryAdmin(admin.ModelAdmin):
     list_display = ['sku', 'nombre', 'tipo_accesorio', 'tipo_conexion']
     list_filter = ['categoria', 'tipo_accesorio', 'tipo_conexion', 'activo']
     search_fields = ['sku', 'nombre']
-    readonly_fields = ['sku', 'creado_en', 'actualizado_en']
+    readonly_fields = ['sku', 'created_at', 'updated_at']
 
 
 # ===========================================================================
