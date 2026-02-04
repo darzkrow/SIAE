@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
@@ -1040,7 +1040,7 @@ class ActivoInventario(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Create audit record for state changes
+        # Create audit record for state changes using state management system
         if old_state and old_state != self.estado:
             self.create_state_change_audit(old_state, self.estado)
     
@@ -1109,20 +1109,27 @@ class ActivoInventario(models.Model):
     @staticmethod
     def is_valid_state_transition(from_state, to_state):
         """
-        Validate state transitions according to business rules.
+        Validate state transitions according to business rules using AssetStateManager.
         """
-        valid_transitions = {
-            'EN_ALMACEN': ['EN_TRANSITO', 'INSTALADO', 'MANTENIMIENTO'],
-            'EN_TRANSITO': ['EN_ALMACEN', 'INSTALADO'],
-            'INSTALADO': ['EN_USO', 'MANTENIMIENTO', 'EN_ALMACEN'],
-            'EN_USO': ['MANTENIMIENTO', 'EN_ALMACEN'],
-            'MANTENIMIENTO': ['EN_ALMACEN', 'INSTALADO', 'EN_USO'],
-        }
+        from .state_management import AssetStateManager
         
-        return to_state in valid_transitions.get(from_state, [])
+        is_valid, _ = AssetStateManager.validate_state_transition(from_state, to_state)
+        return is_valid
     
     def create_state_change_audit(self, old_state, new_state):
-        """Create audit record for state changes"""
+        """Create audit record for state changes using AssetStateManager"""
+        from .state_management import AssetStateAuditLogger
+        
+        # Log the state change
+        AssetStateAuditLogger.log_state_change_attempt(
+            activo=self,
+            old_state=old_state,
+            new_state=new_state,
+            user=self.actualizado_por or self.creado_por,
+            success=True
+        )
+        
+        # Create movement record
         HistorialMovimientoActivo.create_movement_record(
             activo=self,
             tipo_movimiento='CAMBIO_ESTADO',
@@ -1184,22 +1191,103 @@ class ActivoInventario(models.Model):
         if exclude_id:
             queryset = queryset.exclude(id=exclude_id)
         return not queryset.exists()
+    
+    def change_state(self, new_state: str, user, motivo: str, observaciones: str = ''):
+        """
+        Change asset state using AssetStateManager with validation and audit logging.
+        
+        Args:
+            new_state: Target state
+            user: User making the change
+            motivo: Reason for state change
+            observaciones: Additional observations
+            
+        Returns:
+            bool: True if state change was successful
+            
+        Raises:
+            ValidationError: If state transition is not allowed
+        """
+        from .state_management import AssetStateManager
+        
+        return AssetStateManager.change_asset_state(
+            activo=self,
+            new_state=new_state,
+            user=user,
+            motivo=motivo,
+            observaciones=observaciones
+        )
+    
+    def get_allowed_state_transitions(self):
+        """
+        Get all allowed state transitions from current state.
+        
+        Returns:
+            List[Tuple[str, str]]: List of (target_state, description) tuples
+        """
+        from .state_management import AssetStateManager
+        
+        return AssetStateManager.get_allowed_transitions(self.estado)
+    
+    def can_be_transferred(self):
+        """
+        Check if asset can be included in a transfer request.
+        
+        Returns:
+            Tuple[bool, str]: (is_valid, message)
+        """
+        from .state_management import AssetStateManager
+        
+        return AssetStateManager.validate_transfer_request_state(self)
+    
+    def get_state_history(self, limit: int = 10):
+        """
+        Get state transition history for this asset.
+        
+        Args:
+            limit: Maximum number of records to return
+            
+        Returns:
+            List[Dict]: List of state transition records
+        """
+        from .state_management import AssetStateManager
+        
+        return AssetStateManager.get_state_transition_history(self, limit)
 
 
 class HistorialMovimientoActivo(models.Model):
     """
     Immutable record of all asset movements and state changes.
     Provides complete audit trail for asset traceability.
+    
+    Requirements implemented:
+    - 6.1: Immutable movement records for complete asset traceability
+    - 6.2: Audit models for state changes and approval decisions
+    - 6.4: Proper indexing for audit queries and reporting
+    - 6.5: Comprehensive audit trail system
+    
+    This model serves as the primary audit trail for all asset operations,
+    ensuring complete traceability from creation to disposal with immutable
+    records that cannot be modified after creation.
     """
     
     MOVEMENT_TYPES = [
         ('INGRESO_INICIAL', 'Ingreso Inicial'),
         ('TRASLADO_ALMACEN', 'Traslado entre Almacenes'),
+        ('TRASLADO_EJECUTADO', 'Traslado Ejecutado'),
+        ('ROLLBACK_TRASLADO', 'Rollback de Traslado'),
         ('CAMBIO_ESTADO', 'Cambio de Estado'),
+        ('CAMBIO_ESTADO_AUTO_TRANSFER_APPROVED', 'Cambio de Estado Automático - Traslado Aprobado'),
+        ('CAMBIO_ESTADO_AUTO_TRANSFER_COMPLETED', 'Cambio de Estado Automático - Traslado Completado'),
+        ('CAMBIO_ESTADO_AUTO_MAINTENANCE_REQUIRED', 'Cambio de Estado Automático - Mantenimiento Requerido'),
         ('INSTALACION', 'Instalación'),
         ('RETIRO', 'Retiro'),
         ('MANTENIMIENTO_ENTRADA', 'Entrada a Mantenimiento'),
         ('MANTENIMIENTO_SALIDA', 'Salida de Mantenimiento'),
+        ('CORRECCION_INVENTARIO', 'Corrección de Inventario'),
+        ('AUDITORIA_FISICA', 'Auditoría Física'),
+        ('BAJA_ACTIVO', 'Baja de Activo'),
+        ('REACTIVACION_ACTIVO', 'Reactivación de Activo'),
     ]
     
     # Asset reference
@@ -1212,7 +1300,7 @@ class HistorialMovimientoActivo(models.Model):
     
     # Movement details
     tipo_movimiento = models.CharField(
-        max_length=30,
+        max_length=50,
         choices=MOVEMENT_TYPES,
         help_text='Tipo de movimiento realizado'
     )
@@ -1288,16 +1376,45 @@ class HistorialMovimientoActivo(models.Model):
         help_text='Solicitud de traslado asociada (si aplica)'
     )
     
+    # Additional metadata for complex operations
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Additional metadata for the movement operation'
+    )
+    
     class Meta:
         verbose_name = 'Historial de Movimiento de Activo'
         verbose_name_plural = 'Historial de Movimientos de Activos'
         ordering = ['-fecha_movimiento']
         indexes = [
-            models.Index(fields=['activo', '-fecha_movimiento']),
-            models.Index(fields=['almacen_origen', '-fecha_movimiento']),
-            models.Index(fields=['almacen_destino', '-fecha_movimiento']),
-            models.Index(fields=['tipo_movimiento', '-fecha_movimiento']),
-            models.Index(fields=['usuario_responsable', '-fecha_movimiento']),
+            # Primary audit trail indexes for efficient queries
+            models.Index(fields=['activo', '-fecha_movimiento'], name='idx_hist_activo_fecha'),
+            models.Index(fields=['almacen_origen', '-fecha_movimiento'], name='idx_hist_origen_fecha'),
+            models.Index(fields=['almacen_destino', '-fecha_movimiento'], name='idx_hist_destino_fecha'),
+            models.Index(fields=['tipo_movimiento', '-fecha_movimiento'], name='idx_hist_tipo_fecha'),
+            models.Index(fields=['usuario_responsable', '-fecha_movimiento'], name='idx_hist_usuario_fecha'),
+            
+            # Composite indexes for complex audit queries
+            models.Index(fields=['activo', 'tipo_movimiento', '-fecha_movimiento'], name='idx_hist_activo_tipo_fecha'),
+            models.Index(fields=['almacen_origen', 'almacen_destino', '-fecha_movimiento'], name='idx_hist_orig_dest_fecha'),
+            models.Index(fields=['estado_anterior', 'estado_nuevo', '-fecha_movimiento'], name='idx_hist_estados_fecha'),
+            
+            # Reporting and analytics indexes
+            models.Index(fields=['fecha_movimiento'], name='idx_hist_fecha_only'),
+            models.Index(fields=['solicitud_traslado', '-fecha_movimiento'], name='idx_hist_solicitud_fecha'),
+            
+            # Performance indexes for audit trail queries
+            models.Index(fields=['activo', 'almacen_origen', '-fecha_movimiento'], name='idx_hist_act_orig_fecha'),
+            models.Index(fields=['activo', 'almacen_destino', '-fecha_movimiento'], name='idx_hist_act_dest_fecha'),
+            models.Index(fields=['tipo_movimiento', 'estado_nuevo', '-fecha_movimiento'], name='idx_hist_tipo_est_fecha'),
+        ]
+        constraints = [
+            # Ensure immutability by preventing updates
+            models.CheckConstraint(
+                check=models.Q(fecha_movimiento__isnull=False),
+                name='historial_fecha_movimiento_required'
+            ),
         ]
     
     def __str__(self):
@@ -1325,21 +1442,51 @@ class HistorialMovimientoActivo(models.Model):
             )
     
     def save(self, *args, **kwargs):
-        """Override save to ensure validation and immutability"""
+        """
+        Override save to ensure validation and immutability.
+        
+        Implements requirement 6.1: Immutable movement records for complete asset traceability
+        """
         # Prevent modification of existing records (immutable audit trail)
         if self.pk:
             raise ValidationError(
-                'Los registros de historial de movimientos no pueden ser modificados'
+                'Los registros de historial de movimientos son inmutables y no pueden ser modificados. '
+                'Para corregir errores, cree un nuevo registro de corrección.'
             )
         
+        # Ensure required fields are present
+        if not self.activo:
+            raise ValidationError('El activo es requerido para el historial de movimientos')
+        
+        if not self.usuario_responsable:
+            raise ValidationError('El usuario responsable es requerido para el historial de movimientos')
+        
+        # Validate movement type consistency
         self.full_clean()
+        
+        # Set immutable timestamp if not already set
+        if not self.fecha_movimiento:
+            from django.utils import timezone
+            self.fecha_movimiento = timezone.now()
+        
         super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """
+        Override delete to prevent deletion of audit records.
+        
+        Implements requirement 6.5: Comprehensive audit trail system with immutable records
+        """
+        raise ValidationError(
+            'Los registros de auditoría no pueden ser eliminados. '
+            'Los registros de historial de movimientos son inmutables para garantizar la integridad del audit trail.'
+        )
     
     @classmethod
     def create_movement_record(cls, activo, tipo_movimiento, usuario_responsable, 
                              motivo, almacen_origen=None, almacen_destino=None,
                              estado_anterior=None, estado_nuevo=None,
-                             observaciones='', solicitud_traslado=None):
+                             observaciones='', solicitud_traslado=None, metadata=None):
         """
         Create a new movement record with proper validation.
         """
@@ -1348,6 +1495,9 @@ class HistorialMovimientoActivo(models.Model):
             estado_anterior = activo.estado
         if estado_nuevo is None:
             estado_nuevo = activo.estado
+        
+        if metadata is None:
+            metadata = {}
         
         return cls.objects.create(
             activo=activo,
@@ -1361,7 +1511,8 @@ class HistorialMovimientoActivo(models.Model):
             usuario_responsable=usuario_responsable,
             motivo=motivo,
             observaciones=observaciones,
-            solicitud_traslado=solicitud_traslado
+            solicitud_traslado=solicitud_traslado,
+            metadata=metadata
         )
     
     def get_movement_summary(self):
@@ -1518,6 +1669,15 @@ class SolicitudTraslado(models.Model):
             models.Index(fields=['almacen_destino', 'estado']),
             models.Index(fields=['solicitante', '-fecha_solicitud']),
             models.Index(fields=['prioridad', '-fecha_solicitud']),
+            # Additional indexes for manager dashboard queries
+            models.Index(fields=['almacen_origen', 'estado', '-fecha_solicitud']),
+            models.Index(fields=['almacen_destino', 'estado', '-fecha_solicitud']),
+            models.Index(fields=['fecha_limite', 'estado']),
+            models.Index(fields=['prioridad', 'estado', '-fecha_solicitud']),
+            # Composite indexes for approval workflow
+            models.Index(fields=['aprobacion_origen', 'estado']),
+            models.Index(fields=['aprobacion_destino', 'estado']),
+            models.Index(fields=['estado', 'fecha_limite']),
         ]
     
     def __str__(self):
@@ -1526,6 +1686,7 @@ class SolicitudTraslado(models.Model):
     def clean(self):
         """Custom validation for transfer requests"""
         from django.core.exceptions import ValidationError
+        from .state_management import AssetStateManager
         
         # Validate that origin and destination are different
         if self.almacen_origen == self.almacen_destino:
@@ -1540,18 +1701,117 @@ class SolicitudTraslado(models.Model):
                 f'Ubicación actual: {self.activo.almacen_actual.prefijo}'
             )
         
-        # Validate that asset is not in transit
-        if self.activo and self.activo.estado == 'EN_TRANSITO':
+        # Validate asset state for transfer using state management system
+        if self.activo:
+            can_transfer, message = AssetStateManager.validate_transfer_request_state(self.activo)
+            if not can_transfer:
+                raise ValidationError(f'Estado del activo no permite traslado: {message}')
+        
+        # Validate workflow state consistency
+        self.validate_workflow_state_consistency()
+    
+    def validate_workflow_state_consistency(self):
+        """Validate that workflow state is consistent with approvals"""
+        from django.core.exceptions import ValidationError
+        
+        approval_status = self.get_approval_status()
+        
+        # Check state consistency
+        if self.estado == 'APROBADA_COMPLETA':
+            if not (approval_status['origen_aprobado'] and approval_status['destino_aprobado']):
+                raise ValidationError(
+                    'Estado APROBADA_COMPLETA requiere ambas aprobaciones'
+                )
+        
+        elif self.estado == 'APROBADA_ORIGEN':
+            if not approval_status['origen_aprobado'] or approval_status['destino_aprobado']:
+                raise ValidationError(
+                    'Estado APROBADA_ORIGEN requiere solo aprobación de origen'
+                )
+        
+        elif self.estado == 'APROBADA_DESTINO':
+            if not approval_status['destino_aprobado'] or approval_status['origen_aprobado']:
+                raise ValidationError(
+                    'Estado APROBADA_DESTINO requiere solo aprobación de destino'
+                )
+        
+        elif self.estado == 'RECHAZADA':
+            if not approval_status['rechazado']:
+                raise ValidationError(
+                    'Estado RECHAZADA requiere al menos una aprobación rechazada'
+                )
+    
+    def enforce_dual_approval_workflow(self):
+        """Enforce dual approval workflow rules"""
+        from django.core.exceptions import ValidationError
+        
+        # Cannot execute without both approvals
+        if self.estado == 'EN_TRANSITO' or self.fecha_ejecucion:
+            if not self.can_execute():
+                raise ValidationError(
+                    'No se puede ejecutar el traslado sin ambas aprobaciones'
+                )
+        
+        # Cannot complete without execution
+        if self.estado == 'COMPLETADA' or self.fecha_completada:
+            if not self.fecha_ejecucion:
+                raise ValidationError(
+                    'No se puede completar el traslado sin haberlo ejecutado'
+                )
+        
+        # Validate approval authority
+        if self.aprobacion_origen:
+            if self.aprobacion_origen.aprobador != self.almacen_origen.manager:
+                raise ValidationError(
+                    'Solo el gerente del almacén origen puede aprobar desde origen'
+                )
+        
+        if self.aprobacion_destino:
+            if self.aprobacion_destino.aprobador != self.almacen_destino.manager:
+                raise ValidationError(
+                    'Solo el gerente del almacén destino puede aprobar desde destino'
+                )
+    
+    def validate_business_rules(self):
+        """Validate additional business rules"""
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+        
+        # Validate deadline is in the future for new requests
+        if not self.pk and self.fecha_limite <= timezone.now():
             raise ValidationError(
-                'No se pueden crear solicitudes de traslado para activos en tránsito'
+                'La fecha límite debe ser en el futuro'
             )
+        
+        # Validate warehouse managers exist
+        if not self.almacen_origen.manager:
+            raise ValidationError(
+                f'El almacén origen {self.almacen_origen.prefijo} no tiene gerente asignado'
+            )
+        
+        if not self.almacen_destino.manager:
+            raise ValidationError(
+                f'El almacén destino {self.almacen_destino.prefijo} no tiene gerente asignado'
+            )
+        
+        # Validate warehouse capacity (if implemented)
+        if hasattr(self.almacen_destino, 'is_at_capacity') and self.almacen_destino.is_at_capacity():
+            if self.prioridad not in ['ALTA', 'URGENTE']:
+                raise ValidationError(
+                    f'El almacén destino {self.almacen_destino.prefijo} está at capacidad máxima. '
+                    'Solo se permiten traslados de alta prioridad.'
+                )
     
     def save(self, *args, **kwargs):
-        """Override save to generate request number and validate"""
+        """Override save to generate request number, validate, and enforce workflow"""
         if not self.numero_solicitud:
             self.numero_solicitud = self.generate_request_number()
         
+        # Validate all business rules
         self.full_clean()
+        self.enforce_dual_approval_workflow()
+        self.validate_business_rules()
+        
         super().save(*args, **kwargs)
     
     def generate_request_number(self):
@@ -1583,7 +1843,243 @@ class SolicitudTraslado(models.Model):
         """Check if transfer can be executed"""
         return (self.estado == 'APROBADA_COMPLETA' and 
                 self.aprobacion_origen and 
-                self.aprobacion_destino)
+                self.aprobacion_destino and
+                self.aprobacion_origen.decision == 'APROBADO' and
+                self.aprobacion_destino.decision == 'APROBADO')
+    
+    def get_approval_status(self):
+        """Get detailed approval status"""
+        status = {
+            'origen_aprobado': False,
+            'destino_aprobado': False,
+            'completamente_aprobado': False,
+            'rechazado': False,
+            'pendiente_origen': True,
+            'pendiente_destino': True,
+        }
+        
+        if self.aprobacion_origen:
+            status['pendiente_origen'] = False
+            if self.aprobacion_origen.decision == 'APROBADO':
+                status['origen_aprobado'] = True
+            elif self.aprobacion_origen.decision == 'RECHAZADO':
+                status['rechazado'] = True
+        
+        if self.aprobacion_destino:
+            status['pendiente_destino'] = False
+            if self.aprobacion_destino.decision == 'APROBADO':
+                status['destino_aprobado'] = True
+            elif self.aprobacion_destino.decision == 'RECHAZADO':
+                status['rechazado'] = True
+        
+        status['completamente_aprobado'] = (
+            status['origen_aprobado'] and status['destino_aprobado']
+        )
+        
+        return status
+    
+    def update_workflow_state(self):
+        """Update workflow state based on approvals"""
+        approval_status = self.get_approval_status()
+        
+        if approval_status['rechazado']:
+            self.estado = 'RECHAZADA'
+        elif approval_status['completamente_aprobado']:
+            self.estado = 'APROBADA_COMPLETA'
+        elif approval_status['origen_aprobado'] and not approval_status['destino_aprobado']:
+            self.estado = 'APROBADA_ORIGEN'
+        elif approval_status['destino_aprobado'] and not approval_status['origen_aprobado']:
+            self.estado = 'APROBADA_DESTINO'
+        else:
+            self.estado = 'PENDIENTE'
+        
+        self.save()
+    
+    def get_pending_approvers(self):
+        """Get list of users who still need to approve"""
+        pending = []
+        approval_status = self.get_approval_status()
+        
+        if approval_status['pendiente_origen'] and self.almacen_origen.manager:
+            pending.append({
+                'user': self.almacen_origen.manager,
+                'type': 'ORIGEN',
+                'warehouse': self.almacen_origen
+            })
+        
+        if approval_status['pendiente_destino'] and self.almacen_destino.manager:
+            pending.append({
+                'user': self.almacen_destino.manager,
+                'type': 'DESTINO', 
+                'warehouse': self.almacen_destino
+            })
+        
+        return pending
+    
+    def get_workflow_timeline(self):
+        """Get chronological timeline of workflow events"""
+        timeline = []
+        
+        # Request creation
+        timeline.append({
+            'fecha': self.fecha_solicitud,
+            'evento': 'Solicitud Creada',
+            'usuario': self.solicitante,
+            'descripcion': f'Solicitud de traslado creada: {self.activo.codigo_actual}'
+        })
+        
+        # Approvals
+        if self.aprobacion_origen:
+            timeline.append({
+                'fecha': self.aprobacion_origen.fecha_decision,
+                'evento': f'Aprobación Origen - {self.aprobacion_origen.get_decision_display()}',
+                'usuario': self.aprobacion_origen.aprobador,
+                'descripcion': self.aprobacion_origen.comentarios or 'Sin comentarios'
+            })
+        
+        if self.aprobacion_destino:
+            timeline.append({
+                'fecha': self.aprobacion_destino.fecha_decision,
+                'evento': f'Aprobación Destino - {self.aprobacion_destino.get_decision_display()}',
+                'usuario': self.aprobacion_destino.aprobador,
+                'descripcion': self.aprobacion_destino.comentarios or 'Sin comentarios'
+            })
+        
+        # Execution
+        if self.fecha_ejecucion:
+            timeline.append({
+                'fecha': self.fecha_ejecucion,
+                'evento': 'Traslado Ejecutado',
+                'usuario': self.ejecutado_por,
+                'descripcion': 'Traslado iniciado'
+            })
+        
+        # Completion
+        if self.fecha_completada:
+            timeline.append({
+                'fecha': self.fecha_completada,
+                'evento': 'Traslado Completado',
+                'usuario': self.ejecutado_por,
+                'descripcion': 'Traslado finalizado exitosamente'
+            })
+        
+        # Sort by date
+        timeline.sort(key=lambda x: x['fecha'])
+        return timeline
+    
+    def is_overdue(self):
+        """Check if request is overdue"""
+        from django.utils import timezone
+        return (self.fecha_limite < timezone.now() and 
+                self.estado not in ['COMPLETADA', 'RECHAZADA', 'CANCELADA'])
+    
+    def get_days_until_deadline(self):
+        """Get days until deadline (negative if overdue)"""
+        from django.utils import timezone
+        delta = self.fecha_limite - timezone.now()
+        return delta.days
+    
+    def can_be_cancelled(self):
+        """Check if request can be cancelled"""
+        return self.estado in ['PENDIENTE', 'APROBADA_ORIGEN', 'APROBADA_DESTINO']
+    
+    def cancel_request(self, user, motivo):
+        """Cancel the transfer request"""
+        if not self.can_be_cancelled():
+            raise ValidationError('Esta solicitud no puede ser cancelada en su estado actual')
+        
+        self.estado = 'CANCELADA'
+        self.observaciones = f"{self.observaciones}\n\nCancelada por {user.username}: {motivo}".strip()
+        self.save()
+        
+        # Create audit record
+        from .models import HistorialMovimientoActivo
+        HistorialMovimientoActivo.create_movement_record(
+            activo=self.activo,
+            tipo_movimiento='CAMBIO_ESTADO',
+            usuario_responsable=user,
+            motivo=f'Solicitud de traslado cancelada: {self.numero_solicitud}',
+            observaciones=motivo,
+            solicitud_traslado=self
+        )
+    
+    @classmethod
+    def get_pending_for_manager(cls, manager_user):
+        """Get pending requests for a specific manager"""
+        from django.db.models import Q
+        
+        return cls.objects.filter(
+            Q(almacen_origen__manager=manager_user, aprobacion_origen__isnull=True) |
+            Q(almacen_destino__manager=manager_user, aprobacion_destino__isnull=True),
+            estado__in=['PENDIENTE', 'APROBADA_ORIGEN', 'APROBADA_DESTINO']
+        ).select_related(
+            'activo', 'almacen_origen', 'almacen_destino', 'solicitante'
+        ).prefetch_related(
+            'aprobaciones'
+        )
+    
+    @classmethod
+    def get_dashboard_stats_for_manager(cls, manager_user):
+        """Get dashboard statistics for a manager"""
+        from django.db.models import Q, Count
+        from django.utils import timezone
+        
+        # Base queryset for this manager's warehouses
+        manager_requests = cls.objects.filter(
+            Q(almacen_origen__manager=manager_user) |
+            Q(almacen_destino__manager=manager_user)
+        )
+        
+        # Pending approvals for this manager
+        pending_approvals = cls.objects.filter(
+            Q(almacen_origen__manager=manager_user, aprobacion_origen__isnull=True) |
+            Q(almacen_destino__manager=manager_user, aprobacion_destino__isnull=True),
+            estado__in=['PENDIENTE', 'APROBADA_ORIGEN', 'APROBADA_DESTINO']
+        ).count()
+        
+        # Overdue requests
+        overdue_requests = manager_requests.filter(
+            fecha_limite__lt=timezone.now(),
+            estado__in=['PENDIENTE', 'APROBADA_ORIGEN', 'APROBADA_DESTINO', 'APROBADA_COMPLETA']
+        ).count()
+        
+        # Recent activity (last 7 days)
+        week_ago = timezone.now() - timezone.timedelta(days=7)
+        recent_activity = manager_requests.filter(
+            fecha_solicitud__gte=week_ago
+        ).count()
+        
+        # Status breakdown
+        status_counts = manager_requests.values('estado').annotate(
+            count=Count('id')
+        ).order_by('estado')
+        
+        return {
+            'pending_approvals': pending_approvals,
+            'overdue_requests': overdue_requests,
+            'recent_activity': recent_activity,
+            'total_requests': manager_requests.count(),
+            'status_breakdown': {item['estado']: item['count'] for item in status_counts}
+        }
+    
+    @classmethod
+    def get_high_priority_requests(cls, manager_user=None):
+        """Get high priority requests, optionally filtered by manager"""
+        queryset = cls.objects.filter(
+            prioridad__in=['ALTA', 'URGENTE'],
+            estado__in=['PENDIENTE', 'APROBADA_ORIGEN', 'APROBADA_DESTINO', 'APROBADA_COMPLETA']
+        )
+        
+        if manager_user:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(almacen_origen__manager=manager_user) |
+                Q(almacen_destino__manager=manager_user)
+            )
+        
+        return queryset.select_related(
+            'activo', 'almacen_origen', 'almacen_destino', 'solicitante'
+        ).order_by('-prioridad', 'fecha_limite')
     
     def approve_origin(self, approver, comments=''):
         """Approve transfer from origin warehouse"""
@@ -1671,49 +2167,371 @@ class SolicitudTraslado(models.Model):
         self.estado = 'RECHAZADA'
         self.save()
     
+    @transaction.atomic
     def execute_transfer(self, executor):
-        """Execute the approved transfer"""
-        if not self.can_execute():
-            raise ValidationError('La solicitud no puede ser ejecutada')
+        """
+        Execute the approved transfer with atomic operations and comprehensive error handling.
         
+        This method implements:
+        - Atomic transfer execution with proper transaction management
+        - Asset code evolution with rollback capability
+        - Inventory synchronization with warehouse counts
+        - Integration with existing inventory system
+        - Comprehensive error handling and logging
+        
+        Requirements implemented:
+        - 4.4: Transfer execution with asset code evolution
+        - 4.7: Atomic transfer execution
+        - 7.1: Inventory synchronization with warehouse counts
+        - 7.2: Rollback capability for failed transfers
+        - 7.3: Integration with existing systems
+        
+        Args:
+            executor: User executing the transfer
+            
+        Raises:
+            ValidationError: If transfer cannot be executed
+            Exception: For any other execution errors
+        """
+        import logging
+        from django.utils import timezone
+        from django.db import transaction
+        from .state_management import AssetStateManager
+        from .services import InventorySynchronizationService, AuditTrailService
+        
+        logger = logging.getLogger(__name__)
+        
+        # Validate execution preconditions
+        if not self.can_execute():
+            raise ValidationError('La solicitud no puede ser ejecutada - faltan aprobaciones o estado inválido')
+        
+        # Store rollback data before making any changes
+        rollback_data = self._create_rollback_snapshot()
+        execution_start_time = timezone.now()
+        
+        try:
+            # Log transfer execution start
+            logger.info(
+                f"Starting transfer execution: {self.numero_solicitud} "
+                f"for asset {self.activo.codigo_actual} by {executor.username}"
+            )
+            
+            # 1. Validate asset state and location before execution
+            self._validate_pre_execution_state()
+            
+            # 2. Update asset code with evolution (atomic operation)
+            old_code, new_code = self._execute_asset_code_evolution()
+            
+            # 3. Update asset location and state atomically
+            self._execute_asset_location_update()
+            
+            # 4. Handle state change using state management system
+            AssetStateManager.handle_transfer_state_changes(
+                solicitud_traslado=self,
+                stage='approved',
+                user=executor
+            )
+            
+            # 5. Synchronize inventory counts with warehouse systems
+            sync_result = self._execute_inventory_synchronization(executor)
+            if not sync_result.success:
+                raise ValidationError(f"Inventory synchronization failed: {sync_result.message}")
+            
+            # 6. Create comprehensive movement audit record
+            self._create_transfer_execution_audit_record(executor, old_code, new_code)
+            
+            # 7. Update request status and execution metadata
+            self._update_execution_status(executor)
+            
+            # 8. Validate post-execution state
+            self._validate_post_execution_state()
+            
+            # 9. Record comprehensive audit trail
+            execution_duration = (timezone.now() - execution_start_time).total_seconds()
+            AuditTrailService.record_system_operation(
+                accion='TRANSFER_EXECUTION',
+                descripcion=f'Transfer execution completed: {self.numero_solicitud}',
+                user=executor,
+                entidades_afectadas=[
+                    {'type': 'ActivoInventario', 'id': self.activo.id, 'codigo': new_code},
+                    {'type': 'AlmacenRegional', 'id': self.almacen_origen.id, 'prefijo': self.almacen_origen.prefijo},
+                    {'type': 'AlmacenRegional', 'id': self.almacen_destino.id, 'prefijo': self.almacen_destino.prefijo}
+                ],
+                parametros_operacion={
+                    'solicitud_id': self.id,
+                    'asset_code_evolution': {'old': old_code, 'new': new_code},
+                    'inventory_sync': sync_result.__dict__,
+                    'execution_duration_seconds': execution_duration
+                },
+                exitosa=True,
+                duracion_segundos=execution_duration,
+                registros_procesados=1,
+                puede_revertir=True,
+                datos_rollback=rollback_data
+            )
+            
+            # Log successful execution
+            logger.info(
+                f"Transfer execution completed successfully: {self.numero_solicitud} "
+                f"Asset {old_code} -> {new_code} in {execution_duration:.2f}s"
+            )
+            
+        except Exception as e:
+            # Log the error
+            logger.error(
+                f"Transfer execution failed for {self.numero_solicitud}: {str(e)}"
+            )
+            
+            # Record failed execution in audit trail
+            execution_duration = (timezone.now() - execution_start_time).total_seconds()
+            try:
+                AuditTrailService.record_system_operation(
+                    accion='TRANSFER_EXECUTION',
+                    descripcion=f'Transfer execution failed: {self.numero_solicitud}',
+                    user=executor,
+                    entidades_afectadas=[
+                        {'type': 'ActivoInventario', 'id': self.activo.id, 'codigo': self.activo.codigo_actual},
+                        {'type': 'SolicitudTraslado', 'id': self.id, 'numero': self.numero_solicitud}
+                    ],
+                    parametros_operacion={
+                        'solicitud_id': self.id,
+                        'error_message': str(e),
+                        'execution_duration_seconds': execution_duration
+                    },
+                    exitosa=False,
+                    errores=[str(e)],
+                    duracion_segundos=execution_duration,
+                    registros_procesados=0,
+                    puede_revertir=True,
+                    datos_rollback=rollback_data
+                )
+            except Exception as audit_error:
+                logger.error(f"Failed to record execution failure in audit trail: {str(audit_error)}")
+            
+            # Attempt rollback
+            try:
+                self._rollback_transfer_execution(rollback_data, executor)
+                logger.info(f"Transfer execution rollback completed for {self.numero_solicitud}")
+            except Exception as rollback_error:
+                logger.error(
+                    f"CRITICAL: Failed to rollback transfer execution for {self.numero_solicitud}: "
+                    f"{str(rollback_error)}"
+                )
+                # Re-raise original error with rollback failure info
+                raise ValidationError(
+                    f"Transfer execution failed and rollback also failed. "
+                    f"Original error: {str(e)}. Rollback error: {str(rollback_error)}. "
+                    f"Manual intervention required."
+                )
+            
+            # Re-raise the original error
+            raise ValidationError(f"Transfer execution failed: {str(e)}")
+    
+    def _create_rollback_snapshot(self):
+        """Create a snapshot of current state for rollback capability"""
         from django.utils import timezone
         
-        # Update asset code and location
-        old_code, new_code = self.activo.evolve_asset_code(self.almacen_destino)
-        self.activo.almacen_actual = self.almacen_destino
-        self.activo.estado = 'EN_TRANSITO'
-        self.activo.save()
+        return {
+            'timestamp': timezone.now().isoformat(),
+            'solicitud_id': self.id,
+            'solicitud_estado': self.estado,
+            'solicitud_fecha_ejecucion': self.fecha_ejecucion,
+            'solicitud_ejecutado_por': self.ejecutado_por_id if self.ejecutado_por else None,
+            'activo_id': self.activo.id,
+            'activo_codigo_actual': self.activo.codigo_actual,
+            'activo_almacen_actual': self.activo.almacen_actual.id,
+            'activo_estado': self.activo.estado,
+            'almacen_origen_id': self.almacen_origen.id,
+            'almacen_destino_id': self.almacen_destino.id,
+        }
+    
+    def _validate_pre_execution_state(self):
+        """Validate state before execution"""
+        from django.core.exceptions import ValidationError
         
-        # Create movement record
+        # Verify asset is still in origin warehouse
+        if self.activo.almacen_actual != self.almacen_origen:
+            raise ValidationError(
+                f"Asset {self.activo.codigo_actual} is no longer in origin warehouse "
+                f"{self.almacen_origen.prefijo}. Current location: {self.activo.almacen_actual.prefijo}"
+            )
+        
+        # Verify asset state allows transfer
+        if self.activo.estado == 'EN_TRANSITO':
+            raise ValidationError(
+                f"Asset {self.activo.codigo_actual} is already in transit"
+            )
+        
+        # Verify warehouses are still active
+        if not self.almacen_origen.activo:
+            raise ValidationError(f"Origin warehouse {self.almacen_origen.prefijo} is inactive")
+        
+        if not self.almacen_destino.activo:
+            raise ValidationError(f"Destination warehouse {self.almacen_destino.prefijo} is inactive")
+    
+    def _execute_asset_code_evolution(self):
+        """Execute asset code evolution with validation"""
+        old_code = self.activo.codigo_actual
+        
+        # Evolve asset code
+        old_code_returned, new_code = self.activo.evolve_asset_code(self.almacen_destino)
+        
+        # Validate code evolution
+        if old_code != old_code_returned:
+            raise ValidationError(
+                f"Asset code evolution inconsistency: expected {old_code}, got {old_code_returned}"
+            )
+        
+        # Validate new code format and uniqueness
+        if not ActivoInventario.validate_code_uniqueness(new_code, exclude_id=self.activo.id):
+            raise ValidationError(f"Evolved asset code {new_code} is not unique")
+        
+        return old_code, new_code
+    
+    def _execute_asset_location_update(self):
+        """Update asset location atomically"""
+        # Update asset location (code already updated in evolution step)
+        self.activo.almacen_actual = self.almacen_destino
+        self.activo.save()
+    
+    def _execute_inventory_synchronization(self, executor):
+        """Synchronize inventory counts with warehouse systems"""
+        from .services import InventorySynchronizationService
+        
+        try:
+            # Synchronize with existing inventory system
+            sync_result = InventorySynchronizationService.synchronize_transfer_execution(
+                solicitud_traslado=self,
+                executor=executor
+            )
+            
+            if not sync_result.success:
+                raise ValidationError(
+                    f"Inventory synchronization failed: {sync_result.message}"
+                )
+            
+            return sync_result
+                
+        except Exception as e:
+            raise ValidationError(f"Failed to synchronize inventory: {str(e)}")
+    
+    def _create_transfer_execution_audit_record(self, executor, old_code, new_code):
+        """Create comprehensive audit record for transfer execution"""
+        from django.utils import timezone
+        
         HistorialMovimientoActivo.create_movement_record(
             activo=self.activo,
-            tipo_movimiento='TRASLADO_ALMACEN',
+            tipo_movimiento='TRASLADO_EJECUTADO',
             usuario_responsable=executor,
-            motivo=self.motivo,
+            motivo=f'Ejecución de traslado: {self.motivo}',
             almacen_origen=self.almacen_origen,
             almacen_destino=self.almacen_destino,
             estado_anterior='EN_ALMACEN',
             estado_nuevo='EN_TRANSITO',
-            observaciones=f'Solicitud: {self.numero_solicitud}',
-            solicitud_traslado=self
+            observaciones=f'Solicitud: {self.numero_solicitud}. Código: {old_code} -> {new_code}',
+            solicitud_traslado=self,
+            metadata={
+                'codigo_anterior': old_code,
+                'codigo_nuevo': new_code,
+                'fecha_ejecucion': timezone.now().isoformat(),
+                'tipo_operacion': 'EJECUCION_TRASLADO'
+            }
         )
+    
+    def _update_execution_status(self, executor):
+        """Update request execution status and metadata"""
+        from django.utils import timezone
         
-        # Update request status
         self.estado = 'EN_TRANSITO'
         self.fecha_ejecucion = timezone.now()
         self.ejecutado_por = executor
         self.save()
     
+    def _validate_post_execution_state(self):
+        """Validate state after execution"""
+        # Verify asset is now in destination warehouse
+        if self.activo.almacen_actual != self.almacen_destino:
+            raise ValidationError(
+                f"Post-execution validation failed: asset not in destination warehouse"
+            )
+        
+        # Verify asset state is EN_TRANSITO
+        if self.activo.estado != 'EN_TRANSITO':
+            raise ValidationError(
+                f"Post-execution validation failed: asset state is {self.activo.estado}, expected EN_TRANSITO"
+            )
+        
+        # Verify request state is EN_TRANSITO
+        if self.estado != 'EN_TRANSITO':
+            raise ValidationError(
+                f"Post-execution validation failed: request state is {self.estado}, expected EN_TRANSITO"
+            )
+    
+    @transaction.atomic
+    def _rollback_transfer_execution(self, rollback_data, executor):
+        """
+        Rollback transfer execution to previous state.
+        
+        This method provides comprehensive rollback capability for failed transfers
+        by restoring all modified state to the snapshot taken before execution.
+        """
+        import logging
+        from django.utils import timezone
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            # Restore asset state
+            self.activo.codigo_actual = rollback_data['activo_codigo_actual']
+            self.activo.almacen_actual_id = rollback_data['activo_almacen_actual']
+            self.activo.estado = rollback_data['activo_estado']
+            self.activo.save()
+            
+            # Restore request state
+            self.estado = rollback_data['solicitud_estado']
+            self.fecha_ejecucion = rollback_data['solicitud_fecha_ejecucion']
+            self.ejecutado_por_id = rollback_data['solicitud_ejecutado_por']
+            self.save()
+            
+            # Create rollback audit record
+            HistorialMovimientoActivo.create_movement_record(
+                activo=self.activo,
+                tipo_movimiento='ROLLBACK_TRASLADO',
+                usuario_responsable=executor,
+                motivo=f'Rollback de ejecución fallida: {self.numero_solicitud}',
+                almacen_origen=self.almacen_destino,  # Reversed for rollback
+                almacen_destino=self.almacen_origen,  # Reversed for rollback
+                estado_anterior='EN_TRANSITO',
+                estado_nuevo=rollback_data['activo_estado'],
+                observaciones=f'Rollback automático por falla en ejecución',
+                solicitud_traslado=self,
+                metadata={
+                    'tipo_operacion': 'ROLLBACK_EJECUCION',
+                    'rollback_timestamp': timezone.now().isoformat(),
+                    'original_snapshot': rollback_data
+                }
+            )
+            
+            logger.info(f"Transfer execution rollback completed for {self.numero_solicitud}")
+            
+        except Exception as e:
+            logger.error(f"Failed to rollback transfer execution: {str(e)}")
+            raise
+    
     def complete_transfer(self, receiver):
-        """Complete the transfer when asset arrives at destination"""
+        """Complete the transfer when asset arrives at destination with state management"""
         if self.estado != 'EN_TRANSITO':
             raise ValidationError('Solo se pueden completar traslados en tránsito')
         
         from django.utils import timezone
+        from .state_management import AssetStateManager
         
-        # Update asset state
-        self.activo.estado = 'EN_ALMACEN'
-        self.activo.save()
+        # Handle state change using state management system
+        AssetStateManager.handle_transfer_state_changes(
+            solicitud_traslado=self,
+            stage='completed',
+            user=receiver
+        )
         
         # Create completion record
         HistorialMovimientoActivo.create_movement_record(
@@ -1794,6 +2612,10 @@ class AprobacionTraslado(models.Model):
             models.Index(fields=['aprobador', '-fecha_decision']),
             models.Index(fields=['decision', '-fecha_decision']),
             models.Index(fields=['solicitud', 'tipo_aprobacion']),
+            # Additional indexes for manager dashboard queries
+            models.Index(fields=['aprobador', 'decision', '-fecha_decision']),
+            models.Index(fields=['tipo_aprobacion', 'decision', '-fecha_decision']),
+            models.Index(fields=['solicitud', 'decision']),
         ]
     
     def __str__(self):
@@ -1816,9 +2638,196 @@ class AprobacionTraslado(models.Model):
                 )
     
     def save(self, *args, **kwargs):
-        """Override save to ensure validation"""
+        """Override save to ensure validation and update workflow state"""
         self.full_clean()
         super().save(*args, **kwargs)
+        
+        # Update the related solicitud's workflow state and approval references
+        self.update_solicitud_workflow_state()
+    
+    def update_solicitud_workflow_state(self):
+        """Update the related solicitud's workflow state and approval references"""
+        solicitud = self.solicitud
+        
+        # Update approval references in solicitud
+        if self.tipo_aprobacion == 'ORIGEN':
+            solicitud.aprobacion_origen = self
+        elif self.tipo_aprobacion == 'DESTINO':
+            solicitud.aprobacion_destino = self
+        
+        # Update workflow state
+        solicitud.update_workflow_state()
+        
+        # Handle automatic state changes for asset ONLY if both approvals are complete
+        # and this is the final approval that completes the dual approval
+        if (solicitud.estado == 'APROBADA_COMPLETA' and 
+            solicitud.aprobacion_origen and solicitud.aprobacion_destino and
+            solicitud.aprobacion_origen.decision == 'APROBADO' and
+            solicitud.aprobacion_destino.decision == 'APROBADO'):
+            
+            from .state_management import AssetStateManager
+            
+            # Only change state if asset is still in warehouse (not already in transit)
+            if solicitud.activo.estado == 'EN_ALMACEN':
+                AssetStateManager.handle_transfer_state_changes(
+                    solicitud_traslado=solicitud,
+                    stage='approved',
+                    user=self.aprobador
+                )
+                
+                # Update solicitud state to EN_TRANSITO when asset state changes
+                if solicitud.activo.estado == 'EN_TRANSITO':
+                    from django.utils import timezone
+                    solicitud.estado = 'EN_TRANSITO'
+                    solicitud.fecha_ejecucion = timezone.now()
+                    solicitud.ejecutado_por = self.aprobador
+                    solicitud.save()
+    
+    def can_be_modified(self):
+        """Check if this approval can be modified"""
+        # Approvals cannot be modified once the transfer is executed or completed
+        return self.solicitud.estado not in ['EN_TRANSITO', 'COMPLETADA']
+    
+    def get_approval_summary(self):
+        """Get human-readable approval summary"""
+        warehouse = (self.solicitud.almacen_origen if self.tipo_aprobacion == 'ORIGEN' 
+                    else self.solicitud.almacen_destino)
+        
+        return {
+            'warehouse': warehouse,
+            'warehouse_name': warehouse.nombre,
+            'warehouse_prefix': warehouse.prefijo,
+            'approver': self.aprobador,
+            'decision': self.get_decision_display(),
+            'date': self.fecha_decision,
+            'comments': self.comentarios,
+            'can_modify': self.can_be_modified()
+        }
+    
+    @classmethod
+    def create_approval(cls, solicitud, aprobador, tipo_aprobacion, decision, comentarios=''):
+        """Create a new approval with validation"""
+        from django.core.exceptions import ValidationError
+        
+        # Validate that approver is authorized
+        if tipo_aprobacion == 'ORIGEN':
+            if aprobador != solicitud.almacen_origen.manager:
+                raise ValidationError('Solo el gerente del almacén origen puede aprobar desde origen')
+        elif tipo_aprobacion == 'DESTINO':
+            if aprobador != solicitud.almacen_destino.manager:
+                raise ValidationError('Solo el gerente del almacén destino puede aprobar desde destino')
+        
+        # Check if approval already exists
+        existing = cls.objects.filter(
+            solicitud=solicitud,
+            tipo_aprobacion=tipo_aprobacion
+        ).first()
+        
+        if existing and not existing.can_be_modified():
+            raise ValidationError('Esta aprobación ya no puede ser modificada')
+        
+        # Create or update approval
+        if existing:
+            existing.decision = decision
+            existing.comentarios = comentarios
+            existing.save()
+            return existing
+        else:
+            return cls.objects.create(
+                solicitud=solicitud,
+                aprobador=aprobador,
+                tipo_aprobacion=tipo_aprobacion,
+                decision=decision,
+                comentarios=comentarios
+            )
+    
+    @classmethod
+    def get_pending_for_user(cls, user):
+        """Get pending approvals for a specific user"""
+        from django.db.models import Q
+        
+        # Find solicitudes where this user is a manager and approval is pending
+        pending_solicitudes = []
+        
+        # Check for origin approvals
+        origin_pending = SolicitudTraslado.objects.filter(
+            almacen_origen__manager=user,
+            aprobacion_origen__isnull=True,
+            estado__in=['PENDIENTE', 'APROBADA_DESTINO']
+        )
+        
+        for solicitud in origin_pending:
+            pending_solicitudes.append({
+                'solicitud': solicitud,
+                'tipo_aprobacion': 'ORIGEN',
+                'warehouse': solicitud.almacen_origen
+            })
+        
+        # Check for destination approvals
+        destino_pending = SolicitudTraslado.objects.filter(
+            almacen_destino__manager=user,
+            aprobacion_destino__isnull=True,
+            estado__in=['PENDIENTE', 'APROBADA_ORIGEN']
+        )
+        
+        for solicitud in destino_pending:
+            pending_solicitudes.append({
+                'solicitud': solicitud,
+                'tipo_aprobacion': 'DESTINO',
+                'warehouse': solicitud.almacen_destino
+            })
+        
+        return pending_solicitudes
+    
+    @classmethod
+    def get_approval_history_for_user(cls, user, limit=20):
+        """Get approval history for a specific user"""
+        return cls.objects.filter(
+            aprobador=user
+        ).select_related(
+            'solicitud__activo',
+            'solicitud__almacen_origen',
+            'solicitud__almacen_destino'
+        ).order_by('-fecha_decision')[:limit]
+    
+    @classmethod
+    def get_approval_statistics(cls, user=None, warehouse=None):
+        """Get approval statistics"""
+        from django.db.models import Count, Q
+        from django.utils import timezone
+        
+        queryset = cls.objects.all()
+        
+        if user:
+            queryset = queryset.filter(aprobador=user)
+        
+        if warehouse:
+            queryset = queryset.filter(
+                Q(solicitud__almacen_origen=warehouse, tipo_aprobacion='ORIGEN') |
+                Q(solicitud__almacen_destino=warehouse, tipo_aprobacion='DESTINO')
+            )
+        
+        # Count by decision
+        decision_counts = queryset.values('decision').annotate(
+            count=Count('id')
+        )
+        
+        # Recent activity (last 30 days)
+        month_ago = timezone.now() - timezone.timedelta(days=30)
+        recent_approvals = queryset.filter(fecha_decision__gte=month_ago).count()
+        
+        # Average response time (this would need additional tracking)
+        total_approvals = queryset.count()
+        
+        decision_breakdown = {item['decision']: item['count'] for item in decision_counts}
+        approved_count = decision_breakdown.get('APROBADO', 0)
+        
+        return {
+            'total_approvals': total_approvals,
+            'recent_approvals': recent_approvals,
+            'decision_breakdown': decision_breakdown,
+            'approval_rate': (approved_count / total_approvals * 100 if total_approvals > 0 else 0)
+        }
 
 
 class AcueductoNuevo(models.Model):
@@ -1948,3 +2957,999 @@ class AcueductoNuevo(models.Model):
         """Return full hierarchical path including acueducto"""
         base_path = self.unidad_organizacional.get_full_path()
         return f"{base_path} → {self.nombre}"
+
+# ============================================================================
+# COMPREHENSIVE AUDIT TRAIL MODELS
+# ============================================================================
+
+class AuditTrailBase(models.Model):
+    """
+    Base class for all audit trail models.
+    Provides common fields and immutability enforcement.
+    
+    Requirements implemented:
+    - 6.1: Immutable movement records for complete asset traceability
+    - 6.2: Audit models for state changes and approval decisions
+    - 6.4: Proper indexing for audit queries and reporting
+    - 6.5: Comprehensive audit trail system
+    
+    This abstract base class ensures all audit models have consistent
+    structure, proper indexing, and immutability enforcement.
+    """
+    
+    # Audit metadata with enhanced tracking
+    fecha_auditoria = models.DateTimeField(
+        auto_now_add=True,
+        help_text='Timestamp when audit record was created (immutable)',
+        db_index=True  # Index for performance
+    )
+    usuario_responsable = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='%(class)s_audit_records',
+        help_text='User responsible for the audited action',
+        db_index=True  # Index for user-based queries
+    )
+    
+    # Enhanced tracking fields
+    direccion_ip = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text='IP address from which the action was performed',
+        db_index=True  # Index for security analysis
+    )
+    user_agent = models.TextField(
+        blank=True,
+        help_text='User agent string from the request'
+    )
+    session_key = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text='Session key for tracking user sessions',
+        db_index=True  # Index for session analysis
+    )
+    
+    # Request context for web-based actions
+    request_method = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text='HTTP method used for the request'
+    )
+    request_path = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text='Request path/URL'
+    )
+    
+    # Additional context with enhanced structure
+    contexto_adicional = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Additional context information for the audit record'
+    )
+    
+    # Audit integrity fields
+    checksum = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text='SHA-256 checksum for audit record integrity verification'
+    )
+    
+    class Meta:
+        abstract = True
+        ordering = ['-fecha_auditoria']
+        indexes = [
+            # Base indexes that all audit models will inherit
+            models.Index(fields=['-fecha_auditoria'], name='%(class)s_fecha_idx'),
+            models.Index(fields=['usuario_responsable', '-fecha_auditoria'], name='%(class)s_usr_fecha_idx'),
+            models.Index(fields=['direccion_ip', '-fecha_auditoria'], name='%(class)s_ip_fecha_idx'),
+            models.Index(fields=['session_key', '-fecha_auditoria'], name='%(class)s_sess_fecha_idx'),
+        ]
+    
+    def save(self, *args, **kwargs):
+        """
+        Override save to ensure immutability and generate integrity checksum.
+        
+        Implements requirement 6.1: Immutable movement records for complete asset traceability
+        """
+        if self.pk:
+            raise ValidationError(
+                'Los registros de auditoría son inmutables y no pueden ser modificados después de su creación. '
+                'Esta restricción garantiza la integridad del audit trail.'
+            )
+        
+        # Generate integrity checksum before saving
+        self._generate_checksum()
+        
+        super().save(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        """
+        Override delete to prevent deletion of audit records.
+        
+        Implements requirement 6.5: Comprehensive audit trail system
+        """
+        raise ValidationError(
+            'Los registros de auditoría no pueden ser eliminados. '
+            'La inmutabilidad de los registros de auditoría es fundamental para la integridad del sistema.'
+        )
+    
+    def _generate_checksum(self):
+        """Generate SHA-256 checksum for audit record integrity"""
+        import hashlib
+        import json
+        from django.utils import timezone
+        
+        # Create a consistent representation of the record for checksumming
+        checksum_data = {
+            'fecha_auditoria': self.fecha_auditoria.isoformat() if self.fecha_auditoria else timezone.now().isoformat(),
+            'usuario_responsable_id': self.usuario_responsable_id,
+            'direccion_ip': self.direccion_ip or '',
+            'user_agent': self.user_agent or '',
+            'session_key': self.session_key or '',
+            'request_method': getattr(self, 'request_method', '') or '',
+            'request_path': getattr(self, 'request_path', '') or '',
+            'contexto_adicional': self.contexto_adicional or {},
+        }
+        
+        # Add model-specific fields for checksum
+        checksum_data.update(self._get_checksum_fields())
+        
+        # Generate checksum
+        checksum_string = json.dumps(checksum_data, sort_keys=True, default=str)
+        self.checksum = hashlib.sha256(checksum_string.encode()).hexdigest()
+    
+    def _get_checksum_fields(self):
+        """Override in subclasses to include model-specific fields in checksum"""
+        return {}
+    
+    def verify_integrity(self):
+        """
+        Verify the integrity of this audit record by recalculating checksum.
+        
+        Returns:
+            bool: True if integrity is verified, False otherwise
+        """
+        if not self.checksum:
+            return False
+        
+        original_checksum = self.checksum
+        self._generate_checksum()
+        current_checksum = self.checksum
+        
+        # Restore original checksum
+        self.checksum = original_checksum
+        
+        return original_checksum == current_checksum
+    
+    @classmethod
+    def verify_audit_trail_integrity(cls, start_date=None, end_date=None):
+        """
+        Verify integrity of multiple audit records.
+        
+        Args:
+            start_date: Start date for verification range
+            end_date: End date for verification range
+            
+        Returns:
+            dict: Verification results with statistics
+        """
+        queryset = cls.objects.all()
+        
+        if start_date:
+            queryset = queryset.filter(fecha_auditoria__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(fecha_auditoria__lte=end_date)
+        
+        total_records = queryset.count()
+        verified_records = 0
+        failed_records = []
+        
+        for record in queryset:
+            if record.verify_integrity():
+                verified_records += 1
+            else:
+                failed_records.append({
+                    'id': record.id,
+                    'fecha_auditoria': record.fecha_auditoria,
+                    'usuario_responsable': record.usuario_responsable.username if record.usuario_responsable else None
+                })
+        
+        return {
+            'total_records': total_records,
+            'verified_records': verified_records,
+            'failed_records': len(failed_records),
+            'integrity_percentage': (verified_records / total_records * 100) if total_records > 0 else 0,
+            'failed_record_details': failed_records
+        }
+
+
+class AuditoriaEstadoActivo(AuditTrailBase):
+    """
+    Audit trail for asset state changes.
+    Records all state transitions with complete context.
+    """
+    
+    AUDIT_ACTIONS = [
+        ('STATE_CHANGE', 'Cambio de Estado'),
+        ('STATE_CHANGE_AUTO', 'Cambio de Estado Automático'),
+        ('STATE_VALIDATION', 'Validación de Estado'),
+        ('STATE_CORRECTION', 'Corrección de Estado'),
+    ]
+    
+    # Asset reference
+    activo = models.ForeignKey(
+        ActivoInventario,
+        on_delete=models.CASCADE,
+        related_name='auditoria_estados',
+        help_text='Activo cuyo estado fue modificado'
+    )
+    
+    # State change details
+    accion = models.CharField(
+        max_length=20,
+        choices=AUDIT_ACTIONS,
+        help_text='Tipo de acción realizada'
+    )
+    estado_anterior = models.CharField(
+        max_length=20,
+        choices=ActivoInventario.ASSET_STATES,
+        help_text='Estado anterior del activo'
+    )
+    estado_nuevo = models.CharField(
+        max_length=20,
+        choices=ActivoInventario.ASSET_STATES,
+        help_text='Estado nuevo del activo'
+    )
+    
+    # Change context
+    motivo = models.TextField(
+        help_text='Motivo del cambio de estado'
+    )
+    observaciones = models.TextField(
+        blank=True,
+        help_text='Observaciones adicionales sobre el cambio'
+    )
+    
+    # Validation results
+    validacion_exitosa = models.BooleanField(
+        default=True,
+        help_text='Indica si la validación del cambio fue exitosa'
+    )
+    errores_validacion = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Lista de errores de validación si los hubo'
+    )
+    
+    # Related records
+    solicitud_traslado = models.ForeignKey(
+        SolicitudTraslado,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='auditoria_estados',
+        help_text='Solicitud de traslado relacionada (si aplica)'
+    )
+    
+    class Meta:
+        verbose_name = 'Auditoría de Estado de Activo'
+        verbose_name_plural = 'Auditorías de Estados de Activos'
+        ordering = ['-fecha_auditoria']
+        indexes = [
+            # Primary audit indexes
+            models.Index(fields=['activo', '-fecha_auditoria'], name='idx_aud_est_activo_fecha'),
+            models.Index(fields=['accion', '-fecha_auditoria'], name='idx_aud_est_accion_fecha'),
+            models.Index(fields=['usuario_responsable', '-fecha_auditoria'], name='idx_aud_est_usuario_fecha'),
+            
+            # State transition indexes for reporting
+            models.Index(fields=['estado_anterior', 'estado_nuevo'], name='idx_aud_est_transicion'),
+            models.Index(fields=['estado_anterior', 'estado_nuevo', '-fecha_auditoria'], name='idx_aud_est_trans_fecha'),
+            models.Index(fields=['validacion_exitosa', '-fecha_auditoria'], name='idx_aud_est_valid_fecha'),
+            
+            # Complex query indexes
+            models.Index(fields=['activo', 'accion', '-fecha_auditoria'], name='idx_aud_est_act_acc_fecha'),
+            models.Index(fields=['activo', 'estado_nuevo', '-fecha_auditoria'], name='idx_aud_est_act_new_fecha'),
+            models.Index(fields=['solicitud_traslado', '-fecha_auditoria'], name='idx_aud_est_sol_fecha'),
+            
+            # Performance indexes for dashboard queries
+            models.Index(fields=['accion', 'validacion_exitosa', '-fecha_auditoria'], name='idx_aud_est_acc_val_fecha'),
+            models.Index(fields=['usuario_responsable', 'accion', '-fecha_auditoria'], name='idx_aud_est_usr_acc_fecha'),
+        ]
+        constraints = [
+            # Ensure state transitions are logical
+            models.CheckConstraint(
+                check=~models.Q(estado_anterior=models.F('estado_nuevo')),
+                name='audit_estado_different_states'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"{self.activo.codigo_actual} - {self.estado_anterior} → {self.estado_nuevo} - {self.fecha_auditoria.strftime('%Y-%m-%d %H:%M')}"
+    
+    def get_change_summary(self):
+        """Get a human-readable summary of the state change"""
+        return f"{self.get_accion_display()}: {self.estado_anterior} → {self.estado_nuevo}"
+    
+    @classmethod
+    def create_state_change_audit(cls, activo, old_state, new_state, user, motivo, 
+                                 observaciones='', solicitud_traslado=None, 
+                                 ip_address=None, user_agent='', session_key='',
+                                 contexto_adicional=None):
+        """Create a state change audit record"""
+        if contexto_adicional is None:
+            contexto_adicional = {}
+        
+        return cls.objects.create(
+            activo=activo,
+            accion='STATE_CHANGE',
+            estado_anterior=old_state,
+            estado_nuevo=new_state,
+            usuario_responsable=user,
+            motivo=motivo,
+            observaciones=observaciones,
+            solicitud_traslado=solicitud_traslado,
+            direccion_ip=ip_address,
+            user_agent=user_agent,
+            session_key=session_key,
+            contexto_adicional=contexto_adicional
+        )
+    
+    def _get_checksum_fields(self):
+        """Include model-specific fields in checksum calculation"""
+        return {
+            'activo_id': self.activo_id,
+            'accion': self.accion,
+            'estado_anterior': self.estado_anterior,
+            'estado_nuevo': self.estado_nuevo,
+            'motivo': self.motivo,
+            'observaciones': self.observaciones,
+            'validacion_exitosa': self.validacion_exitosa,
+            'errores_validacion': self.errores_validacion,
+            'solicitud_traslado_id': self.solicitud_traslado_id if self.solicitud_traslado else None,
+        }
+    
+    @classmethod
+    def get_state_transition_report(cls, activo=None, start_date=None, end_date=None):
+        """
+        Generate state transition report for compliance and analysis.
+        
+        Args:
+            activo: Specific asset to report on (optional)
+            start_date: Start date for report range
+            end_date: End date for report range
+            
+        Returns:
+            dict: Comprehensive state transition report
+        """
+        from django.db.models import Count, Q
+        from django.utils import timezone
+        
+        queryset = cls.objects.all()
+        
+        if activo:
+            queryset = queryset.filter(activo=activo)
+        if start_date:
+            queryset = queryset.filter(fecha_auditoria__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(fecha_auditoria__lte=end_date)
+        
+        # State transition statistics
+        transitions = queryset.values('estado_anterior', 'estado_nuevo').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        # Validation statistics
+        validation_stats = queryset.aggregate(
+            total_changes=Count('id'),
+            successful_validations=Count('id', filter=Q(validacion_exitosa=True)),
+            failed_validations=Count('id', filter=Q(validacion_exitosa=False))
+        )
+        
+        # User activity statistics
+        user_stats = queryset.values('usuario_responsable__username').annotate(
+            count=Count('id')
+        ).order_by('-count')[:10]
+        
+        return {
+            'period': {
+                'start_date': start_date,
+                'end_date': end_date,
+                'asset': activo.codigo_actual if activo else 'All Assets'
+            },
+            'summary': {
+                'total_state_changes': validation_stats['total_changes'],
+                'successful_validations': validation_stats['successful_validations'],
+                'failed_validations': validation_stats['failed_validations'],
+                'validation_success_rate': (
+                    validation_stats['successful_validations'] / validation_stats['total_changes'] * 100
+                    if validation_stats['total_changes'] > 0 else 0
+                )
+            },
+            'state_transitions': list(transitions),
+            'top_users': list(user_stats),
+            'generated_at': timezone.now().isoformat()
+        }
+
+
+class AuditoriaAprobacion(AuditTrailBase):
+    """
+    Audit trail for approval and rejection decisions.
+    Records all approval workflow actions with complete context.
+    """
+    
+    AUDIT_ACTIONS = [
+        ('APPROVAL_GRANTED', 'Aprobación Otorgada'),
+        ('APPROVAL_REJECTED', 'Aprobación Rechazada'),
+        ('APPROVAL_REVOKED', 'Aprobación Revocada'),
+        ('APPROVAL_DELEGATED', 'Aprobación Delegada'),
+        ('APPROVAL_ESCALATED', 'Aprobación Escalada'),
+    ]
+    
+    # Approval reference
+    solicitud_traslado = models.ForeignKey(
+        SolicitudTraslado,
+        on_delete=models.CASCADE,
+        related_name='auditoria_aprobaciones',
+        help_text='Solicitud de traslado relacionada'
+    )
+    aprobacion = models.ForeignKey(
+        AprobacionTraslado,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='auditoria_records',
+        help_text='Registro de aprobación relacionado'
+    )
+    
+    # Approval details
+    accion = models.CharField(
+        max_length=20,
+        choices=AUDIT_ACTIONS,
+        help_text='Tipo de acción de aprobación realizada'
+    )
+    tipo_aprobacion = models.CharField(
+        max_length=10,
+        choices=AprobacionTraslado.APPROVAL_TYPES,
+        help_text='Tipo de aprobación (origen o destino)'
+    )
+    decision = models.CharField(
+        max_length=10,
+        choices=AprobacionTraslado.DECISIONS,
+        help_text='Decisión tomada'
+    )
+    
+    # Decision context
+    comentarios = models.TextField(
+        blank=True,
+        help_text='Comentarios sobre la decisión'
+    )
+    motivo_rechazo = models.TextField(
+        blank=True,
+        help_text='Motivo detallado del rechazo (si aplica)'
+    )
+    
+    # Approval authority validation
+    autoridad_validada = models.BooleanField(
+        default=True,
+        help_text='Indica si la autoridad del aprobador fue validada'
+    )
+    errores_autoridad = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Lista de errores de validación de autoridad'
+    )
+    
+    # Workflow impact
+    estado_solicitud_anterior = models.CharField(
+        max_length=20,
+        choices=SolicitudTraslado.TRANSFER_STATES,
+        help_text='Estado anterior de la solicitud'
+    )
+    estado_solicitud_nuevo = models.CharField(
+        max_length=20,
+        choices=SolicitudTraslado.TRANSFER_STATES,
+        help_text='Estado nuevo de la solicitud'
+    )
+    
+    class Meta:
+        verbose_name = 'Auditoría de Aprobación'
+        verbose_name_plural = 'Auditorías de Aprobaciones'
+        ordering = ['-fecha_auditoria']
+        indexes = [
+            # Primary audit indexes
+            models.Index(fields=['solicitud_traslado', '-fecha_auditoria'], name='idx_aud_apr_sol_fecha'),
+            models.Index(fields=['accion', '-fecha_auditoria'], name='idx_aud_apr_accion_fecha'),
+            models.Index(fields=['usuario_responsable', '-fecha_auditoria'], name='idx_aud_apr_usuario_fecha'),
+            
+            # Approval workflow indexes
+            models.Index(fields=['decision', '-fecha_auditoria'], name='idx_aud_apr_decision_fecha'),
+            models.Index(fields=['tipo_aprobacion', 'decision'], name='idx_aud_apr_tipo_decision'),
+            models.Index(fields=['tipo_aprobacion', 'decision', '-fecha_auditoria'], name='idx_aud_apr_tip_dec_fecha'),
+            models.Index(fields=['autoridad_validada', '-fecha_auditoria'], name='idx_aud_apr_autor_fecha'),
+            
+            # Workflow state tracking indexes
+            models.Index(fields=['estado_solicitud_anterior', 'estado_solicitud_nuevo'], name='idx_aud_apr_estados'),
+            models.Index(fields=['estado_solicitud_nuevo', '-fecha_auditoria'], name='idx_aud_apr_est_new_fecha'),
+            
+            # Complex query indexes for reporting
+            models.Index(fields=['accion', 'autoridad_validada', '-fecha_auditoria'], name='idx_aud_apr_acc_aut_fecha'),
+            models.Index(fields=['usuario_responsable', 'decision', '-fecha_auditoria'], name='idx_aud_apr_usr_dec_fecha'),
+            models.Index(fields=['solicitud_traslado', 'tipo_aprobacion', '-fecha_auditoria'], name='idx_aud_apr_sol_tip_fecha'),
+            
+            # Performance indexes for manager dashboards
+            models.Index(fields=['aprobacion', '-fecha_auditoria'], name='idx_aud_apr_aprob_fecha'),
+            models.Index(fields=['decision', 'autoridad_validada', '-fecha_auditoria'], name='idx_aud_apr_dec_aut_fecha'),
+        ]
+    
+    def __str__(self):
+        return f"{self.solicitud_traslado.numero_solicitud} - {self.get_accion_display()} - {self.fecha_auditoria.strftime('%Y-%m-%d %H:%M')}"
+    
+    def get_decision_summary(self):
+        """Get a human-readable summary of the approval decision"""
+        return f"{self.get_tipo_aprobacion_display()}: {self.get_decision_display()}"
+    
+    @classmethod
+    def create_approval_audit(cls, solicitud_traslado, aprobacion, accion, user,
+                            comentarios='', motivo_rechazo='', ip_address=None,
+                            user_agent='', session_key='', contexto_adicional=None):
+        """Create an approval audit record"""
+        if contexto_adicional is None:
+            contexto_adicional = {}
+        
+        # Get workflow state information
+        estado_anterior = solicitud_traslado.estado
+        
+        return cls.objects.create(
+            solicitud_traslado=solicitud_traslado,
+            aprobacion=aprobacion,
+            accion=accion,
+            tipo_aprobacion=aprobacion.tipo_aprobacion if aprobacion else '',
+            decision=aprobacion.decision if aprobacion else '',
+            usuario_responsable=user,
+            comentarios=comentarios,
+            motivo_rechazo=motivo_rechazo,
+            estado_solicitud_anterior=estado_anterior,
+            estado_solicitud_nuevo=solicitud_traslado.estado,
+            direccion_ip=ip_address,
+            user_agent=user_agent,
+            session_key=session_key,
+            contexto_adicional=contexto_adicional
+        )
+    
+    def _get_checksum_fields(self):
+        """Include model-specific fields in checksum calculation"""
+        return {
+            'solicitud_traslado_id': self.solicitud_traslado_id,
+            'aprobacion_id': self.aprobacion_id if self.aprobacion else None,
+            'accion': self.accion,
+            'tipo_aprobacion': self.tipo_aprobacion,
+            'decision': self.decision,
+            'comentarios': self.comentarios,
+            'motivo_rechazo': self.motivo_rechazo,
+            'autoridad_validada': self.autoridad_validada,
+            'errores_autoridad': self.errores_autoridad,
+            'estado_solicitud_anterior': self.estado_solicitud_anterior,
+            'estado_solicitud_nuevo': self.estado_solicitud_nuevo,
+        }
+    
+    @classmethod
+    def get_approval_workflow_report(cls, warehouse=None, manager=None, start_date=None, end_date=None):
+        """
+        Generate approval workflow report for compliance and performance analysis.
+        
+        Args:
+            warehouse: Specific warehouse to report on (optional)
+            manager: Specific manager to report on (optional)
+            start_date: Start date for report range
+            end_date: End date for report range
+            
+        Returns:
+            dict: Comprehensive approval workflow report
+        """
+        from django.db.models import Count, Q, Avg
+        from django.utils import timezone
+        
+        queryset = cls.objects.all()
+        
+        if warehouse:
+            queryset = queryset.filter(
+                Q(solicitud_traslado__almacen_origen=warehouse) |
+                Q(solicitud_traslado__almacen_destino=warehouse)
+            )
+        if manager:
+            queryset = queryset.filter(usuario_responsable=manager)
+        if start_date:
+            queryset = queryset.filter(fecha_auditoria__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(fecha_auditoria__lte=end_date)
+        
+        # Approval statistics
+        approval_stats = queryset.aggregate(
+            total_approvals=Count('id'),
+            granted_approvals=Count('id', filter=Q(decision='APROBADO')),
+            rejected_approvals=Count('id', filter=Q(decision='RECHAZADO')),
+            origin_approvals=Count('id', filter=Q(tipo_aprobacion='ORIGEN')),
+            destination_approvals=Count('id', filter=Q(tipo_aprobacion='DESTINO')),
+            authority_validated=Count('id', filter=Q(autoridad_validada=True)),
+        )
+        
+        # Decision breakdown by type
+        decision_breakdown = queryset.values('tipo_aprobacion', 'decision').annotate(
+            count=Count('id')
+        ).order_by('tipo_aprobacion', 'decision')
+        
+        # Manager performance
+        manager_stats = queryset.values('usuario_responsable__username').annotate(
+            total_decisions=Count('id'),
+            approvals=Count('id', filter=Q(decision='APROBADO')),
+            rejections=Count('id', filter=Q(decision='RECHAZADO'))
+        ).order_by('-total_decisions')[:10]
+        
+        return {
+            'period': {
+                'start_date': start_date,
+                'end_date': end_date,
+                'warehouse': warehouse.nombre if warehouse else 'All Warehouses',
+                'manager': manager.username if manager else 'All Managers'
+            },
+            'summary': {
+                'total_approvals': approval_stats['total_approvals'],
+                'granted_approvals': approval_stats['granted_approvals'],
+                'rejected_approvals': approval_stats['rejected_approvals'],
+                'approval_rate': (
+                    approval_stats['granted_approvals'] / approval_stats['total_approvals'] * 100
+                    if approval_stats['total_approvals'] > 0 else 0
+                ),
+                'origin_approvals': approval_stats['origin_approvals'],
+                'destination_approvals': approval_stats['destination_approvals'],
+                'authority_validation_rate': (
+                    approval_stats['authority_validated'] / approval_stats['total_approvals'] * 100
+                    if approval_stats['total_approvals'] > 0 else 0
+                )
+            },
+            'decision_breakdown': list(decision_breakdown),
+            'manager_performance': list(manager_stats),
+            'generated_at': timezone.now().isoformat()
+        }
+
+
+class AuditoriaOperacionSistema(AuditTrailBase):
+    """
+    Audit trail for system operations and administrative actions.
+    Records system-level operations that affect multiple entities.
+    """
+    
+    AUDIT_ACTIONS = [
+        ('SYSTEM_MIGRATION', 'Migración del Sistema'),
+        ('DATA_IMPORT', 'Importación de Datos'),
+        ('DATA_EXPORT', 'Exportación de Datos'),
+        ('BULK_UPDATE', 'Actualización Masiva'),
+        ('SYSTEM_MAINTENANCE', 'Mantenimiento del Sistema'),
+        ('CONFIGURATION_CHANGE', 'Cambio de Configuración'),
+        ('PERMISSION_CHANGE', 'Cambio de Permisos'),
+        ('USER_MANAGEMENT', 'Gestión de Usuarios'),
+        ('WAREHOUSE_MANAGEMENT', 'Gestión de Almacenes'),
+        ('INVENTORY_RECONCILIATION', 'Reconciliación de Inventario'),
+    ]
+    
+    # Operation details
+    accion = models.CharField(
+        max_length=30,
+        choices=AUDIT_ACTIONS,
+        help_text='Tipo de operación del sistema realizada'
+    )
+    descripcion = models.TextField(
+        help_text='Descripción detallada de la operación'
+    )
+    
+    # Operation scope
+    entidades_afectadas = models.JSONField(
+        default=list,
+        help_text='Lista de entidades afectadas por la operación'
+    )
+    parametros_operacion = models.JSONField(
+        default=dict,
+        help_text='Parámetros utilizados en la operación'
+    )
+    
+    # Operation results
+    exitosa = models.BooleanField(
+        default=True,
+        help_text='Indica si la operación fue exitosa'
+    )
+    errores = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Lista de errores ocurridos durante la operación'
+    )
+    warnings = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Lista de advertencias generadas durante la operación'
+    )
+    
+    # Performance metrics
+    duracion_segundos = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text='Duración de la operación en segundos'
+    )
+    registros_procesados = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Número de registros procesados'
+    )
+    
+    # Rollback information
+    puede_revertir = models.BooleanField(
+        default=False,
+        help_text='Indica si la operación puede ser revertida'
+    )
+    datos_rollback = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Datos necesarios para revertir la operación'
+    )
+    
+    class Meta:
+        verbose_name = 'Auditoría de Operación del Sistema'
+        verbose_name_plural = 'Auditorías de Operaciones del Sistema'
+        ordering = ['-fecha_auditoria']
+        indexes = [
+            # Primary audit indexes
+            models.Index(fields=['accion', '-fecha_auditoria'], name='idx_aud_oper_accion_fecha'),
+            models.Index(fields=['usuario_responsable', '-fecha_auditoria'], name='idx_aud_oper_usuario_fecha'),
+            models.Index(fields=['exitosa', '-fecha_auditoria'], name='idx_aud_oper_exitosa_fecha'),
+            
+            # Performance and monitoring indexes
+            models.Index(fields=['puede_revertir', '-fecha_auditoria'], name='idx_aud_oper_revert_fecha'),
+            models.Index(fields=['duracion_segundos'], name='idx_aud_oper_duracion'),
+            models.Index(fields=['registros_procesados'], name='idx_aud_oper_registros'),
+            
+            # System operation analysis indexes
+            models.Index(fields=['accion', 'exitosa', '-fecha_auditoria'], name='idx_aud_oper_acc_exit_fecha'),
+            models.Index(fields=['usuario_responsable', 'accion', '-fecha_auditoria'], name='idx_aud_oper_usr_acc_fecha'),
+            models.Index(fields=['exitosa', 'puede_revertir', '-fecha_auditoria'], name='idx_aud_oper_exit_rev_fecha'),
+            
+            # Performance analysis indexes
+            models.Index(fields=['accion', 'duracion_segundos', '-fecha_auditoria'], name='idx_aud_oper_acc_dur_fecha'),
+            models.Index(fields=['registros_procesados', '-fecha_auditoria'], name='idx_aud_oper_reg_fecha'),
+            
+            # Error analysis indexes
+            models.Index(fields=['exitosa', 'accion', '-fecha_auditoria'], name='idx_aud_oper_exit_acc_fecha'),
+        ]
+        constraints = [
+            # Ensure duration is positive if provided
+            models.CheckConstraint(
+                check=models.Q(duracion_segundos__isnull=True) | models.Q(duracion_segundos__gte=0),
+                name='audit_oper_duracion_positive'
+            ),
+            # Ensure processed records is non-negative if provided
+            models.CheckConstraint(
+                check=models.Q(registros_procesados__isnull=True) | models.Q(registros_procesados__gte=0),
+                name='audit_oper_registros_non_negative'
+            ),
+        ]
+    
+    def __str__(self):
+        status = "✓" if self.exitosa else "✗"
+        return f"{status} {self.get_accion_display()} - {self.fecha_auditoria.strftime('%Y-%m-%d %H:%M')}"
+    
+    def get_operation_summary(self):
+        """Get a human-readable summary of the operation"""
+        status = "Exitosa" if self.exitosa else "Fallida"
+        duration = f" ({self.duracion_segundos}s)" if self.duracion_segundos else ""
+        return f"{self.get_accion_display()}: {status}{duration}"
+    
+    @classmethod
+    def create_system_operation_audit(cls, accion, descripcion, user, entidades_afectadas=None,
+                                    parametros_operacion=None, exitosa=True, errores=None,
+                                    warnings=None, duracion_segundos=None, registros_procesados=None,
+                                    puede_revertir=False, datos_rollback=None, ip_address=None,
+                                    user_agent='', session_key='', contexto_adicional=None):
+        """Create a system operation audit record"""
+        if entidades_afectadas is None:
+            entidades_afectadas = []
+        if parametros_operacion is None:
+            parametros_operacion = {}
+        if errores is None:
+            errores = []
+        if warnings is None:
+            warnings = []
+        if datos_rollback is None:
+            datos_rollback = {}
+        if contexto_adicional is None:
+            contexto_adicional = {}
+        
+        return cls.objects.create(
+            accion=accion,
+            descripcion=descripcion,
+            usuario_responsable=user,
+            entidades_afectadas=entidades_afectadas,
+            parametros_operacion=parametros_operacion,
+            exitosa=exitosa,
+            errores=errores,
+            warnings=warnings,
+            duracion_segundos=duracion_segundos,
+            registros_procesados=registros_procesados,
+            puede_revertir=puede_revertir,
+            datos_rollback=datos_rollback,
+            direccion_ip=ip_address,
+            user_agent=user_agent,
+            session_key=session_key,
+            contexto_adicional=contexto_adicional
+        )
+
+
+class AuditoriaAccesoSistema(AuditTrailBase):
+    """
+    Audit trail for system access and authentication events.
+    Records login attempts, permission checks, and security events.
+    """
+    
+    AUDIT_ACTIONS = [
+        ('LOGIN_SUCCESS', 'Inicio de Sesión Exitoso'),
+        ('LOGIN_FAILED', 'Inicio de Sesión Fallido'),
+        ('LOGOUT', 'Cierre de Sesión'),
+        ('PASSWORD_CHANGE', 'Cambio de Contraseña'),
+        ('PERMISSION_CHECK', 'Verificación de Permisos'),
+        ('UNAUTHORIZED_ACCESS', 'Acceso No Autorizado'),
+        ('SESSION_EXPIRED', 'Sesión Expirada'),
+        ('ACCOUNT_LOCKED', 'Cuenta Bloqueada'),
+        ('ACCOUNT_UNLOCKED', 'Cuenta Desbloqueada'),
+        ('SECURITY_VIOLATION', 'Violación de Seguridad'),
+    ]
+    
+    # Access details
+    accion = models.CharField(
+        max_length=20,
+        choices=AUDIT_ACTIONS,
+        help_text='Tipo de evento de acceso'
+    )
+    usuario_objetivo = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='auditoria_acceso_objetivo',
+        null=True,
+        blank=True,
+        help_text='Usuario objetivo del evento (puede ser diferente al responsable)'
+    )
+    
+    # Access context
+    recurso_accedido = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Recurso o URL accedida'
+    )
+    metodo_http = models.CharField(
+        max_length=10,
+        blank=True,
+        help_text='Método HTTP utilizado'
+    )
+    codigo_respuesta = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Código de respuesta HTTP'
+    )
+    
+    # Security information
+    exitoso = models.BooleanField(
+        default=True,
+        help_text='Indica si el acceso fue exitoso'
+    )
+    motivo_fallo = models.TextField(
+        blank=True,
+        help_text='Motivo del fallo de acceso'
+    )
+    nivel_riesgo = models.CharField(
+        max_length=10,
+        choices=[
+            ('BAJO', 'Bajo'),
+            ('MEDIO', 'Medio'),
+            ('ALTO', 'Alto'),
+            ('CRITICO', 'Crítico'),
+        ],
+        default='BAJO',
+        help_text='Nivel de riesgo del evento'
+    )
+    
+    # Geographic and device information
+    pais = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='País desde donde se realizó el acceso'
+    )
+    ciudad = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Ciudad desde donde se realizó el acceso'
+    )
+    dispositivo = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Información del dispositivo utilizado'
+    )
+    
+    class Meta:
+        verbose_name = 'Auditoría de Acceso al Sistema'
+        verbose_name_plural = 'Auditorías de Acceso al Sistema'
+        ordering = ['-fecha_auditoria']
+        indexes = [
+            # Primary security audit indexes
+            models.Index(fields=['accion', '-fecha_auditoria'], name='idx_aud_acc_accion_fecha'),
+            models.Index(fields=['usuario_responsable', '-fecha_auditoria'], name='idx_aud_acc_usuario_fecha'),
+            models.Index(fields=['usuario_objetivo', '-fecha_auditoria'], name='idx_aud_acc_objetivo_fecha'),
+            models.Index(fields=['exitoso', '-fecha_auditoria'], name='idx_aud_acc_exitoso_fecha'),
+            
+            # Security monitoring indexes
+            models.Index(fields=['nivel_riesgo', '-fecha_auditoria'], name='idx_aud_acc_riesgo_fecha'),
+            models.Index(fields=['direccion_ip', '-fecha_auditoria'], name='idx_aud_acc_ip_fecha'),
+            
+            # Failed access tracking indexes
+            models.Index(fields=['exitoso', 'accion', '-fecha_auditoria'], name='idx_aud_acc_exit_acc_fecha'),
+            models.Index(fields=['exitoso', 'direccion_ip', '-fecha_auditoria'], name='idx_aud_acc_exit_ip_fecha'),
+            models.Index(fields=['nivel_riesgo', 'exitoso', '-fecha_auditoria'], name='idx_aud_acc_risk_exit_fecha'),
+            
+            # Geographic and device tracking indexes
+            models.Index(fields=['pais', '-fecha_auditoria'], name='idx_aud_acc_pais_fecha'),
+            models.Index(fields=['ciudad', '-fecha_auditoria'], name='idx_aud_acc_ciudad_fecha'),
+            
+            # Security analysis indexes
+            models.Index(fields=['usuario_responsable', 'exitoso', '-fecha_auditoria'], name='idx_aud_acc_usr_exit_fecha'),
+            models.Index(fields=['accion', 'nivel_riesgo', '-fecha_auditoria'], name='idx_aud_acc_acc_risk_fecha'),
+            models.Index(fields=['direccion_ip', 'exitoso', '-fecha_auditoria'], name='idx_aud_acc_ip_exit_fecha'),
+            
+            # HTTP request tracking indexes
+            models.Index(fields=['recurso_accedido', '-fecha_auditoria'], name='idx_aud_acc_recurso_fecha'),
+            models.Index(fields=['metodo_http', 'codigo_respuesta', '-fecha_auditoria'], name='idx_aud_acc_http_fecha'),
+        ]
+        constraints = [
+            # Ensure HTTP response codes are valid if provided
+            models.CheckConstraint(
+                check=models.Q(codigo_respuesta__isnull=True) | 
+                      models.Q(codigo_respuesta__gte=100, codigo_respuesta__lt=600),
+                name='audit_acceso_codigo_respuesta_valid'
+            ),
+        ]
+    
+    def __str__(self):
+        status = "✓" if self.exitoso else "✗"
+        user = self.usuario_objetivo or self.usuario_responsable
+        return f"{status} {self.get_accion_display()} - {user.username} - {self.fecha_auditoria.strftime('%Y-%m-%d %H:%M')}"
+    
+    def get_access_summary(self):
+        """Get a human-readable summary of the access event"""
+        status = "Exitoso" if self.exitoso else "Fallido"
+        risk = f" (Riesgo: {self.get_nivel_riesgo_display()})" if self.nivel_riesgo != 'BAJO' else ""
+        return f"{self.get_accion_display()}: {status}{risk}"
+    
+    @classmethod
+    def create_access_audit(cls, accion, user, usuario_objetivo=None, recurso_accedido='',
+                          metodo_http='', codigo_respuesta=None, exitoso=True, motivo_fallo='',
+                          nivel_riesgo='BAJO', pais='', ciudad='', dispositivo='',
+                          ip_address=None, user_agent='', session_key='', contexto_adicional=None):
+        """Create an access audit record"""
+        if contexto_adicional is None:
+            contexto_adicional = {}
+        
+        return cls.objects.create(
+            accion=accion,
+            usuario_responsable=user,
+            usuario_objetivo=usuario_objetivo,
+            recurso_accedido=recurso_accedido,
+            metodo_http=metodo_http,
+            codigo_respuesta=codigo_respuesta,
+            exitoso=exitoso,
+            motivo_fallo=motivo_fallo,
+            nivel_riesgo=nivel_riesgo,
+            pais=pais,
+            ciudad=ciudad,
+            dispositivo=dispositivo,
+            direccion_ip=ip_address,
+            user_agent=user_agent,
+            session_key=session_key,
+            contexto_adicional=contexto_adicional
+        )

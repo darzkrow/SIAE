@@ -1,1 +1,1 @@
-# Management commands for institucion app
+# Management commands package
