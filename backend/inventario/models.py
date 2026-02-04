@@ -17,7 +17,7 @@ from django.contrib.postgres.indexes import GinIndex
 from institucion.models import Acueducto, Sucursal, OrganizacionCentral
 from geography.models import Ubicacion
 from catalogo.models import CategoriaProducto, Marca
-from auditoria.models import SoftDeleteModel
+from core.models import SoftDeleteModel, TimeStampedModel
 
 # Optional import for JSON schema validation
 try:
@@ -31,13 +31,15 @@ except ImportError:
 # MODELOS AUXILIARES DEL NUEVO SISTEMA
 # ============================================================================
 
-class Tag(models.Model):
-    """Tags for categorizing and organizing inventory items."""
+class Tag(TimeStampedModel):
+    """
+    🏷️ Tags para categorizar inventario
+    
+    Hereda created_at y updated_at de TimeStampedModel.
+    """
     name = models.CharField(max_length=50, unique=True)
     color = models.CharField(max_length=7, default='#007bff', help_text='Hex color code for the tag')
     description = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Tag'
@@ -75,7 +77,11 @@ class UnitOfMeasure(SoftDeleteModel):
 
 
 class Supplier(SoftDeleteModel):
-    """Proveedores de productos."""
+    """
+    🏢 Proveedores de productos
+    
+    Hereda timestamps y soft delete de SoftDeleteModel.
+    """
     nombre = models.CharField(max_length=200, unique=True)
     rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
     codigo = models.CharField(max_length=20, unique=True, blank=True, null=True)
@@ -84,8 +90,6 @@ class Supplier(SoftDeleteModel):
     email = models.EmailField(blank=True)
     direccion = models.TextField(blank=True)
     activo = models.BooleanField(default=True)
-    creado_en = models.DateTimeField(auto_now_add=True)
-    actualizado_en = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Proveedor'
@@ -105,8 +109,10 @@ class Supplier(SoftDeleteModel):
 
 class ProductBase(SoftDeleteModel):
     """
-    Modelo base abstracto para todos los productos.
+    📦 Modelo base abstracto para productos
+    
     Contiene campos comunes a todos los tipos de productos.
+    Hereda timestamps y soft delete de SoftDeleteModel.
     """
     # Identificación
     sku = models.CharField(
@@ -171,8 +177,7 @@ class ProductBase(SoftDeleteModel):
         default=timezone.now,
         help_text='Fecha de primera entrada al inventario'
     )
-    creado_en = models.DateTimeField(auto_now_add=True)
-    actualizado_en = models.DateTimeField(auto_now=True)
+    # creado_en y actualizado_en heredados de SoftDeleteModel (created_at, updated_at)
     
     # Notas
     notas = models.TextField(blank=True, help_text='Notas adicionales')
