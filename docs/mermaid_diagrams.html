@@ -183,7 +183,6 @@
                 <li><button onclick="showDiagram('flujo-qr')">Flujo QR</button></li>
                 <li><button onclick="showDiagram('estados')">Estados</button></li>
                 <li><button onclick="showDiagram('capas')">Capas</button></li>
-                <li><button onclick="showDiagram('endpoints')">API Endpoints</button></li>
                 <li><button onclick="showDiagram('permisos')">Permisos</button></li>
                 <li><button onclick="showDiagram('componentes')">Componentes</button></li>
             </ul>
@@ -193,552 +192,376 @@
             <!-- Arquitectura General -->
             <div id="general" class="diagram-section active">
                 <h2>📊 Arquitectura General del Sistema</h2>
-                <p>Vista completa de la arquitectura en capas del sistema SIAE, mostrando la interacción entre frontend,
-                    API, lógica de negocio y base de datos.</p>
+                <p>Vista completa de la arquitectura en capas del sistema SIAE.</p>
 
-                <div class="mermaid">
-                    graph TB
-                    subgraph "Frontend Layer"
-                    UI[React UI]
-                    Mobile[Mobile PWA]
-                    QRScanner[QR Scanner]
-                    end
-
-                    subgraph "API Layer - Django REST Framework"
-                    API[REST API]
-                    Auth[Authentication]
-                    Perms[Permissions]
-                    end
-
-                    subgraph "Business Logic Layer"
-                    InstView[Institucion ViewSets]
-                    InvView[Inventario ViewSets]
-                    QRGen[QR Generator]
-                    ApprovalFlow[Approval Workflow]
-                    end
-
-                    subgraph "Data Layer - PostgreSQL"
-                    OrgModels[Organizational Models]
-                    InvModels[Inventory Models]
-                    GeoModels[Geography Models]
-                    AuditModels[Audit Models]
-                    end
-
-                    subgraph "External Services"
-                    QRLib[qrcode Library]
-                    Pillow[Pillow Image]
-                    Media[Media Storage]
-                    end
-
-                    UI --> API
-                    Mobile --> API
-                    QRScanner --> API
-
-                    API --> Auth
-                    API --> Perms
-                    API --> InstView
-                    API --> InvView
-
-                    InstView --> QRGen
-                    InstView --> ApprovalFlow
-                    InvView --> OrgModels
-
-                    QRGen --> QRLib
-                    QRGen --> Pillow
-                    QRGen --> Media
-
-                    InstView --> OrgModels
-                    InstView --> GeoModels
-                    InvView --> InvModels
-                    ApprovalFlow --> AuditModels
-
-                    OrgModels -.-> InvModels
-                    GeoModels -.-> OrgModels
-                </div>
+                <pre class="mermaid">
+graph TB
+    subgraph Frontend["Frontend Layer"]
+        UI[React UI]
+        Mobile[Mobile PWA]
+        QRScanner[QR Scanner]
+    end
+    
+    subgraph API["API Layer"]
+        RESTAPI[REST API]
+        Auth[Authentication]
+        Perms[Permissions]
+    end
+    
+    subgraph Business["Business Logic"]
+        InstView[Institucion ViewSets]
+        InvView[Inventario ViewSets]
+        QRGen[QR Generator]
+        ApprovalFlow[Approval Workflow]
+    end
+    
+    subgraph Data["Data Layer"]
+        OrgModels[Organizational Models]
+        InvModels[Inventory Models]
+        GeoModels[Geography Models]
+        AuditModels[Audit Models]
+    end
+    
+    UI --> RESTAPI
+    Mobile --> RESTAPI
+    QRScanner --> RESTAPI
+    
+    RESTAPI --> Auth
+    RESTAPI --> Perms
+    RESTAPI --> InstView
+    RESTAPI --> InvView
+    
+    InstView --> QRGen
+    InstView --> ApprovalFlow
+    InvView --> OrgModels
+    
+    InstView --> OrgModels
+    InstView --> GeoModels
+    InvView --> InvModels
+    ApprovalFlow --> AuditModels
+                </pre>
             </div>
 
             <!-- Modelos de Datos -->
             <div id="modelos" class="diagram-section">
                 <h2>🗄️ Jerarquía Organizacional</h2>
-                <p>Estructura jerárquica de la organización desde Empresa hasta Almacén Regional.</p>
+                <p>Estructura jerárquica de la organización.</p>
 
-                <div class="mermaid">
-                    erDiagram
-                    Empresa ||--o{ Vicepresidencia : tiene
-                    Vicepresidencia ||--o{ UnidadOrganizacional : contiene
-                    UnidadOrganizacional ||--o{ AlmacenRegional : gestiona
-
-                    Empresa {
-                    int id PK
-                    string nombre
-                    string codigo
-                    string rif
-                    int parent FK
-                    bool activo
-                    datetime created_at
-                    datetime updated_at
-                    }
-
-                    Vicepresidencia {
-                    int id PK
-                    string nombre
-                    string codigo
-                    string tipo
-                    int empresa_id FK
-                    bool activo
-                    datetime created_at
-                    datetime updated_at
-                    }
-
-                    UnidadOrganizacional {
-                    int id PK
-                    string nombre
-                    string codigo
-                    int vicepresidencia_id FK
-                    bool activo
-                    datetime created_at
-                    datetime updated_at
-                    }
-
-                    AlmacenRegional {
-                    int id PK
-                    string nombre
-                    string prefijo
-                    string ubicacion
-                    int unidad_organizacional_id FK
-                    int manager_id FK
-                    int capacidad_maxima
-                    bool activo
-                    datetime created_at
-                    datetime updated_at
-                    }
-                </div>
+                <pre class="mermaid">
+erDiagram
+    Empresa ||--o{ Vicepresidencia : tiene
+    Vicepresidencia ||--o{ UnidadOrganizacional : contiene
+    UnidadOrganizacional ||--o{ AlmacenRegional : gestiona
+    
+    Empresa {
+        int id PK
+        string nombre
+        string codigo
+        string rif
+        bool activo
+    }
+    
+    Vicepresidencia {
+        int id PK
+        string nombre
+        string codigo
+        string tipo
+        bool activo
+    }
+    
+    UnidadOrganizacional {
+        int id PK
+        string nombre
+        string codigo
+        bool activo
+    }
+    
+    AlmacenRegional {
+        int id PK
+        string nombre
+        string prefijo
+        string ubicacion
+        bool activo
+    }
+                </pre>
             </div>
 
             <!-- Subalmacén -->
             <div id="subalmacen" class="diagram-section">
-                <h2>🗺️ Modelo Subalmacén con Ubicación Geográfica <span class="badge">NUEVO</span></h2>
-                <p>Modelo completo de Subalmacén con integración geográfica (Estado, Municipio, Parroquia) y gestión por
-                    Sucursal.</p>
+                <h2>🗺️ Modelo Subalmacén <span class="badge">NUEVO</span></h2>
+                <p>Modelo con integración geográfica completa.</p>
 
                 <div class="info-box">
-                    <strong>Características:</strong> Ubicación geográfica completa, coordenadas GPS, responsable
-                    asignado, capacidad definida.
+                    <strong>Características:</strong> Ubicación geográfica, coordenadas GPS, responsable, capacidad.
                 </div>
 
-                <div class="mermaid">
-                    erDiagram
-                    Subalmacen ||--|| State : ubicado_en
-                    Subalmacen ||--o| Municipality : pertenece_a
-                    Subalmacen ||--o| Parish : localizado_en
-                    Subalmacen ||--|| Sucursal : gestionado_por
-                    Subalmacen ||--o| User : responsable
-
-                    Subalmacen {
-                    int id PK
-                    string nombre
-                    string codigo UK
-                    int sucursal_id FK
-                    int estado_id FK
-                    int municipio_id FK
-                    int parroquia_id FK
-                    text direccion
-                    string coordenadas_gps
-                    int responsable_id FK
-                    int capacidad
-                    bool activo
-                    text descripcion
-                    datetime created_at
-                    datetime updated_at
-                    }
-
-                    State {
-                    int id PK
-                    string name
-                    }
-
-                    Municipality {
-                    int id PK
-                    string name
-                    int state_id FK
-                    }
-
-                    Parish {
-                    int id PK
-                    string name
-                    int municipality_id FK
-                    }
-
-                    Sucursal {
-                    int id PK
-                    string nombre
-                    string codigo
-                    int organizacion_central_id FK
-                    }
-                </div>
+                <pre class="mermaid">
+erDiagram
+    Subalmacen ||--|| State : ubicado_en
+    Subalmacen ||--o| Municipality : pertenece_a
+    Subalmacen ||--o| Parish : localizado_en
+    Subalmacen ||--|| Sucursal : gestionado_por
+    
+    Subalmacen {
+        int id PK
+        string nombre
+        string codigo UK
+        string direccion
+        string coordenadas_gps
+        int capacidad
+        bool activo
+    }
+    
+    State {
+        int id PK
+        string name
+    }
+    
+    Municipality {
+        int id PK
+        string name
+    }
+    
+    Parish {
+        int id PK
+        string name
+    }
+                </pre>
             </div>
 
             <!-- Inventario -->
             <div id="inventario" class="diagram-section">
                 <h2>📦 Sistema de Inventario y Traslados</h2>
-                <p>Gestión de activos, solicitudes de traslado y sistema de aprobación dual.</p>
+                <p>Gestión de activos y solicitudes de traslado.</p>
 
-                <div class="mermaid">
-                    erDiagram
-                    ActivoInventario ||--|| AlmacenRegional : almacenado_en
-                    ActivoInventario ||--o{ SolicitudTraslado : genera
-                    SolicitudTraslado ||--|| AlmacenRegional : origen
-                    SolicitudTraslado ||--|| AlmacenRegional : destino
-                    SolicitudTraslado ||--o| AprobacionTraslado : aprobacion_origen
-                    SolicitudTraslado ||--o| AprobacionTraslado : aprobacion_destino
-                    SolicitudTraslado ||--|| User : solicitante
-                    AprobacionTraslado ||--|| User : aprobador
-
-                    ActivoInventario {
-                    int id PK
-                    string codigo_actual UK
-                    string codigo_anterior
-                    string tipo_activo
-                    int almacen_actual_id FK
-                    string estado
-                    datetime created_at
-                    datetime updated_at
-                    }
-
-                    SolicitudTraslado {
-                    int id PK
-                    string numero_solicitud UK
-                    datetime fecha_solicitud
-                    string estado
-                    int activo_id FK
-                    int almacen_origen_id FK
-                    int almacen_destino_id FK
-                    int solicitante_id FK
-                    text motivo
-                    datetime fecha_limite
-                    string prioridad
-                    image qr_code
-                    url qr_url
-                    datetime qr_generado_en
-                    text observaciones
-                    }
-
-                    AprobacionTraslado {
-                    int id PK
-                    int solicitud_id FK
-                    int aprobador_id FK
-                    string tipo_aprobacion
-                    string decision
-                    datetime fecha_decision
-                    text comentarios
-                    }
-                </div>
+                <pre class="mermaid">
+erDiagram
+    ActivoInventario ||--|| AlmacenRegional : almacenado_en
+    ActivoInventario ||--o{ SolicitudTraslado : genera
+    SolicitudTraslado ||--|| AlmacenRegional : origen
+    SolicitudTraslado ||--|| AlmacenRegional : destino
+    SolicitudTraslado ||--|| User : solicitante
+    
+    ActivoInventario {
+        int id PK
+        string codigo_actual UK
+        string tipo_activo
+        string estado
+    }
+    
+    SolicitudTraslado {
+        int id PK
+        string numero_solicitud UK
+        string estado
+        string prioridad
+        image qr_code
+        url qr_url
+    }
+                </pre>
             </div>
 
             <!-- Flujo QR -->
             <div id="flujo-qr" class="diagram-section">
-                <h2>🔄 Flujo de Aprobación con QR Codes <span class="badge">NUEVO</span></h2>
-                <p>Secuencia completa del proceso de aprobación dual mediante escaneo de códigos QR.</p>
+                <h2>🔄 Flujo de Aprobación con QR <span class="badge">NUEVO</span></h2>
+                <p>Proceso de aprobación dual mediante QR.</p>
 
                 <div class="info-box">
-                    <strong>Proceso:</strong> Crear solicitud → Generar QR → Aprobar Origen (QR) → Aprobar Destino (QR)
-                    → Ejecutar traslado automático
+                    <strong>Proceso:</strong> Crear → Generar QR → Aprobar Origen → Aprobar Destino → Ejecutar
                 </div>
 
-                <div class="mermaid">
-                    sequenceDiagram
-                    participant Usuario
-                    participant Frontend
-                    participant API
-                    participant QRGenerator
-                    participant Database
-                    participant Mobile
-
-                    Usuario->>Frontend: Crear Solicitud Traslado
-                    Frontend->>API: POST /solicitudes-traslado/
-                    API->>Database: Guardar Solicitud
-                    Database-->>API: Solicitud Creada (ID)
-
-                    API->>QRGenerator: generar_qr_code()
-                    QRGenerator->>QRGenerator: Crear URL aprobación
-                    QRGenerator->>QRGenerator: Generar imagen QR
-                    QRGenerator->>Database: Guardar QR en media/
-                    Database-->>QRGenerator: QR guardado
-                    QRGenerator-->>API: QR generado
-
-                    API-->>Frontend: Solicitud + QR URL
-                    Frontend-->>Usuario: Mostrar QR Code
-
-                    Note over Usuario,Mobile: Gerente Origen escanea QR
-
-                    Mobile->>Mobile: Escanear QR Code
-                    Mobile->>API: POST /solicitudes/{id}/aprobar-origen/
-                    API->>Database: Validar permisos
-                    Database-->>API: Usuario autorizado
-                    API->>Database: Crear AprobacionTraslado (ORIGEN)
-                    API->>Database: Actualizar estado → APROBADA_ORIGEN
-                    Database-->>API: Actualizado
-                    API-->>Mobile: Aprobación exitosa
-
-                    Note over Usuario,Mobile: Gerente Destino escanea QR
-
-                    Mobile->>API: POST /solicitudes/{id}/aprobar-destino/
-                    API->>Database: Validar estado = APROBADA_ORIGEN
-                    API->>Database: Crear AprobacionTraslado (DESTINO)
-                    API->>Database: Actualizar estado → APROBADA_COMPLETA
-                    API->>Database: Ejecutar traslado automático
-                    Database-->>API: Traslado ejecutado
-                    API-->>Mobile: Aprobación completa
-                </div>
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend
+    participant A as API
+    participant Q as QRGenerator
+    participant D as Database
+    participant M as Mobile
+    
+    U->>F: Crear Solicitud
+    F->>A: POST /solicitudes/
+    A->>D: Guardar
+    D-->>A: ID Creado
+    
+    A->>Q: generar_qr_code()
+    Q->>Q: Crear URL
+    Q->>Q: Generar QR
+    Q->>D: Guardar QR
+    D-->>Q: OK
+    Q-->>A: QR generado
+    
+    A-->>F: Solicitud + QR
+    F-->>U: Mostrar QR
+    
+    Note over U,M: Escanear QR Origen
+    
+    M->>A: POST /aprobar-origen/
+    A->>D: Validar
+    A->>D: Crear Aprobacion
+    D-->>A: OK
+    A-->>M: Aprobado
+    
+    Note over U,M: Escanear QR Destino
+    
+    M->>A: POST /aprobar-destino/
+    A->>D: Validar
+    A->>D: Ejecutar Traslado
+    D-->>A: Completado
+    A-->>M: Traslado OK
+                </pre>
             </div>
 
             <!-- Estados -->
             <div id="estados" class="diagram-section">
-                <h2>🎯 Máquina de Estados - Workflow de Solicitudes</h2>
-                <p>Ciclo de vida completo de una solicitud de traslado con aprobación dual.</p>
+                <h2>🎯 Máquina de Estados</h2>
+                <p>Ciclo de vida de solicitudes de traslado.</p>
 
-                <div class="mermaid">
-                    stateDiagram-v2
-                    [*] --> PENDIENTE: Crear Solicitud + Generar QR
-
-                    PENDIENTE --> APROBADA_ORIGEN: Aprobar desde Origen (QR)
-                    PENDIENTE --> RECHAZADA: Rechazar
-
-                    APROBADA_ORIGEN --> APROBADA_DESTINO: Aprobar desde Destino (QR)
-                    APROBADA_ORIGEN --> RECHAZADA: Rechazar
-
-                    APROBADA_DESTINO --> APROBADA_COMPLETA: Validación dual OK
-
-                    APROBADA_COMPLETA --> EN_TRANSITO: Ejecutar Traslado
-
-                    EN_TRANSITO --> COMPLETADA: Confirmar recepción
-
-                    RECHAZADA --> [*]
-                    COMPLETADA --> [*]
-
-                    note right of PENDIENTE
-                    QR Code generado
-                    automáticamente
-                    end note
-
-                    note right of APROBADA_ORIGEN
-                    Primera aprobación
-                    vía QR scan
-                    end note
-
-                    note right of APROBADA_DESTINO
-                    Segunda aprobación
-                    vía QR scan
-                    end note
-                </div>
+                <pre class="mermaid">
+stateDiagram-v2
+    [*] --> PENDIENTE
+    
+    PENDIENTE --> APROBADA_ORIGEN: Aprobar Origen
+    PENDIENTE --> RECHAZADA: Rechazar
+    
+    APROBADA_ORIGEN --> APROBADA_DESTINO: Aprobar Destino
+    APROBADA_ORIGEN --> RECHAZADA: Rechazar
+    
+    APROBADA_DESTINO --> APROBADA_COMPLETA: Validar
+    
+    APROBADA_COMPLETA --> EN_TRANSITO: Ejecutar
+    
+    EN_TRANSITO --> COMPLETADA: Confirmar
+    
+    RECHAZADA --> [*]
+    COMPLETADA --> [*]
+                </pre>
             </div>
 
             <!-- Capas -->
             <div id="capas" class="diagram-section">
                 <h2>🏛️ Arquitectura de Capas</h2>
-                <p>Separación de responsabilidades en capas bien definidas.</p>
+                <p>Separación de responsabilidades.</p>
 
-                <div class="mermaid">
-                    graph TB
-                    subgraph "Presentation Layer"
-                    A1[React Components]
-                    A2[Mobile PWA]
-                    A3[QR Scanner Component]
-                    end
-
-                    subgraph "API Gateway"
-                    B1[Django REST Framework]
-                    B2[URL Routing]
-                    B3[Authentication JWT]
-                    B4[Permissions]
-                    end
-
-                    subgraph "Business Logic"
-                    C1[ViewSets]
-                    C2[Serializers]
-                    C3[QR Generator Service]
-                    C4[Approval Workflow Engine]
-                    C5[Validation Rules]
-                    end
-
-                    subgraph "Data Access Layer"
-                    D1[Django ORM]
-                    D2[Query Optimization]
-                    D3[select_related/prefetch]
-                    end
-
-                    subgraph "Database"
-                    E1[(PostgreSQL)]
-                    E2[Indexes]
-                    E3[Constraints]
-                    end
-
-                    subgraph "External Storage"
-                    F1[Media Files]
-                    F2[QR Code Images]
-                    end
-
-                    A1 --> B1
-                    A2 --> B1
-                    A3 --> B1
-
-                    B1 --> B2
-                    B2 --> B3
-                    B3 --> B4
-                    B4 --> C1
-
-                    C1 --> C2
-                    C1 --> C3
-                    C1 --> C4
-                    C2 --> C5
-
-                    C1 --> D1
-                    C3 --> F1
-
-                    D1 --> D2
-                    D2 --> D3
-                    D3 --> E1
-
-                    E1 --> E2
-                    E1 --> E3
-
-                    C3 --> F2
-                </div>
-            </div>
-
-            <!-- Endpoints -->
-            <div id="endpoints" class="diagram-section">
-                <h2>📡 API Endpoints</h2>
-
-                <h3>Subalmacén Endpoints</h3>
-                <div class="mermaid">
-                    graph LR
-                    A[Client] -->|GET| B[/api/institucion/subalmacenes/]
-                    A -->|POST| B
-                    A -->|GET| C[/api/institucion/subalmacenes/:id/]
-                    A -->|PUT/PATCH| C
-                    A -->|DELETE| C
-                    A -->|GET| D[/api/institucion/subalmacenes/por-estado/:id/]
-                    A -->|GET| E[/api/institucion/subalmacenes/por-sucursal/:id/]
-
-                    B --> F[SubalmacenViewSet]
-                    C --> F
-                    D --> F
-                    E --> F
-
-                    F --> G[SubalmacenSerializer]
-                    G --> H[(Database)]
-                </div>
-
-                <h3>Aprobación con QR</h3>
-                <div class="mermaid">
-                    graph LR
-                    A[Mobile App] -->|POST| B[/solicitudes/:id/aprobar-origen/]
-                    A -->|POST| C[/solicitudes/:id/aprobar-destino/]
-                    A -->|POST| D[/solicitudes/:id/rechazar/]
-                    A -->|GET| E[/solicitudes/:id/qr-code/]
-
-                    B --> F[SolicitudTrasladoViewSet]
-                    C --> F
-                    D --> F
-                    E --> F
-
-                    F --> G{Validar Permisos}
-                    G -->|OK| H[Crear Aprobación]
-                    G -->|Fail| I[403 Forbidden]
-
-                    H --> J[Actualizar Estado]
-                    J --> K[Ejecutar Traslado?]
-                    K -->|Sí| L[Mover Activo]
-                    K -->|No| M[Esperar siguiente aprobación]
-                </div>
+                <pre class="mermaid">
+graph TB
+    subgraph Presentation["Presentation Layer"]
+        A1[React Components]
+        A2[Mobile PWA]
+        A3[QR Scanner]
+    end
+    
+    subgraph Gateway["API Gateway"]
+        B1[Django REST Framework]
+        B2[URL Routing]
+        B3[Authentication]
+        B4[Permissions]
+    end
+    
+    subgraph Logic["Business Logic"]
+        C1[ViewSets]
+        C2[Serializers]
+        C3[QR Generator]
+        C4[Approval Workflow]
+    end
+    
+    subgraph DataAccess["Data Access"]
+        D1[Django ORM]
+        D2[Query Optimization]
+    end
+    
+    subgraph DB["Database"]
+        E1[(PostgreSQL)]
+        E2[Indexes]
+    end
+    
+    A1 --> B1
+    A2 --> B1
+    A3 --> B1
+    
+    B1 --> B2
+    B2 --> B3
+    B3 --> B4
+    B4 --> C1
+    
+    C1 --> C2
+    C1 --> C3
+    C1 --> C4
+    
+    C1 --> D1
+    D1 --> D2
+    D2 --> E1
+    E1 --> E2
+                </pre>
             </div>
 
             <!-- Permisos -->
             <div id="permisos" class="diagram-section">
                 <h2>🔐 Sistema de Permisos</h2>
-                <p>Control de acceso basado en roles y validaciones específicas.</p>
+                <p>Control de acceso basado en roles.</p>
 
-                <div class="mermaid">
-                    graph TB
-                    A[Usuario] --> B{Rol}
-
-                    B -->|Admin| C[Todos los permisos]
-                    B -->|Gerente Almacén| D[Aprobar traslados de su almacén]
-                    B -->|Responsable Subalmacén| E[Gestionar su subalmacén]
-                    B -->|Usuario Regular| F[Ver y solicitar traslados]
-
-                    D --> G{Validación}
-                    G -->|Origen| H[manager == almacen_origen.manager]
-                    G -->|Destino| I[manager == almacen_destino.manager]
-
-                    E --> J{Validación}
-                    J --> K[responsable == subalmacen.responsable]
-                </div>
+                <pre class="mermaid">
+graph TB
+    A[Usuario] --> B{Rol}
+    
+    B -->|Admin| C[Todos los permisos]
+    B -->|Gerente| D[Aprobar traslados]
+    B -->|Responsable| E[Gestionar subalmacen]
+    B -->|Regular| F[Ver y solicitar]
+    
+    D --> G{Validacion}
+    G -->|Origen| H[Es gerente origen]
+    G -->|Destino| I[Es gerente destino]
+                </pre>
             </div>
 
             <!-- Componentes -->
             <div id="componentes" class="diagram-section">
                 <h2>📦 Componentes del Sistema</h2>
-                <p>Organización de componentes y sus relaciones de herencia.</p>
+                <p>Organización de componentes y herencia.</p>
 
-                <div class="mermaid">
-                    graph TB
-                    subgraph "Core Models"
-                    A[TimeStampedModel]
-                    B[SoftDeleteModel]
-                    end
-
-                    subgraph "Institucion App"
-                    C[Empresa]
-                    D[Vicepresidencia]
-                    E[UnidadOrganizacional]
-                    F[AlmacenRegional]
-                    G[Subalmacen]
-                    H[SolicitudTraslado]
-                    I[AprobacionTraslado]
-                    end
-
-                    subgraph "Inventario App"
-                    J[ActivoInventario]
-                    K[HistorialMovimiento]
-                    end
-
-                    subgraph "Geography App"
-                    L[State]
-                    M[Municipality]
-                    N[Parish]
-                    O[Ubicacion]
-                    end
-
-                    subgraph "Auditoria App"
-                    P[AuditoriaAcceso]
-                    Q[AuditoriaAprobacion]
-                    R[AuditoriaEstadoActivo]
-                    end
-
-                    A -.hereda.-> C
-                    A -.hereda.-> D
-                    A -.hereda.-> E
-                    A -.hereda.-> F
-                    A -.hereda.-> G
-
-                    C --> D
-                    D --> E
-                    E --> F
-
-                    G --> L
-                    G --> M
-                    G --> N
-
-                    H --> F
-                    H --> J
-                    H --> I
-
-                    I --> P
-                    I --> Q
-                    H --> R
-                </div>
+                <pre class="mermaid">
+graph TB
+    subgraph Core["Core Models"]
+        A[TimeStampedModel]
+    end
+    
+    subgraph Inst["Institucion App"]
+        C[Empresa]
+        D[Vicepresidencia]
+        E[UnidadOrganizacional]
+        F[AlmacenRegional]
+        G[Subalmacen]
+        H[SolicitudTraslado]
+    end
+    
+    subgraph Inv["Inventario App"]
+        J[ActivoInventario]
+        K[HistorialMovimiento]
+    end
+    
+    subgraph Geo["Geography App"]
+        L[State]
+        M[Municipality]
+        N[Parish]
+    end
+    
+    A -.hereda.-> C
+    A -.hereda.-> D
+    A -.hereda.-> E
+    A -.hereda.-> F
+    A -.hereda.-> G
+    
+    C --> D
+    D --> E
+    E --> F
+    
+    G --> L
+    G --> M
+    G --> N
+    
+    H --> F
+    H --> J
+                </pre>
             </div>
         </div>
     </div>
@@ -747,6 +570,7 @@
         mermaid.initialize({
             startOnLoad: true,
             theme: 'default',
+            securityLevel: 'loose',
             themeVariables: {
                 primaryColor: '#667eea',
                 primaryTextColor: '#fff',
@@ -758,19 +582,17 @@
         });
 
         function showDiagram(diagramId) {
-            // Hide all diagrams
             const diagrams = document.querySelectorAll('.diagram-section');
             diagrams.forEach(d => d.classList.remove('active'));
 
-            // Remove active class from all buttons
             const buttons = document.querySelectorAll('nav button');
             buttons.forEach(b => b.classList.remove('active'));
 
-            // Show selected diagram
             document.getElementById(diagramId).classList.add('active');
-
-            // Add active class to clicked button
             event.target.classList.add('active');
+
+            // Re-render mermaid diagrams
+            mermaid.contentLoaded();
         }
     </script>
 </body>
