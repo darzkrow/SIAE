@@ -1,7 +1,10 @@
 from rest_framework import serializers
+from core.serializers import SoftDeleteSerializer
 from .models import OrdenCompra, ItemOrden, Correlativo
 
-class ItemOrdenSerializer(serializers.ModelSerializer):
+
+class ItemOrdenSerializer(SoftDeleteSerializer):
+    """Serializer para ItemOrden con soft delete y lógica de generic relation"""
     producto_str = serializers.SerializerMethodField()
     product_type_read = serializers.SerializerMethodField()
     product_id_read = serializers.SerializerMethodField()
@@ -9,9 +12,13 @@ class ItemOrdenSerializer(serializers.ModelSerializer):
     product_type = serializers.CharField(write_only=True)
     product_id = serializers.IntegerField(write_only=True)
 
-    class Meta:
+    class Meta(SoftDeleteSerializer.Meta):
         model = ItemOrden
-        fields = ['id', 'product_type', 'product_id', 'product_type_read', 'product_id_read', 'producto_str', 'cantidad_pedida', 'cantidad_recibida', 'precio_estimado']
+        fields = SoftDeleteSerializer.Meta.fields + [
+            'product_type', 'product_id', 'product_type_read', 'product_id_read', 
+            'producto_str', 'cantidad_pedida', 'cantidad_recibida', 'precio_estimado'
+        ]
+        read_only_fields = SoftDeleteSerializer.Meta.read_only_fields
     
     def get_producto_str(self, obj):
         return str(obj.producto)
@@ -46,19 +53,20 @@ class ItemOrdenSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'product_id': f'El producto con ID {product_id} no existe para el tipo {product_type}'})
         return super().create(validated_data)
 
-class OrdenCompraSerializer(serializers.ModelSerializer):
+class OrdenCompraSerializer(SoftDeleteSerializer):
+    """Serializer para OrdenCompra con soft delete"""
     items = ItemOrdenSerializer(many=True, read_only=True)
     solicitante_nombre = serializers.SerializerMethodField()
     aprobador_nombre = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(SoftDeleteSerializer.Meta):
         model = OrdenCompra
-        fields = [
-            'id', 'codigo', 'movimiento', 'fecha_creacion', 
+        fields = SoftDeleteSerializer.Meta.fields + [
+            'codigo', 'movimiento', 'fecha_creacion', 
             'solicitante', 'solicitante_nombre', 'aprobador', 'aprobador_nombre',
             'status', 'notas', 'items'
         ]
-        read_only_fields = ['id', 'codigo', 'fecha_creacion']
+        read_only_fields = SoftDeleteSerializer.Meta.read_only_fields + ['codigo', 'fecha_creacion']
 
     def get_solicitante_nombre(self, obj):
         return obj.solicitante.username if obj.solicitante else None
