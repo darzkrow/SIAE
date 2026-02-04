@@ -3,6 +3,7 @@ Serializers for Hidroven Organizational Restructuring API.
 Provides both new hierarchical API endpoints and backward compatibility.
 """
 from rest_framework import serializers
+from core.serializers import BaseModelSerializer, SoftDeleteSerializer
 from django.contrib.auth import get_user_model
 from .models import (
     # New hierarchical models
@@ -20,21 +21,21 @@ User = get_user_model()
 # NEW HIERARCHICAL API SERIALIZERS
 # ============================================================================
 
-class EmpresaSerializer(serializers.ModelSerializer):
+class EmpresaSerializer(BaseModelSerializer):
     """Serializer for Empresa (root company) model."""
     
     subsidiarias_count = serializers.SerializerMethodField()
     vicepresidencias_count = serializers.SerializerMethodField()
     full_path = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Empresa
-        fields = [
-            'id', 'nombre', 'codigo', 'rif', 'direccion', 'telefono', 'email',
+        fields = BaseModelSerializer.Meta.fields + [
+            'nombre', 'codigo', 'rif', 'direccion', 'telefono', 'email',
             'activo', 'fecha_creacion', 'fecha_actualizacion', 'parent',
             'subsidiarias_count', 'vicepresidencias_count', 'full_path'
         ]
-        read_only_fields = ['fecha_creacion', 'fecha_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_creacion', 'fecha_actualizacion']
     
     def get_subsidiarias_count(self, obj):
         """Get count of subsidiary companies."""
@@ -49,7 +50,7 @@ class EmpresaSerializer(serializers.ModelSerializer):
         return obj.get_full_path()
 
 
-class VicepresidenciaSerializer(serializers.ModelSerializer):
+class VicepresidenciaSerializer(BaseModelSerializer):
     """Serializer for Vicepresidencia model."""
     
     empresa_nombre = serializers.CharField(source='empresa.nombre', read_only=True)
@@ -57,15 +58,15 @@ class VicepresidenciaSerializer(serializers.ModelSerializer):
     unidades_count = serializers.SerializerMethodField()
     full_path = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Vicepresidencia
-        fields = [
-            'id', 'empresa', 'empresa_nombre', 'nombre', 'codigo', 'tipo',
+        fields = BaseModelSerializer.Meta.fields + [
+            'empresa', 'empresa_nombre', 'nombre', 'codigo', 'tipo',
             'descripcion', 'responsable', 'responsable_username', 'activo',
             'fecha_creacion', 'fecha_actualizacion', 'parent',
             'unidades_count', 'full_path'
         ]
-        read_only_fields = ['fecha_creacion', 'fecha_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_creacion', 'fecha_actualizacion']
     
     def get_unidades_count(self, obj):
         """Get count of organizational units under this VP."""
@@ -76,7 +77,7 @@ class VicepresidenciaSerializer(serializers.ModelSerializer):
         return obj.get_full_path()
 
 
-class UnidadOrganizacionalSerializer(serializers.ModelSerializer):
+class UnidadOrganizacionalSerializer(BaseModelSerializer):
     """Serializer for UnidadOrganizacional model."""
     
     vicepresidencia_nombre = serializers.CharField(source='vicepresidencia.nombre', read_only=True)
@@ -85,16 +86,16 @@ class UnidadOrganizacionalSerializer(serializers.ModelSerializer):
     almacenes_count = serializers.SerializerMethodField()
     full_path = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = UnidadOrganizacional
-        fields = [
-            'id', 'vicepresidencia', 'vicepresidencia_nombre', 'empresa_nombre',
+        fields = BaseModelSerializer.Meta.fields + [
+            'vicepresidencia', 'vicepresidencia_nombre', 'empresa_nombre',
             'nombre', 'codigo', 'tipo', 'descripcion', 'ubicacion',
             'responsable', 'responsable_username', 'activo',
             'fecha_creacion', 'fecha_actualizacion', 'parent',
             'almacenes_count', 'full_path'
         ]
-        read_only_fields = ['fecha_creacion', 'fecha_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_creacion', 'fecha_actualizacion']
     
     def get_almacenes_count(self, obj):
         """Get count of regional warehouses under this unit."""
@@ -105,7 +106,7 @@ class UnidadOrganizacionalSerializer(serializers.ModelSerializer):
         return obj.get_full_path()
 
 
-class AlmacenRegionalSerializer(serializers.ModelSerializer):
+class AlmacenRegionalSerializer(BaseModelSerializer):
     """Serializer for AlmacenRegional model."""
     
     unidad_nombre = serializers.CharField(source='unidad_organizacional.nombre', read_only=True)
@@ -115,16 +116,16 @@ class AlmacenRegionalSerializer(serializers.ModelSerializer):
     capacity_usage = serializers.SerializerMethodField()
     full_path = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = AlmacenRegional
-        fields = [
-            'id', 'unidad_organizacional', 'unidad_nombre', 'vicepresidencia_nombre',
+        fields = BaseModelSerializer.Meta.fields + [
+            'unidad_organizacional', 'unidad_nombre', 'vicepresidencia_nombre',
             'nombre', 'prefijo', 'ubicacion', 'manager', 'manager_username',
             'capacidad_maxima', 'activo', 'fecha_creacion', 'fecha_actualizacion',
             'descripcion', 'telefono', 'email', 'activos_count', 'capacity_usage',
             'full_path'
         ]
-        read_only_fields = ['fecha_creacion', 'fecha_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_creacion', 'fecha_actualizacion']
     
     def get_activos_count(self, obj):
         """Get count of assets currently in this warehouse."""
@@ -139,7 +140,7 @@ class AlmacenRegionalSerializer(serializers.ModelSerializer):
         return obj.get_full_path()
 
 
-class ActivoInventarioSerializer(serializers.ModelSerializer):
+class ActivoInventarioSerializer(BaseModelSerializer):
     """Serializer for ActivoInventario model."""
     
     almacen_nombre = serializers.CharField(source='almacen_actual.nombre', read_only=True)
@@ -149,17 +150,17 @@ class ActivoInventarioSerializer(serializers.ModelSerializer):
     transfer_count = serializers.SerializerMethodField()
     asset_age_days = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = ActivoInventario
-        fields = [
-            'id', 'codigo_actual', 'codigo_original', 'tipo_activo', 'descripcion',
+        fields = BaseModelSerializer.Meta.fields + [
+            'codigo_actual', 'codigo_original', 'tipo_activo', 'descripcion',
             'almacen_actual', 'almacen_nombre', 'almacen_prefijo', 'estado',
             'fecha_ingreso', 'valor_unitario', 'numero_serie',
             'producto_inventario_type', 'producto_inventario_id',
             'fecha_actualizacion', 'creado_por', 'creado_por_username',
             'actualizado_por', 'movement_history', 'transfer_count', 'asset_age_days'
         ]
-        read_only_fields = [
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
             'codigo_actual', 'codigo_original', 'fecha_ingreso', 'fecha_actualizacion',
             'movement_history', 'transfer_count', 'asset_age_days'
         ]
@@ -177,7 +178,7 @@ class ActivoInventarioSerializer(serializers.ModelSerializer):
         return obj.get_asset_age_days()
 
 
-class HistorialMovimientoActivoSerializer(serializers.ModelSerializer):
+class HistorialMovimientoActivoSerializer(BaseModelSerializer):
     """Serializer for HistorialMovimientoActivo model."""
     
     activo_codigo = serializers.CharField(source='activo.codigo_actual', read_only=True)
@@ -186,38 +187,38 @@ class HistorialMovimientoActivoSerializer(serializers.ModelSerializer):
     usuario_username = serializers.CharField(source='usuario_responsable.username', read_only=True)
     movement_summary = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = HistorialMovimientoActivo
-        fields = [
-            'id', 'activo', 'activo_codigo', 'tipo_movimiento', 'fecha_movimiento',
+        fields = BaseModelSerializer.Meta.fields + [
+            'activo', 'activo_codigo', 'tipo_movimiento', 'fecha_movimiento',
             'almacen_origen', 'almacen_origen_prefijo', 'almacen_destino', 'almacen_destino_prefijo',
             'estado_anterior', 'estado_nuevo', 'codigo_anterior', 'codigo_nuevo',
             'usuario_responsable', 'usuario_username', 'motivo', 'observaciones',
             'solicitud_traslado', 'metadata', 'movement_summary'
         ]
-        read_only_fields = ['fecha_movimiento', 'movement_summary']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_movimiento', 'movement_summary']
     
     def get_movement_summary(self, obj):
         """Get human-readable movement summary."""
         return obj.get_movement_summary()
 
 
-class AprobacionTrasladoSerializer(serializers.ModelSerializer):
+class AprobacionTrasladoSerializer(BaseModelSerializer):
     """Serializer for AprobacionTraslado model."""
     
     aprobador_username = serializers.CharField(source='aprobador.username', read_only=True)
     solicitud_numero = serializers.CharField(source='solicitud.numero_solicitud', read_only=True)
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = AprobacionTraslado
-        fields = [
-            'id', 'solicitud', 'solicitud_numero', 'aprobador', 'aprobador_username',
+        fields = BaseModelSerializer.Meta.fields + [
+            'solicitud', 'solicitud_numero', 'aprobador', 'aprobador_username',
             'tipo_aprobacion', 'decision', 'fecha_decision', 'comentarios'
         ]
-        read_only_fields = ['fecha_decision']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_decision']
 
 
-class SolicitudTrasladoSerializer(serializers.ModelSerializer):
+class SolicitudTrasladoSerializer(BaseModelSerializer):
     """Serializer for SolicitudTraslado model."""
     
     activo_codigo = serializers.CharField(source='activo.codigo_actual', read_only=True)
@@ -235,10 +236,10 @@ class SolicitudTrasladoSerializer(serializers.ModelSerializer):
     aprobacion_origen = AprobacionTrasladoSerializer(read_only=True)
     aprobacion_destino = AprobacionTrasladoSerializer(read_only=True)
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = SolicitudTraslado
-        fields = [
-            'id', 'numero_solicitud', 'fecha_solicitud', 'estado',
+        fields = BaseModelSerializer.Meta.fields + [
+            'numero_solicitud', 'fecha_solicitud', 'estado',
             'activo', 'activo_codigo', 'almacen_origen', 'almacen_origen_nombre',
             'almacen_destino', 'almacen_destino_nombre', 'solicitante', 'solicitante_username',
             'motivo', 'fecha_limite', 'prioridad', 'aprobacion_origen', 'aprobacion_destino',
@@ -246,7 +247,7 @@ class SolicitudTrasladoSerializer(serializers.ModelSerializer):
             'observaciones', 'approval_status', 'workflow_timeline', 'pending_approvers',
             'is_overdue', 'days_until_deadline'
         ]
-        read_only_fields = [
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
             'numero_solicitud', 'fecha_solicitud', 'fecha_ejecucion', 'fecha_completada',
             'approval_status', 'workflow_timeline', 'pending_approvers', 'is_overdue',
             'days_until_deadline'
@@ -273,7 +274,7 @@ class SolicitudTrasladoSerializer(serializers.ModelSerializer):
         return obj.get_days_until_deadline()
 
 
-class MigracionOrganizacionalSerializer(serializers.ModelSerializer):
+class MigracionOrganizacionalSerializer(BaseModelSerializer):
     """Serializer for MigracionOrganizacional model."""
     
     migrado_por_username = serializers.CharField(source='migrado_por.username', read_only=True)
@@ -282,10 +283,10 @@ class MigracionOrganizacionalSerializer(serializers.ModelSerializer):
     old_reference_display = serializers.SerializerMethodField()
     new_reference_display = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = MigracionOrganizacional
-        fields = [
-            'id', 'organizacion_central_id', 'sucursal_id', 'acueducto_id',
+        fields = BaseModelSerializer.Meta.fields + [
+            'organizacion_central_id', 'sucursal_id', 'acueducto_id',
             'empresa', 'vicepresidencia', 'unidad_organizacional', 'acueducto_nuevo',
             'fecha_migracion', 'estado_migracion', 'validado', 'migrado_por',
             'migrado_por_username', 'validado_por', 'validado_por_username',
@@ -294,7 +295,7 @@ class MigracionOrganizacionalSerializer(serializers.ModelSerializer):
             'notas', 'errores', 'warnings', 'fecha_actualizacion',
             'old_reference_display', 'new_reference_display'
         ]
-        read_only_fields = [
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
             'fecha_migracion', 'fecha_actualizacion', 'old_reference_display',
             'new_reference_display'
         ]
@@ -312,16 +313,16 @@ class MigracionOrganizacionalSerializer(serializers.ModelSerializer):
 # BACKWARD COMPATIBILITY SERIALIZERS
 # ============================================================================
 
-class OrganizacionCentralSerializer(serializers.ModelSerializer):
+class OrganizacionCentralSerializer(BaseModelSerializer):
     """Backward compatibility serializer for OrganizacionCentral."""
     
     sucursales_count = serializers.SerializerMethodField()
     parent_nombre = serializers.CharField(source='parent.nombre', read_only=True)
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = OrganizacionCentral
-        fields = [
-            'id', 'nombre', 'rif', 'parent', 'parent_nombre', 'sucursales_count'
+        fields = BaseModelSerializer.Meta.fields + [
+            'nombre', 'rif', 'parent', 'parent_nombre', 'sucursales_count'
         ]
     
     def get_sucursales_count(self, obj):
@@ -329,16 +330,16 @@ class OrganizacionCentralSerializer(serializers.ModelSerializer):
         return obj.sucursales.count()
 
 
-class SucursalSerializer(serializers.ModelSerializer):
+class SucursalSerializer(BaseModelSerializer):
     """Backward compatibility serializer for Sucursal."""
     
     organizacion_nombre = serializers.CharField(source='organizacion_central.nombre', read_only=True)
     acueductos_count = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Sucursal
-        fields = [
-            'id', 'nombre', 'organizacion_central', 'organizacion_nombre',
+        fields = BaseModelSerializer.Meta.fields + [
+            'nombre', 'organizacion_central', 'organizacion_nombre',
             'codigo', 'direccion', 'telefono', 'acueductos_count'
         ]
     
@@ -347,16 +348,16 @@ class SucursalSerializer(serializers.ModelSerializer):
         return obj.acueductos.count()
 
 
-class AcueductoSerializer(serializers.ModelSerializer):
+class AcueductoSerializer(BaseModelSerializer):
     """Backward compatibility serializer for Acueducto."""
     
     sucursal_nombre = serializers.CharField(source='sucursal.nombre', read_only=True)
     organizacion_nombre = serializers.CharField(source='sucursal.organizacion_central.nombre', read_only=True)
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Acueducto
-        fields = [
-            'id', 'nombre', 'sucursal', 'sucursal_nombre', 'organizacion_nombre',
+        fields = BaseModelSerializer.Meta.fields + [
+            'nombre', 'sucursal', 'sucursal_nombre', 'organizacion_nombre',
             'codigo', 'ubicacion'
         ]
 
@@ -365,7 +366,7 @@ class AcueductoSerializer(serializers.ModelSerializer):
 # SPECIALIZED SERIALIZERS FOR SPECIFIC USE CASES
 # ============================================================================
 
-class AssetTrackingSerializer(serializers.ModelSerializer):
+class AssetTrackingSerializer(BaseModelSerializer):
     """Specialized serializer for asset tracking with complete traceability."""
     
     current_location = serializers.SerializerMethodField()
@@ -373,15 +374,15 @@ class AssetTrackingSerializer(serializers.ModelSerializer):
     allowed_transitions = serializers.SerializerMethodField()
     can_be_transferred = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = ActivoInventario
-        fields = [
-            'id', 'codigo_actual', 'codigo_original', 'tipo_activo', 'descripcion',
+        fields = BaseModelSerializer.Meta.fields + [
+            'codigo_actual', 'codigo_original', 'tipo_activo', 'descripcion',
             'estado', 'almacen_actual', 'current_location', 'fecha_ingreso',
             'valor_unitario', 'numero_serie', 'movement_history_detailed',
             'allowed_transitions', 'can_be_transferred'
         ]
-        read_only_fields = [
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
             'codigo_actual', 'codigo_original', 'fecha_ingreso',
             'current_location', 'movement_history_detailed',
             'allowed_transitions', 'can_be_transferred'
@@ -406,33 +407,33 @@ class AssetTrackingSerializer(serializers.ModelSerializer):
         return {'can_transfer': can_transfer, 'message': message}
 
 
-class TransferWorkflowSerializer(serializers.ModelSerializer):
+class TransferWorkflowSerializer(BaseModelSerializer):
     """Specialized serializer for transfer workflow management."""
     
     activo_details = AssetTrackingSerializer(source='activo', read_only=True)
     almacen_origen_details = AlmacenRegionalSerializer(source='almacen_origen', read_only=True)
     almacen_destino_details = AlmacenRegionalSerializer(source='almacen_destino', read_only=True)
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = SolicitudTraslado
-        fields = [
-            'id', 'numero_solicitud', 'fecha_solicitud', 'estado',
+        fields = BaseModelSerializer.Meta.fields + [
+            'numero_solicitud', 'fecha_solicitud', 'estado',
             'activo_details', 'almacen_origen_details', 'almacen_destino_details',
             'solicitante', 'motivo', 'fecha_limite', 'prioridad',
             'aprobacion_origen', 'aprobacion_destino', 'observaciones'
         ]
-        read_only_fields = ['numero_solicitud', 'fecha_solicitud']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['numero_solicitud', 'fecha_solicitud']
 
 
-class HierarchyTreeSerializer(serializers.ModelSerializer):
+class HierarchyTreeSerializer(BaseModelSerializer):
     """Serializer for hierarchical tree representation."""
     
     children = serializers.SerializerMethodField()
     level = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Empresa  # Can be used for any MPTT model
-        fields = ['id', 'nombre', 'codigo', 'level', 'children']
+        fields = BaseModelSerializer.Meta.fields + ['nombre', 'codigo', 'level', 'children']
     
     def get_children(self, obj):
         """Get immediate children in hierarchy."""

@@ -3,6 +3,7 @@ Serializers para el sistema de inventario refactorizado.
 Usar con los modelos de models_refactored_consolidated.py
 """
 from rest_framework import serializers
+from core.serializers import BaseModelSerializer, SoftDeleteSerializer
 from decimal import Decimal
 
 from inventario.models import (
@@ -21,32 +22,32 @@ User = get_user_model()
 # SERIALIZERS DE MODELOS AUXILIARES
 # ============================================================================
 
-class OrganizacionCentralSerializer(serializers.ModelSerializer):
+class OrganizacionCentralSerializer(BaseModelSerializer):
     """Serializer para organizaciones centrales."""
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = OrganizacionCentral
-        fields = ['id', 'nombre', 'rif']
+        fields = BaseModelSerializer.Meta.fields + ['nombre', 'rif']
 
-class SucursalSerializer(serializers.ModelSerializer):
+class SucursalSerializer(BaseModelSerializer):
     """Serializer para sucursales."""
     organizacion_central_nombre = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Sucursal
-        fields = ['id', 'nombre', 'organizacion_central', 'organizacion_central_nombre', 'codigo', 'direccion', 'telefono']
+        fields = BaseModelSerializer.Meta.fields + ['nombre', 'organizacion_central', 'organizacion_central_nombre', 'codigo', 'direccion', 'telefono']
 
     def get_organizacion_central_nombre(self, obj):
         return obj.organizacion_central.nombre if obj.organizacion_central else None
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(BaseModelSerializer):
     """Serializer para usuarios."""
     sucursal_nombre = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'sucursal', 'sucursal_nombre', 'is_active', 'password']
-        read_only_fields = ['id']
+        fields = BaseModelSerializer.Meta.fields + ['username', 'email', 'first_name', 'last_name', 'role', 'sucursal', 'sucursal_nombre', 'is_active', 'password']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields
 
     def get_sucursal_nombre(self, obj):
         return obj.sucursal.nombre if obj.sucursal else None
@@ -67,17 +68,17 @@ class UserSerializer(serializers.ModelSerializer):
             user.save()
         return user
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategorySerializer(BaseModelSerializer):
     """Serializer para categorías de productos."""
     total_productos = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = CategoriaProducto
-        fields = [
-            'id', 'nombre', 'codigo', 'descripcion',
+        fields = BaseModelSerializer.Meta.fields + [
+            'nombre', 'codigo', 'descripcion',
             'activo', 'orden', 'total_productos'
         ]
-        read_only_fields = ['id']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields
     
     def get_total_productos(self, obj):
         """Cuenta total de productos en esta categoría."""
@@ -85,46 +86,46 @@ class CategorySerializer(serializers.ModelSerializer):
         return 0
 
 
-class UnitOfMeasureSerializer(serializers.ModelSerializer):
+class UnitOfMeasureSerializer(BaseModelSerializer):
     """Serializer para unidades de medida."""
     tipo_display = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = UnitOfMeasure
-        fields = ['id', 'nombre', 'simbolo', 'tipo', 'tipo_display', 'activo']
-        read_only_fields = ['id']
+        fields = BaseModelSerializer.Meta.fields + ['nombre', 'simbolo', 'tipo', 'tipo_display', 'activo']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields
 
     def get_tipo_display(self, obj):
         return obj.get_tipo_display()
 
 
-class SupplierSerializer(serializers.ModelSerializer):
+class SupplierSerializer(BaseModelSerializer):
     """Serializer para proveedores."""
     total_productos = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Supplier
-        fields = [
-            'id', 'nombre', 'rif', 'codigo', 'contacto_nombre',
+        fields = BaseModelSerializer.Meta.fields + [
+            'nombre', 'rif', 'codigo', 'contacto_nombre',
             'telefono', 'email', 'direccion', 'activo',
             'creado_en', 'actualizado_en', 'total_productos'
         ]
-        read_only_fields = ['id', 'creado_en', 'actualizado_en']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['creado_en', 'actualizado_en']
     
     def get_total_productos(self, obj):
         """Total de productos de este proveedor."""
         return 0  # Implementar después
 
 
-class AcueductoSerializer(serializers.ModelSerializer):
+class AcueductoSerializer(BaseModelSerializer):
     """Serializer para acueductos."""
     sucursal_nombre = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         from inventario.models import Acueducto
         model = Acueducto
-        fields = ['id', 'nombre', 'sucursal', 'sucursal_nombre', 'ubicacion']
-        read_only_fields = ['id']
+        fields = BaseModelSerializer.Meta.fields + ['nombre', 'sucursal', 'sucursal_nombre', 'ubicacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields
 
     def get_sucursal_nombre(self, obj):
         return obj.sucursal.nombre if obj.sucursal else None
@@ -134,7 +135,7 @@ class AcueductoSerializer(serializers.ModelSerializer):
 # SERIALIZERS BASE PARA PRODUCTOS
 # ============================================================================
 
-class ProductBaseSerializer(serializers.ModelSerializer):
+class ProductBaseSerializer(BaseModelSerializer):
     """Serializer base para todos los productos."""
     # Nested serializers para lectura
     categoria_detail = CategorySerializer(source='categoria', read_only=True)
@@ -183,11 +184,11 @@ class ChemicalProductSerializer(ProductBaseSerializer):
     is_expired = serializers.SerializerMethodField()
     days_until_expiration = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = ChemicalProduct
-        fields = [
+        fields = BaseModelSerializer.Meta.fields + [
             # Campos base
-            'id', 'sku', 'nombre', 'descripcion',
+            'sku', 'nombre', 'descripcion',
             'categoria', 'categoria_detail', 'categoria_nombre',
             'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
@@ -205,8 +206,8 @@ class ChemicalProductSerializer(ProductBaseSerializer):
             'stock_status', 'stock_percentage', 'valor_total',
             'is_expired', 'days_until_expiration'
         ]
-        read_only_fields = [
-            'id', 'sku', 'creado_en', 'actualizado_en',
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
+            'sku', 'creado_en', 'actualizado_en',
             'stock_status', 'stock_percentage', 'valor_total'
         ]
     
@@ -245,9 +246,9 @@ class PipeSerializer(ProductBaseSerializer):
     
     class Meta:
         model = Pipe
-        fields = [
+        fields = BaseModelSerializer.Meta.fields + [
             # Campos base
-            'id', 'sku', 'nombre', 'descripcion',
+            'sku', 'nombre', 'descripcion',
             'categoria', 'categoria_detail', 'categoria_nombre',
             'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
@@ -265,8 +266,8 @@ class PipeSerializer(ProductBaseSerializer):
             # Campos calculados
             'stock_status', 'stock_percentage', 'valor_total',
         ]
-        read_only_fields = [
-            'id', 'sku', 'presion_psi', 'creado_en', 'actualizado_en',
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
+            'sku', 'presion_psi', 'creado_en', 'actualizado_en',
             'stock_status', 'stock_percentage', 'valor_total'
         ]
 
@@ -297,9 +298,9 @@ class PumpAndMotorSerializer(ProductBaseSerializer):
     
     class Meta:
         model = PumpAndMotor
-        fields = [
+        fields = BaseModelSerializer.Meta.fields + [
             # Campos base
-            'id', 'sku', 'nombre', 'descripcion',
+            'sku', 'nombre', 'descripcion',
             'categoria', 'categoria_detail', 'categoria_nombre',
             'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
@@ -322,8 +323,8 @@ class PumpAndMotorSerializer(ProductBaseSerializer):
             # Campos calculados
             'stock_status', 'stock_percentage', 'valor_total',
         ]
-        read_only_fields = [
-            'id', 'sku', 'potencia_kw', 'creado_en', 'actualizado_en',
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
+            'sku', 'potencia_kw', 'creado_en', 'actualizado_en',
             'stock_status', 'stock_percentage', 'valor_total'
         ]
 
@@ -346,9 +347,9 @@ class AccessorySerializer(ProductBaseSerializer):
     
     class Meta:
         model = Accessory
-        fields = [
+        fields = BaseModelSerializer.Meta.fields + [
             # Campos base
-            'id', 'sku', 'nombre', 'descripcion',
+            'sku', 'nombre', 'descripcion',
             'categoria', 'categoria_detail', 'categoria_nombre',
             'unidad_medida', 'unidad_medida_detail', 'unidad_medida_nombre',
             'stock_actual', 'stock_minimo', 'precio_unitario',
@@ -365,8 +366,8 @@ class AccessorySerializer(ProductBaseSerializer):
             # Campos calculados
             'stock_status', 'stock_percentage', 'valor_total',
         ]
-        read_only_fields = [
-            'id', 'sku', 'creado_en', 'actualizado_en',
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
+            'sku', 'creado_en', 'actualizado_en',
             'stock_status', 'stock_percentage', 'valor_total'
         ]
 
@@ -387,59 +388,59 @@ class AccessorySerializer(ProductBaseSerializer):
 # SERIALIZERS DE STOCK
 # ============================================================================
 
-class StockChemicalSerializer(serializers.ModelSerializer):
+class StockChemicalSerializer(BaseModelSerializer):
     """Serializer para stock de químicos."""
     producto_detail = ChemicalProductSerializer(source='producto', read_only=True)
     acueducto_detail = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = StockChemical
-        fields = [
-            'id', 'producto', 'producto_detail',
+        fields = BaseModelSerializer.Meta.fields + [
+            'producto', 'producto_detail',
             'ubicacion', 'acueducto_detail',
             'cantidad', 'lote', 'fecha_vencimiento',
             'fecha_ultima_actualizacion'
         ]
-        read_only_fields = ['id', 'fecha_ultima_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_ultima_actualizacion']
 
     def get_acueducto_detail(self, obj):
         return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
 
 
-class StockPipeSerializer(serializers.ModelSerializer):
+class StockPipeSerializer(BaseModelSerializer):
     """Serializer para stock de tuberías."""
     producto_detail = PipeSerializer(source='producto', read_only=True)
     acueducto_detail = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = StockPipe
-        fields = [
-            'id', 'producto', 'producto_detail',
+        fields = BaseModelSerializer.Meta.fields + [
+            'producto', 'producto_detail',
             'ubicacion', 'acueducto_detail',
             'cantidad', 'metros_totales',
             'fecha_ultima_actualizacion'
         ]
-        read_only_fields = ['id', 'metros_totales', 'fecha_ultima_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['metros_totales', 'fecha_ultima_actualizacion']
 
     def get_acueducto_detail(self, obj):
         return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
 
 
-class StockPumpAndMotorSerializer(serializers.ModelSerializer):
+class StockPumpAndMotorSerializer(BaseModelSerializer):
     """Serializer para stock de bombas/motores."""
     producto_detail = PumpAndMotorSerializer(source='producto', read_only=True)
     acueducto_detail = serializers.SerializerMethodField()
     estado_operativo_display = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = StockPumpAndMotor
-        fields = [
-            'id', 'producto', 'producto_detail',
+        fields = BaseModelSerializer.Meta.fields + [
+            'producto', 'producto_detail',
             'ubicacion', 'acueducto_detail',
             'cantidad', 'estado_operativo', 'estado_operativo_display',
             'fecha_ultima_actualizacion'
         ]
-        read_only_fields = ['id', 'fecha_ultima_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_ultima_actualizacion']
 
     def get_estado_operativo_display(self, obj):
         return obj.get_estado_operativo_display()
@@ -448,20 +449,20 @@ class StockPumpAndMotorSerializer(serializers.ModelSerializer):
         return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
 
 
-class StockAccessorySerializer(serializers.ModelSerializer):
+class StockAccessorySerializer(BaseModelSerializer):
     """Serializer para stock de accesorios."""
     producto_detail = AccessorySerializer(source='producto', read_only=True)
     acueducto_detail = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = StockAccessory
-        fields = [
-            'id', 'producto', 'producto_detail',
+        fields = BaseModelSerializer.Meta.fields + [
+            'producto', 'producto_detail',
             'ubicacion', 'acueducto_detail',
             'cantidad',
             'fecha_ultima_actualizacion'
         ]
-        read_only_fields = ['id', 'fecha_ultima_actualizacion']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_ultima_actualizacion']
 
     def get_acueducto_detail(self, obj):
         return str(obj.ubicacion.acueducto) if obj.ubicacion and obj.ubicacion.acueducto else None
@@ -472,7 +473,7 @@ class StockAccessorySerializer(serializers.ModelSerializer):
 # SERIALIZERS DE MOVIMIENTOS
 # ============================================================================
 
-class MovimientoInventarioSerializer(serializers.ModelSerializer):
+class MovimientoInventarioSerializer(BaseModelSerializer):
     """Serializer para movimientos de inventario con soporte genérico."""
     producto_str = serializers.SerializerMethodField()
     articulo_nombre = serializers.SerializerMethodField()
@@ -492,18 +493,18 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
     product_type = serializers.CharField(write_only=True)  # 'chemical', 'pipe', 'pump', 'accessory'
     product_id = serializers.IntegerField(write_only=True)
 
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         from inventario.models import MovimientoInventario
         model = MovimientoInventario
-        fields = [
-            'id', 'tipo_movimiento', 'cantidad', 'fecha_movimiento',
+        fields = BaseModelSerializer.Meta.fields + [
+            'tipo_movimiento', 'cantidad', 'fecha_movimiento',
             'ubicacion_origen', 'acueducto_origen', 'acueducto_origen_nombre',
             'ubicacion_destino', 'acueducto_destino', 'acueducto_destino_nombre',
             'producto_str', 'articulo_nombre', 'razon', 'creado_por_username',
             'product_type', 'product_id',
             'product_type_read', 'product_id_read', 'status'
         ]
-        read_only_fields = ['id', 'fecha_movimiento', 'producto_str', 'articulo_nombre', 'creado_por_username']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + ['fecha_movimiento', 'producto_str', 'articulo_nombre', 'creado_por_username']
 
     def get_creado_por_username(self, obj):
         if obj.creado_por:
@@ -587,15 +588,15 @@ class MovimientoInventarioSerializer(serializers.ModelSerializer):
 # SERIALIZERS PARA LISTADOS SIMPLIFICADOS
 # ============================================================================
 
-class ChemicalProductListSerializer(serializers.ModelSerializer):
+class ChemicalProductListSerializer(BaseModelSerializer):
     """Serializer simple para listados de químicos."""
     stock_status = serializers.SerializerMethodField()
     categoria_nombre = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = ChemicalProduct
-        fields = [
-            'id', 'sku', 'nombre', 'categoria_nombre', 'stock_actual', 'stock_minimo',
+        fields = BaseModelSerializer.Meta.fields + [
+            'sku', 'nombre', 'categoria_nombre', 'stock_actual', 'stock_minimo',
             'stock_status', 'es_peligroso', 'fecha_caducidad', 'presentacion'
         ]
 
@@ -606,15 +607,15 @@ class ChemicalProductListSerializer(serializers.ModelSerializer):
         return obj.categoria.nombre if obj.categoria else None
 
 
-class PipeListSerializer(serializers.ModelSerializer):
+class PipeListSerializer(BaseModelSerializer):
     """Serializer simple para listados de tuberías."""
     stock_status = serializers.SerializerMethodField()
     categoria_nombre = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Pipe
-        fields = [
-            'id', 'sku', 'nombre', 'categoria_nombre', 'material', 'diametro_nominal',
+        fields = BaseModelSerializer.Meta.fields + [
+            'sku', 'nombre', 'categoria_nombre', 'material', 'diametro_nominal',
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
@@ -625,15 +626,15 @@ class PipeListSerializer(serializers.ModelSerializer):
         return obj.categoria.nombre if obj.categoria else None
 
 
-class PumpAndMotorListSerializer(serializers.ModelSerializer):
+class PumpAndMotorListSerializer(BaseModelSerializer):
     """Serializer simple para listados de bombas."""
     stock_status = serializers.SerializerMethodField()
     categoria_nombre = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = PumpAndMotor
-        fields = [
-            'id', 'sku', 'nombre', 'categoria_nombre', 'tipo_equipo', 'marca', 'modelo',
+        fields = BaseModelSerializer.Meta.fields + [
+            'sku', 'nombre', 'categoria_nombre', 'tipo_equipo', 'marca', 'modelo',
             'potencia_hp', 'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
@@ -644,15 +645,15 @@ class PumpAndMotorListSerializer(serializers.ModelSerializer):
         return obj.categoria.nombre if obj.categoria else None
 
 
-class AccessoryListSerializer(serializers.ModelSerializer):
+class AccessoryListSerializer(BaseModelSerializer):
     """Serializer simple para listados de accesorios."""
     stock_status = serializers.SerializerMethodField()
     categoria_nombre = serializers.SerializerMethodField()
     
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         model = Accessory
-        fields = [
-            'id', 'sku', 'nombre', 'categoria_nombre', 'tipo_accesorio', 'tipo_conexion',
+        fields = BaseModelSerializer.Meta.fields + [
+            'sku', 'nombre', 'categoria_nombre', 'tipo_accesorio', 'tipo_conexion',
             'stock_actual', 'stock_minimo', 'stock_status'
         ]
 
@@ -676,11 +677,11 @@ class AccessoryListSerializer(serializers.ModelSerializer):
 # SERIALIZERS DE MANTENIMIENTO Y OTRAS OPERACIONES
 # ============================================================================
 
-class FichaTecnicaMotorSerializer(serializers.ModelSerializer):
+class FichaTecnicaMotorSerializer(BaseModelSerializer):
     equipo_nombre = serializers.SerializerMethodField()
     equipo_serial = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta(BaseModelSerializer.Meta):
         from inventario.models import FichaTecnicaMotor
         model = FichaTecnicaMotor
         fields = '__all__'
@@ -691,8 +692,8 @@ class FichaTecnicaMotorSerializer(serializers.ModelSerializer):
     def get_equipo_serial(self, obj):
         return obj.equipo.numero_serie if obj.equipo else None
 
-class RegistroMantenimientoSerializer(serializers.ModelSerializer):
-    class Meta:
+class RegistroMantenimientoSerializer(BaseModelSerializer):
+    class Meta(BaseModelSerializer.Meta):
         from inventario.models import RegistroMantenimiento
         model = RegistroMantenimiento
         fields = '__all__'
