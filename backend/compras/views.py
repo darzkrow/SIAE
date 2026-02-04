@@ -15,6 +15,14 @@ class OrdenCompraViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     permission_classes = [IsAuthenticated]
     filterset_fields = ['status', 'solicitante']
     search_fields = ['codigo', 'notas']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related and prefetch_related."""
+        return super().get_queryset().select_related(
+            'solicitante',
+            'aprobador',
+            'movimiento'
+        ).prefetch_related('items__content_type')
 
     @action(detail=True, methods=['post'])
     def aprobar(self, request, pk=None):
@@ -31,3 +39,10 @@ class ItemOrdenViewSet(BaseModelViewSet):
     serializer_class = ItemOrdenSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ['orden']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'orden__solicitante',
+            'content_type'
+        )

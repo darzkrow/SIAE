@@ -106,6 +106,13 @@ class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     search_fields = ['nombre', 'codigo', 'descripcion', 'ubicacion']
     ordering_fields = ['nombre', 'tipo', 'fecha_creacion']
     ordering = ['vicepresidencia', 'tipo', 'nombre']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'vicepresidencia__empresa',
+            'responsable'
+        ).prefetch_related('almacenes_regionales')
 
 
 class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
@@ -118,6 +125,13 @@ class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     search_fields = ['nombre', 'prefijo', 'ubicacion', 'descripcion']
     ordering_fields = ['nombre', 'prefijo', 'fecha_creacion']
     ordering = ['prefijo']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'unidad_organizacional__vicepresidencia__empresa',
+            'manager'
+        )
 
 
 # ============================================================================
@@ -182,6 +196,14 @@ class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     search_fields = ['codigo_actual', 'codigo_original', 'descripcion', 'numero_serie']
     ordering_fields = ['codigo_actual', 'fecha_ingreso', 'valor_unitario']
     ordering = ['-fecha_ingreso']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'tipo_activo',
+            'almacen_actual__unidad_organizacional',
+            'unidad_organizacional__vicepresidencia'
+        ).prefetch_related('movimientos')
 
 
 class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
@@ -194,6 +216,15 @@ class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     search_fields = ['numero_solicitud', 'activo__codigo_actual', 'motivo']
     ordering_fields = ['fecha_solicitud', 'fecha_limite', 'prioridad']
     ordering = ['-fecha_solicitud']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related and prefetch_related."""
+        return super().get_queryset().select_related(
+            'activo__tipo_activo',
+            'almacen_origen__unidad_organizacional',
+            'almacen_destino__unidad_organizacional',
+            'solicitante'
+        ).prefetch_related('aprobaciones')
 
 
 class HistorialMovimientoActivoViewSet(BaseModelViewSet):
@@ -206,6 +237,16 @@ class HistorialMovimientoActivoViewSet(BaseModelViewSet):
     search_fields = ['activo__codigo_actual', 'motivo', 'observaciones']
     ordering_fields = ['fecha_movimiento']
     ordering = ['-fecha_movimiento']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'activo__tipo_activo',
+            'almacen_origen',
+            'almacen_destino',
+            'usuario_responsable',
+            'solicitud_traslado'
+        )
 
 
 class MigracionOrganizacionalViewSet(BaseModelViewSet):
@@ -218,6 +259,17 @@ class MigracionOrganizacionalViewSet(BaseModelViewSet):
     search_fields = ['notas']
     ordering_fields = ['fecha_migracion', 'fecha_validacion']
     ordering = ['-fecha_migracion']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'empresa',
+            'vicepresidencia__empresa',
+            'unidad_organizacional__vicepresidencia',
+            'migrado_por',
+            'validado_por',
+            'revertido_por'
+        )
     
     @action(detail=False, methods=['get'])
     def integrity_report(self, request):
