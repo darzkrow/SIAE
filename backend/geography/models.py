@@ -1,5 +1,4 @@
 from django.db import models
-from institucion.models import Acueducto
 
 
 
@@ -53,7 +52,7 @@ class Ubicacion(models.Model):
         null=True, blank=True
     )
     acueducto = models.ForeignKey(
-        Acueducto,
+        'institucion.Acueducto',  # String reference to avoid circular import
         on_delete=models.CASCADE,
         related_name='ubicaciones',
         null=True, blank=True
