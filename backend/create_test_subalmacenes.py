@@ -59,7 +59,7 @@ def create_test_data():
     print("\n3️⃣ Creando Organización y Sucursal...")
     org, created = OrganizacionCentral.objects.get_or_create(
         nombre='Hidroven',
-        defaults={'codigo': 'HV-001'}
+        defaults={'rif': 'J-00000000-0'}  # Changed from codigo to rif
     )
     if created:
         print(f"   ✅ Organización creada: {org.nombre}")
