@@ -1,5 +1,20 @@
+"""
+Script para agregar Subalmacén al admin
+"""
 
+# Leer el archivo admin.py
+with open(r'c:\Users\gfranco\Desktop\SIAE\backend\institucion\admin.py', 'r', encoding='utf-8') as f:
+    content = f.read()
 
+# Agregar import de Subalmacen
+if "Subalmacen" not in content:
+    content = content.replace(
+        "from .models import (",
+        "from .models import (\n    Subalmacen,"
+    )
+
+# Admin de Subalmacén
+subalmacen_admin = '''
 
 @admin.register(Subalmacen)
 class SubalmacenAdmin(admin.ModelAdmin):
@@ -32,4 +47,15 @@ class SubalmacenAdmin(admin.ModelAdmin):
             'sucursal', 'estado', 'municipio', 'parroquia', 'responsable'
         )
 
+'''
 
+# Agregar antes del final del archivo
+if "@admin.register(Subalmacen)" not in content:
+    # Agregar al final del archivo
+    content = content.rstrip() + "\n" + subalmacen_admin + "\n"
+
+# Guardar el archivo modificado
+with open(r'c:\Users\gfranco\Desktop\SIAE\backend\institucion\admin.py', 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print("✅ SubalmacenAdmin agregado al admin")

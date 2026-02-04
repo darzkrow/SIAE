@@ -26,6 +26,8 @@ router.register(r'almacenes-regionales', views.AlmacenRegionalViewSet, basename=
 
 # Transfer workflow endpoints
 # router.register(r'solicitudes-traslado', views.SolicitudTrasladoViewSet, basename='solicitud-traslado')
+router.register(r'subalmacenes', views.SubalmacenViewSet, basename='subalmacen')
+
 
 # Migration monitoring endpoints
 router.register(r'migraciones', views.MigracionOrganizacionalViewSet, basename='migracion')
