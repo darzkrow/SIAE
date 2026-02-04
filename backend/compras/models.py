@@ -3,10 +3,16 @@ from django.conf import settings
 from django.utils import timezone
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-from auditoria.models import SoftDeleteModel
+from core.models import SoftDeleteModel, TimeStampedModel
 
-class Correlativo(models.Model):
-    """Manejo de numeración secuencial para órdenes."""
+
+class Correlativo(TimeStampedModel):
+    """
+    🔢 Manejo de numeración secuencial
+    
+    Genera códigos únicos para órdenes de compra.
+    Hereda timestamps de TimeStampedModel.
+    """
     tipo = models.CharField(max_length=50, unique=True, help_text="Ej: ORDEN_COMPRA")
     prefijo = models.CharField(max_length=10)
     ultimo_numero = models.PositiveIntegerField(default=0)
@@ -21,8 +27,14 @@ class Correlativo(models.Model):
         verbose_name = 'Correlativo'
         verbose_name_plural = 'Correlativos'
 
+
 class OrdenCompra(SoftDeleteModel):
-    """Orden de compra para adquisición de stock."""
+    """
+    📋 Orden de compra
+    
+    Orden para adquisición de stock.
+    Hereda timestamps y soft delete de SoftDeleteModel.
+    """
     class Status(models.TextChoices):
         BORRADOR = 'BORRADOR', 'Borrador'
         SOLICITADO = 'SOLICITADO', 'Solicitado'
@@ -75,8 +87,14 @@ class OrdenCompra(SoftDeleteModel):
             self.codigo = correlativo.siguiente()
         super().save(*args, **kwargs)
 
+
 class ItemOrden(SoftDeleteModel):
-    """Detalle de productos en una orden de compra."""
+    """
+    📦 Detalle de orden de compra
+    
+    Items individuales en una orden de compra.
+    Hereda timestamps y soft delete de SoftDeleteModel.
+    """
     orden = models.ForeignKey(
         OrdenCompra,
         on_delete=models.CASCADE,

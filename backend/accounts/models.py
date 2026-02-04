@@ -1,10 +1,16 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.contenttypes.models import ContentType
+from core.models import TimeStampedModel
 
 
-class Permission(models.Model):
-
+class Permission(TimeStampedModel):
+    """
+    🎫 Permiso dinámico del sistema
+    
+    Representa un permiso que puede ser asignado a roles.
+    Hereda created_at y updated_at de TimeStampedModel.
+    """
     name = models.CharField(max_length=100, unique=True, help_text="Human-readable permission name")
     codename = models.CharField(max_length=100, unique=True, help_text="Unique permission identifier")
     content_type = models.ForeignKey(
@@ -14,8 +20,6 @@ class Permission(models.Model):
         help_text="The model this permission applies to"
     )
     description = models.TextField(blank=True, help_text="Detailed description of what this permission allows")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         verbose_name = 'Permiso'
@@ -27,7 +31,13 @@ class Permission(models.Model):
         return f"{self.content_type.app_label}.{self.codename}"
 
 
-class Role(models.Model):
+class Role(TimeStampedModel):
+    """
+    👥 Rol del sistema
+    
+    Agrupa permisos que pueden ser asignados a usuarios.
+    Hereda created_at y updated_at de TimeStampedModel.
+    """
     name = models.CharField(max_length=50, unique=True, help_text="Role name")
     description = models.TextField(blank=True, help_text="Role description")
     permissions = models.ManyToManyField(
@@ -37,8 +47,6 @@ class Role(models.Model):
         help_text="Permissions granted to this role"
     )
     is_active = models.BooleanField(default=True, help_text="Whether this role is active")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         verbose_name = 'Rol'
@@ -49,8 +57,13 @@ class Role(models.Model):
         return self.name
 
 
-class RolePermission(models.Model):
-
+class RolePermission(TimeStampedModel):
+    """
+    🔗 Relación Rol-Permiso
+    
+    Conecta roles con permisos y permite condiciones adicionales.
+    Hereda created_at y updated_at de TimeStampedModel.
+    """
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
     permission = models.ForeignKey(Permission, on_delete=models.CASCADE)
     granted = models.BooleanField(default=True, help_text="Whether permission is granted or denied")
@@ -59,7 +72,6 @@ class RolePermission(models.Model):
         blank=True,
         help_text="Additional conditions for permission (JSON format)"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         verbose_name = 'Permiso de Rol'
@@ -71,10 +83,13 @@ class RolePermission(models.Model):
         return f"{self.role.name} - {self.permission.codename} ({status})"
 
 
-class UserRole(models.Model):
+
+class UserRole(TimeStampedModel):
     """
-    Through model for User-Role relationship.
-    Tracks role assignments with metadata like assignment date and expiration.
+    🔗 Asignación de Rol a Usuario
+    
+    Rastrea asignaciones de roles con metadata como fecha y expiración.
+    Hereda created_at y updated_at de TimeStampedModel.
     """
     user = models.ForeignKey('CustomUser', on_delete=models.CASCADE)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
@@ -86,7 +101,6 @@ class UserRole(models.Model):
         related_name='assigned_roles',
         help_text="User who assigned this role"
     )
-    assigned_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(
         null=True, 
         blank=True,
@@ -98,7 +112,7 @@ class UserRole(models.Model):
         verbose_name = 'Rol de Usuario'
         verbose_name_plural = 'Roles de Usuarios'
         unique_together = ('user', 'role')
-        ordering = ['-assigned_at']
+        ordering = ['-created_at']
     
     def __str__(self):
         return f"{self.user.username} - {self.role.name}"
@@ -110,6 +124,7 @@ class UserRole(models.Model):
             return False
         from django.utils import timezone
         return timezone.now() > self.expires_at
+
 
 class CustomUserManager(UserManager):
     def create_superuser(self, username, email=None, password=None, **extra_fields):
@@ -178,7 +193,16 @@ class CustomUser(AbstractUser):
         return permissions
     
     def has_dynamic_permission(self, permission_codename, content_type=None):
-    
+        """
+        Check if user has a specific dynamic permission.
+        
+        Args:
+            permission_codename: The codename of the permission to check
+            content_type: Optional ContentType to filter by
+            
+        Returns:
+            bool: True if user has the permission, False otherwise
+        """
         permissions = self.get_dynamic_permissions()
         
         if content_type:
