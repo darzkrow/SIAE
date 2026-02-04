@@ -6,6 +6,7 @@ from rest_framework import serializers
 from core.serializers import BaseModelSerializer, SoftDeleteSerializer
 from django.contrib.auth import get_user_model
 from .models import (
+    Subalmacen,
     # New hierarchical models
     Empresa, Vicepresidencia, UnidadOrganizacional, AlmacenRegional,
     ActivoInventario, HistorialMovimientoActivo, SolicitudTraslado, AprobacionTraslado,

@@ -7,6 +7,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from mptt.models import MPTTModel, TreeForeignKey
 from core.models import TimeStampedModel
+from geography.models import State, Municipality, Parish
+import qrcode
+from io import BytesIO
+from django.core.files import File
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -409,6 +414,70 @@ class Sucursal(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.organizacion_central.nombre})"
 
+
+
+
+# ============================================================================
+# SUBALMACÉN MODEL (Nuevo - Reemplaza Acueducto)
+# ============================================================================
+
+class Subalmacen(TimeStampedModel):
+    """
+    Subalmacén con ubicación geográfica.
+    Reemplaza el modelo Acueducto con capacidades geográficas mejoradas.
+    """
+    nombre = models.CharField(max_length=200, help_text='Nombre del subalmacén')
+    codigo = models.CharField(max_length=20, unique=True, help_text='Código único (ej: SUB-ZUL-001)')
+    
+    sucursal = models.ForeignKey(
+        'Sucursal',
+        on_delete=models.CASCADE,
+        related_name='subalmacenes',
+        help_text='Sucursal a la que pertenece'
+    )
+    
+    # Ubicación geográfica
+    estado = models.ForeignKey(State, on_delete=models.PROTECT, related_name='subalmacenes')
+    municipio = models.ForeignKey(Municipality, on_delete=models.PROTECT, related_name='subalmacenes', null=True, blank=True)
+    parroquia = models.ForeignKey(Parish, on_delete=models.PROTECT, related_name='subalmacenes', null=True, blank=True)
+    
+    direccion = models.TextField(blank=True, help_text='Dirección completa')
+    coordenadas_gps = models.CharField(max_length=100, blank=True, help_text='Coordenadas GPS (lat,lng)')
+    
+    responsable = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='subalmacenes_responsable')
+    capacidad = models.IntegerField(null=True, blank=True, help_text='Capacidad de almacenamiento')
+    activo = models.BooleanField(default=True)
+    descripcion = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = 'Subalmacén'
+        verbose_name_plural = 'Subalmacenes'
+        unique_together = ('nombre', 'sucursal')
+        ordering = ['estado__name', 'sucursal__nombre', 'nombre']
+        indexes = [
+            models.Index(fields=['estado', 'activo']),
+            models.Index(fields=['sucursal', 'activo']),
+            models.Index(fields=['codigo']),
+        ]
+    
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre} ({self.estado.name})"
+    
+    def get_ubicacion_completa(self):
+        partes = [self.estado.name]
+        if self.municipio:
+            partes.append(self.municipio.name)
+        if self.parroquia:
+            partes.append(self.parroquia.name)
+        return ", ".join(partes)
+    
+    def es_responsable(self, user):
+        return self.responsable == user or user.is_staff
+
+
+# ============================================================================
+# LEGACY MODELS (Backward Compatibility)
+# ============================================================================
 
 class Acueducto(models.Model):
     """Acueducto o sistema de agua potable."""
@@ -1662,6 +1731,24 @@ class SolicitudTraslado(models.Model):
         help_text='Observaciones adicionales'
     )
     
+    # 🆕 Campos para QR Code
+    qr_code = models.ImageField(
+        upload_to='qr_codes/traslados/',
+        blank=True,
+        null=True,
+        help_text='Código QR para aprobación rápida'
+    )
+    qr_url = models.URLField(
+        blank=True,
+        help_text='URL de aprobación contenida en el QR'
+    )
+    qr_generado_en = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Fecha de generación del QR'
+    )
+
+    
     class Meta:
         verbose_name = 'Solicitud de Traslado'
         verbose_name_plural = 'Solicitudes de Traslado'
@@ -1685,6 +1772,56 @@ class SolicitudTraslado(models.Model):
     
     def __str__(self):
         return f"{self.numero_solicitud} - {self.activo.codigo_actual} ({self.almacen_origen.prefijo} → {self.almacen_destino.prefijo})"
+
+    
+    def generar_qr_code(self, request=None):
+        """
+        Genera código QR con URL de aprobación.
+        """
+        from django.contrib.sites.models import Site
+        
+        # Construir URL de aprobación
+        if request:
+            domain = request.get_host()
+            protocol = 'https' if request.is_secure() else 'http'
+        else:
+            try:
+                site = Site.objects.get_current()
+                domain = site.domain
+                protocol = 'https'
+            except:
+                domain = 'localhost:8000'
+                protocol = 'http'
+        
+        # URL de aprobación
+        approval_path = f'/api/institucion/solicitudes-traslado/{self.pk}/aprobar/'
+        self.qr_url = f"{protocol}://{domain}{approval_path}"
+        
+        # Generar QR code
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(self.qr_url)
+        qr.make(fit=True)
+        
+        # Crear imagen
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Guardar en campo ImageField
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        filename = f'solicitud_{self.numero_solicitud}_qr.png'
+        self.qr_code.save(filename, File(buffer), save=False)
+        
+        # Actualizar fecha de generación
+        from django.utils import timezone
+        self.qr_generado_en = timezone.now()
+        
+        self.save()
+        return self.qr_code
     
     def clean(self):
         """Custom validation for transfer requests"""
