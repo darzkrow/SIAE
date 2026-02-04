@@ -4,10 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 
 
 class Permission(models.Model):
-    """
-    Dynamic permission model for granular access control.
-    Replaces hardcoded permissions with database-driven approach.
-    """
+
     name = models.CharField(max_length=100, unique=True, help_text="Human-readable permission name")
     codename = models.CharField(max_length=100, unique=True, help_text="Unique permission identifier")
     content_type = models.ForeignKey(
@@ -31,10 +28,6 @@ class Permission(models.Model):
 
 
 class Role(models.Model):
-    """
-    Role model for grouping permissions.
-    Provides a way to assign multiple permissions to users through roles.
-    """
     name = models.CharField(max_length=50, unique=True, help_text="Role name")
     description = models.TextField(blank=True, help_text="Role description")
     permissions = models.ManyToManyField(
@@ -57,10 +50,7 @@ class Role(models.Model):
 
 
 class RolePermission(models.Model):
-    """
-    Through model for Role-Permission relationship.
-    Allows for additional metadata on permission assignments.
-    """
+
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
     permission = models.ForeignKey(Permission, on_delete=models.CASCADE)
     granted = models.BooleanField(default=True, help_text="Whether permission is granted or denied")
@@ -188,16 +178,7 @@ class CustomUser(AbstractUser):
         return permissions
     
     def has_dynamic_permission(self, permission_codename, content_type=None):
-        """
-        Check if user has a specific dynamic permission.
-        
-        Args:
-            permission_codename: The codename of the permission to check
-            content_type: Optional ContentType to filter by
-            
-        Returns:
-            bool: True if user has the permission, False otherwise
-        """
+    
         permissions = self.get_dynamic_permissions()
         
         if content_type:
