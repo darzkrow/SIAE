@@ -1,0 +1,3 @@
+sku,nombre,material,diametro_nominal,unidad_diametro,presion_nominal,tipo_union,tipo_uso,longitud_unitaria,stock_actual,stock_minimo,precio_unitario,categoria,unidad_medida,proveedor
+PIPE-PVC-001,Tubería PVC 2" PN10,PVC,2.00,PULGADAS,PN10,SOLDABLE,POTABLE,6.00,100,20,45.00,Tubería PVC,Metros,Proveedor Hidro
+PIPE-PEAD-002,Tubería PEAD 90mm SDR11,PEAD,90.00,MM,PN16,FUSION,POTABLE,50.00,5,1,150.00,Tubería PEAD,Metros,Distribuidora Industrial

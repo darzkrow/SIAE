@@ -14,10 +14,7 @@ User = get_user_model()
 # ============================================================================
 
 class Empresa(MPTTModel):
-    """
-    Root company model - Hidroven
-    Uses MPTT for efficient hierarchical operations
-    """
+
     nombre = models.CharField(max_length=200, unique=True)
     codigo = models.CharField(max_length=10, unique=True)
     rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
@@ -214,7 +211,7 @@ class AlmacenRegional(models.Model):
         ('TAC', 'Táchira'),
         ('BOL', 'Bolívar'),
         ('ANZ', 'Anzoátegui'),
-        ('MON', 'Monagas'),
+        ('NVA', 'Nueva Esparta'),
     ]
     
     unidad_organizacional = models.ForeignKey(
@@ -323,8 +320,7 @@ class AlmacenRegional(models.Model):
     
     def get_current_capacity_usage(self):
         """Calculate current capacity usage percentage"""
-        # This would be implemented when asset tracking is added
-        # For now, return 0 as placeholder
+
         return 0
     
     def is_at_capacity(self):

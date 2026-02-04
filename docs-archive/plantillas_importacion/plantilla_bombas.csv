@@ -1,0 +1,3 @@
+sku,nombre,tipo_equipo,marca,modelo,numero_serie,potencia_hp,fases,voltaje,stock_actual,stock_minimo,precio_unitario,categoria,unidad_medida,proveedor
+PUMP-CEN-001,Bomba Centrifuga 5HP,BOMBA,Grundfos,CR-5,S12345,5.00,TRIFASICA,220V,2,1,1200.00,Equipos de Bombeo,Unidades,Motores y Bombas
+MOT-TRI-002,Motor Trifásico 10HP,MOTOR,Siemens,M-10,S98765,10.00,TRIFASICA,440V,1,0,850.00,Motores Eléctricos,Unidades,Suministros Eléctricos

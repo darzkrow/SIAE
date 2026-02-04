@@ -3,12 +3,12 @@
     "model": "institucion.empresa",
     "pk": 1,
     "fields": {
-      "nombre": "Hidroven",
-      "codigo": "HV",
-      "rif": "G-20000001-0",
-      "direccion": "Caracas, Venezuela",
+      "nombre": "C.A HIDROLOGICA VENEZOLANA (HIDROVEN)",
+      "codigo": "HVEN",
+      "rif": "G-20007922-3",
+      "direccion": "Edificio Sede Hidroven, calle Pantin, Edo Miranda, Muncipio Chacao, Venezuela",
       "telefono": "+58-212-555-0000",
-      "email": "info@hidroven.gob.ve",
+      "email": "[EMAIL_ADDRESS]",
       "activo": true,
       "fecha_creacion": "2024-01-01T00:00:00Z",
       "fecha_actualizacion": "2024-01-01T00:00:00Z"
@@ -189,11 +189,11 @@
     "model": "institucion.almacenregional",
     "pk": 9,
     "fields": {
-      "nombre": "Almacén Regional Monagas",
-      "prefijo": "MON",
+      "nombre": "Almacén Regional Nueva Esparta",
+      "prefijo": "NVA",
       "unidad_organizacional": 3,
       "capacidad_maxima": 2800,
-      "ubicacion": "Maturín, Estado Monagas",
+      "ubicacion": "Porlamar, Estado Nueva Esparta",
       "activo": true
     }
   }
