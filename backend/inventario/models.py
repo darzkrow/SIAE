@@ -1,7 +1,3 @@
-"""
-Modelos refactorizados para Sistema de Inventario de Agua Potable y Saneamiento.
-Usa Abstract Base Classes para herencia óptima de rendimiento.
-"""
 from django.db import models, transaction
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
@@ -32,11 +28,7 @@ except ImportError:
 # ============================================================================
 
 class Tag(TimeStampedModel):
-    """
-    🏷️ Tags para categorizar inventario
-    
-    Hereda created_at y updated_at de TimeStampedModel.
-    """
+
     name = models.CharField(max_length=50, unique=True)
     color = models.CharField(max_length=7, default='#007bff', help_text='Hex color code for the tag')
     description = models.TextField(blank=True)
@@ -49,7 +41,7 @@ class Tag(TimeStampedModel):
     def __str__(self):
         return self.name
 
-# Category removed, moved to catalogo app
+
 
 
 class UnitOfMeasure(SoftDeleteModel):

@@ -8,8 +8,7 @@ from core.models import SoftDeleteModel, TimeStampedModel
 
 class Correlativo(TimeStampedModel):
     """
-    🔢 Manejo de numeración secuencial
-    
+    🔢 Manejo de numeración secuencial    
     Genera códigos únicos para órdenes de compra.
     Hereda timestamps de TimeStampedModel.
     """
