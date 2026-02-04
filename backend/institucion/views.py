@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from django.db.models import Q, Count, Prefetch
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from core.viewsets import BaseModelViewSet, SoftDeleteViewSet
 from auditoria.mixins import AuditMixin, TrashBinMixin
 
 from .models import (
@@ -36,7 +37,7 @@ User = get_user_model()
 # NEW HIERARCHICAL API VIEWSETS
 # ============================================================================
 
-class EmpresaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class EmpresaViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for Empresa (root company) management."""
     
     queryset = Empresa.objects.all()
@@ -77,7 +78,7 @@ class EmpresaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return Response(status_info)
 
 
-class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for Vicepresidencia management."""
     
     queryset = Vicepresidencia.objects.all()
@@ -95,7 +96,7 @@ class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         ).prefetch_related('unidades_organizacionales')
 
 
-class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for UnidadOrganizacional management."""
     
     queryset = UnidadOrganizacional.objects.all()
@@ -105,9 +106,16 @@ class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewS
     search_fields = ['nombre', 'codigo', 'descripcion', 'ubicacion']
     ordering_fields = ['nombre', 'tipo', 'fecha_creacion']
     ordering = ['vicepresidencia', 'tipo', 'nombre']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'vicepresidencia__empresa',
+            'responsable'
+        ).prefetch_related('almacenes_regionales')
 
 
-class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for AlmacenRegional management."""
     
     queryset = AlmacenRegional.objects.all()
@@ -117,13 +125,20 @@ class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     search_fields = ['nombre', 'prefijo', 'ubicacion', 'descripcion']
     ordering_fields = ['nombre', 'prefijo', 'fecha_creacion']
     ordering = ['prefijo']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'unidad_organizacional__vicepresidencia__empresa',
+            'manager'
+        )
 
 
 # ============================================================================
 # BACKWARD COMPATIBILITY VIEWSETS
 # ============================================================================
 
-class OrganizacionCentralViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class OrganizacionCentralViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """Backward compatibility ViewSet for OrganizacionCentral."""
     
     queryset = OrganizacionCentral.objects.all()
@@ -139,7 +154,7 @@ class OrganizacionCentralViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSe
         return super().get_queryset().select_related('parent').prefetch_related('sucursales')
 
 
-class SucursalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class SucursalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """Backward compatibility ViewSet for Sucursal."""
     
     queryset = Sucursal.objects.all()
@@ -155,7 +170,7 @@ class SucursalViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return super().get_queryset().select_related('organizacion_central').prefetch_related('acueductos')
 
 
-class AcueductoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class AcueductoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """Backward compatibility ViewSet for Acueducto."""
     
     queryset = Acueducto.objects.all()
@@ -171,7 +186,7 @@ class AcueductoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
         return super().get_queryset().select_related('sucursal__organizacion_central')
 
 
-class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for ActivoInventario management with asset tracking."""
     
     queryset = ActivoInventario.objects.all()
@@ -181,9 +196,17 @@ class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
     search_fields = ['codigo_actual', 'codigo_original', 'descripcion', 'numero_serie']
     ordering_fields = ['codigo_actual', 'fecha_ingreso', 'valor_unitario']
     ordering = ['-fecha_ingreso']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'tipo_activo',
+            'almacen_actual__unidad_organizacional',
+            'unidad_organizacional__vicepresidencia'
+        ).prefetch_related('movimientos')
 
 
-class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet):
+class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     """ViewSet for SolicitudTraslado management with dual approval workflow."""
     
     queryset = SolicitudTraslado.objects.all()
@@ -193,9 +216,18 @@ class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, viewsets.ModelViewSet)
     search_fields = ['numero_solicitud', 'activo__codigo_actual', 'motivo']
     ordering_fields = ['fecha_solicitud', 'fecha_limite', 'prioridad']
     ordering = ['-fecha_solicitud']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related and prefetch_related."""
+        return super().get_queryset().select_related(
+            'activo__tipo_activo',
+            'almacen_origen__unidad_organizacional',
+            'almacen_destino__unidad_organizacional',
+            'solicitante'
+        ).prefetch_related('aprobaciones')
 
 
-class HistorialMovimientoActivoViewSet(viewsets.ReadOnlyModelViewSet):
+class HistorialMovimientoActivoViewSet(BaseModelViewSet):
     """Read-only ViewSet for HistorialMovimientoActivo (immutable audit trail)."""
     
     queryset = HistorialMovimientoActivo.objects.all()
@@ -205,9 +237,19 @@ class HistorialMovimientoActivoViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['activo__codigo_actual', 'motivo', 'observaciones']
     ordering_fields = ['fecha_movimiento']
     ordering = ['-fecha_movimiento']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'activo__tipo_activo',
+            'almacen_origen',
+            'almacen_destino',
+            'usuario_responsable',
+            'solicitud_traslado'
+        )
 
 
-class MigracionOrganizacionalViewSet(viewsets.ReadOnlyModelViewSet):
+class MigracionOrganizacionalViewSet(BaseModelViewSet):
     """ViewSet for monitoring organizational migration status."""
     
     queryset = MigracionOrganizacional.objects.all()
@@ -217,6 +259,17 @@ class MigracionOrganizacionalViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['notas']
     ordering_fields = ['fecha_migracion', 'fecha_validacion']
     ordering = ['-fecha_migracion']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'empresa',
+            'vicepresidencia__empresa',
+            'unidad_organizacional__vicepresidencia',
+            'migrado_por',
+            'validado_por',
+            'revertido_por'
+        )
     
     @action(detail=False, methods=['get'])
     def integrity_report(self, request):

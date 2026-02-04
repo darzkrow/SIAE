@@ -26,3 +26,10 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['object_repr', 'user__username', 'action']
     ordering_fields = ['timestamp']
+    
+    def get_queryset(self):
+        """Optimize queryset with select_related."""
+        return super().get_queryset().select_related(
+            'user',
+            'content_type'
+        )

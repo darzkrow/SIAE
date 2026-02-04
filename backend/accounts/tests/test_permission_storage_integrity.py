@@ -137,10 +137,8 @@ class PermissionStorageIntegrityPropertyTest(HypothesisTestCase, PropertyTestMix
     def test_role_permission_relationship_integrity(self, permission_data, role_data, granted, conditions):
         """
         🔗 Prueba 3: Verificar que los roles y permisos se conecten bien
-        
         Propiedad: Cuando le das un permiso a un rol, esa conexión debe guardarse
         correctamente y no romperse.
-        
         ¡Es como conectar dos piezas de LEGO y asegurarte de que no se separen! 🧱
         """
         # Verificamos que los datos sean válidos

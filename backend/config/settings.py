@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'mptt',  # Django MPTT for hierarchical models
     # Project apps
+    'core',  # Core utilities and base classes
     'accounts',
     'catalogo',
     'compras',

@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from mptt.models import MPTTModel, TreeForeignKey
+from core.models import TimeStampedModel
 
 User = get_user_model()
 
@@ -13,8 +14,12 @@ User = get_user_model()
 # NUEVOS MODELOS ORGANIZACIONALES JERÁRQUICOS (MPTT)
 # ============================================================================
 
-class Empresa(MPTTModel):
-
+class Empresa(TimeStampedModel, MPTTModel):
+    """
+    🏢 Empresa en jerarquía organizacional
+    
+    Hereda created_at y updated_at de TimeStampedModel.
+    """
     nombre = models.CharField(max_length=200, unique=True)
     codigo = models.CharField(max_length=10, unique=True)
     rif = models.CharField(max_length=30, blank=True, verbose_name='RIF')
@@ -22,8 +27,7 @@ class Empresa(MPTTModel):
     telefono = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
     activo = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    # fecha_creacion y fecha_actualizacion heredados de TimeStampedModel (created_at, updated_at)
     
     # MPTT fields
     parent = TreeForeignKey(
@@ -44,7 +48,7 @@ class Empresa(MPTTModel):
         indexes = [
             models.Index(fields=['codigo']),
             models.Index(fields=['activo']),
-            models.Index(fields=['fecha_creacion']),
+            models.Index(fields=['created_at']),  # Using inherited field
         ]
     
     def __str__(self):
@@ -56,10 +60,12 @@ class Empresa(MPTTModel):
         return ' → '.join([ancestor.nombre for ancestor in ancestors])
 
 
-class Vicepresidencia(MPTTModel):
+class Vicepresidencia(TimeStampedModel, MPTTModel):
     """
-    Three VP types: Comercialización, Operaciones Hídricas, Administrativa
-    Second level in organizational hierarchy
+    🏛️ Vicepresidencias (Comercialización, Operaciones Hídricas, Administrativa)
+    
+    Segundo nivel en jerarquía organizacional.
+    Hereda created_at y updated_at de TimeStampedModel.
     """
     VP_TYPES = [
         ('COMERCIALIZACION', 'Vicepresidencia de Comercialización'),
@@ -84,8 +90,7 @@ class Vicepresidencia(MPTTModel):
         related_name='vicepresidencias_responsable'
     )
     activo = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    # fecha_creacion y fecha_actualizacion heredados de TimeStampedModel
     
     # MPTT fields
     parent = TreeForeignKey(
@@ -122,10 +127,12 @@ class Vicepresidencia(MPTTModel):
         return ' → '.join(path)
 
 
-class UnidadOrganizacional(MPTTModel):
+class UnidadOrganizacional(TimeStampedModel, MPTTModel):
     """
-    Generic organizational units under VPs
-    Third level in organizational hierarchy
+    🏛️ Unidades organizacionales genéricas
+    
+    Tercer nivel en jerarquía organizacional.
+    Hereda created_at y updated_at de TimeStampedModel.
     """
     TIPO_UNIDAD_CHOICES = [
         ('GERENCIA', 'Gerencia'),
@@ -157,8 +164,7 @@ class UnidadOrganizacional(MPTTModel):
         related_name='unidades_responsable'
     )
     activo = models.BooleanField(default=True)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    # fecha_creacion y fecha_actualizacion heredados de TimeStampedModel
     
     # MPTT fields
     parent = TreeForeignKey(
@@ -196,10 +202,12 @@ class UnidadOrganizacional(MPTTModel):
         return ' → '.join(path)
 
 
-class AlmacenRegional(models.Model):
+class AlmacenRegional(TimeStampedModel):
     """
-    9 regional warehouses under VP Operations
-    Each warehouse has a unique three-letter prefix code
+    🏬 9 almacenes regionales bajo VP Operaciones
+    
+    Cada almacén tiene un código único de tres letras.
+    Hereda created_at y updated_at de TimeStampedModel.
     """
     # Predefined warehouse prefixes as per requirements
     PREFIJOS_VALIDOS = [
@@ -251,8 +259,7 @@ class AlmacenRegional(models.Model):
         default=True,
         help_text='Indica si el almacén está activo'
     )
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    # fecha_creacion y fecha_actualizacion heredados de TimeStampedModel
     
     # Additional fields for warehouse management
     descripcion = models.TextField(

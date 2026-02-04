@@ -1,8 +1,14 @@
 from django.db import models
-from auditoria.models import SoftDeleteModel
+from core.models import SoftDeleteModel
+
 
 class CategoriaProducto(SoftDeleteModel):
-    """Categorías generales de productos (Químicos, Tuberías, etc.)"""
+    """
+    📦 Categorías generales de productos
+    
+    Categorías principales como Químicos, Tuberías, Bombas, etc.
+    Hereda timestamps y soft delete de SoftDeleteModel.
+    """
     nombre = models.CharField(max_length=150, unique=True)
     codigo = models.CharField(
         max_length=10, 
@@ -21,8 +27,14 @@ class CategoriaProducto(SoftDeleteModel):
     def __str__(self):
         return self.nombre
 
+
 class Marca(SoftDeleteModel):
-    """Marcas de fabricantes de equipos y productos."""
+    """
+    🏷️ Marcas de fabricantes
+    
+    Marcas de equipos y productos.
+    Hereda timestamps y soft delete de SoftDeleteModel.
+    """
     nombre = models.CharField(max_length=150, unique=True)
     descripcion = models.TextField(blank=True)
     activo = models.BooleanField(default=True)

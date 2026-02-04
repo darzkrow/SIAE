@@ -1,8 +1,3 @@
-"""
-Management command to create sample permissions and roles for testing.
-This demonstrates the dynamic permission system functionality.
-"""
-
 from django.core.management.base import BaseCommand
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model

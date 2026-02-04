@@ -1,7 +1,11 @@
 from rest_framework import serializers
+from core.serializers import BaseModelSerializer
 from .models import CustomUser
 
-class CustomUserSerializer(serializers.ModelSerializer):
-    class Meta:
+
+class CustomUserSerializer(BaseModelSerializer):
+    """Serializer para CustomUser heredando de BaseModelSerializer"""
+    class Meta(BaseModelSerializer.Meta):
         model = CustomUser
-        fields = ['id', 'username', 'email', 'role', 'sucursal']
+        fields = BaseModelSerializer.Meta.fields + ['username', 'email', 'role', 'sucursal']
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields
