@@ -1,0 +1,200 @@
+[
+  {
+    "model": "institucion.empresa",
+    "pk": 1,
+    "fields": {
+      "nombre": "Hidroven",
+      "codigo": "HV",
+      "rif": "G-20000001-0",
+      "direccion": "Caracas, Venezuela",
+      "telefono": "+58-212-555-0000",
+      "email": "info@hidroven.gob.ve",
+      "activo": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z",
+      "fecha_actualizacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "institucion.vicepresidencia",
+    "pk": 1,
+    "fields": {
+      "nombre": "Vicepresidencia de Operaciones Hídricas",
+      "codigo": "VOH",
+      "tipo": "OPERACIONES_HIDRICAS",
+      "empresa": 1,
+      "activo": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z",
+      "fecha_actualizacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "institucion.vicepresidencia",
+    "pk": 2,
+    "fields": {
+      "nombre": "Vicepresidencia de Comercialización",
+      "codigo": "VCO",
+      "tipo": "COMERCIALIZACION",
+      "empresa": 1,
+      "activo": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z",
+      "fecha_actualizacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "institucion.vicepresidencia",
+    "pk": 3,
+    "fields": {
+      "nombre": "Vicepresidencia Administrativa",
+      "codigo": "VAD",
+      "tipo": "ADMINISTRATIVA",
+      "empresa": 1,
+      "activo": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z",
+      "fecha_actualizacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "institucion.unidadorganizacional",
+    "pk": 1,
+    "fields": {
+      "nombre": "Unidad de Operaciones Región Occidental",
+      "codigo": "UORO",
+      "vicepresidencia": 1,
+      "activo": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z",
+      "fecha_actualizacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "institucion.unidadorganizacional",
+    "pk": 2,
+    "fields": {
+      "nombre": "Unidad de Operaciones Región Central",
+      "codigo": "UORC",
+      "vicepresidencia": 1,
+      "activo": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z",
+      "fecha_actualizacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "institucion.unidadorganizacional",
+    "pk": 3,
+    "fields": {
+      "nombre": "Unidad de Operaciones Región Oriental",
+      "codigo": "UORI",
+      "vicepresidencia": 1,
+      "activo": true,
+      "fecha_creacion": "2024-01-01T00:00:00Z",
+      "fecha_actualizacion": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 1,
+    "fields": {
+      "nombre": "Almacén Regional Zulia",
+      "prefijo": "ZUL",
+      "unidad_organizacional": 1,
+      "capacidad_maxima": 5000,
+      "ubicacion": "Maracaibo, Estado Zulia",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 2,
+    "fields": {
+      "nombre": "Almacén Regional Caracas",
+      "prefijo": "CAR",
+      "unidad_organizacional": 2,
+      "capacidad_maxima": 8000,
+      "ubicacion": "Caracas, Distrito Capital",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 3,
+    "fields": {
+      "nombre": "Almacén Regional Miranda",
+      "prefijo": "MIR",
+      "unidad_organizacional": 2,
+      "capacidad_maxima": 4500,
+      "ubicacion": "Los Teques, Estado Miranda",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 4,
+    "fields": {
+      "nombre": "Almacén Regional Aragua",
+      "prefijo": "ARA",
+      "unidad_organizacional": 2,
+      "capacidad_maxima": 3500,
+      "ubicacion": "Maracay, Estado Aragua",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 5,
+    "fields": {
+      "nombre": "Almacén Regional Lara",
+      "prefijo": "LAR",
+      "unidad_organizacional": 1,
+      "capacidad_maxima": 3000,
+      "ubicacion": "Barquisimeto, Estado Lara",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 6,
+    "fields": {
+      "nombre": "Almacén Regional Táchira",
+      "prefijo": "TAC",
+      "unidad_organizacional": 1,
+      "capacidad_maxima": 2500,
+      "ubicacion": "San Cristóbal, Estado Táchira",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 7,
+    "fields": {
+      "nombre": "Almacén Regional Bolívar",
+      "prefijo": "BOL",
+      "unidad_organizacional": 3,
+      "capacidad_maxima": 4000,
+      "ubicacion": "Ciudad Bolívar, Estado Bolívar",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 8,
+    "fields": {
+      "nombre": "Almacén Regional Anzoátegui",
+      "prefijo": "ANZ",
+      "unidad_organizacional": 3,
+      "capacidad_maxima": 3500,
+      "ubicacion": "Barcelona, Estado Anzoátegui",
+      "activo": true
+    }
+  },
+  {
+    "model": "institucion.almacenregional",
+    "pk": 9,
+    "fields": {
+      "nombre": "Almacén Regional Monagas",
+      "prefijo": "MON",
+      "unidad_organizacional": 3,
+      "capacidad_maxima": 2800,
+      "ubicacion": "Maturín, Estado Monagas",
+      "activo": true
+    }
+  }
+]

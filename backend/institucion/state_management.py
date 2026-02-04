@@ -62,8 +62,8 @@ class AssetStateManager:
             from_state='EN_ALMACEN',
             to_state='EN_TRANSITO',
             allowed=True,
-            auto_trigger_conditions=['transfer_approved'],
-            business_rule_description='Asset can be moved from warehouse when transfer is approved'
+            auto_trigger_conditions=['transfer_executed'],  # Changed from 'transfer_approved' to 'transfer_executed'
+            business_rule_description='Asset can be moved from warehouse when transfer is executed'
         ),
         StateTransitionRule(
             from_state='EN_ALMACEN',
@@ -338,17 +338,22 @@ class AssetStateManager:
         
         try:
             if stage == 'approved':
-                # When transfer is approved, asset should go to EN_TRANSITO
+                # NOTE: Asset state changes are now handled only during execution,
+                # not during approval. This ensures proper dual approval workflow.
+                pass
+            
+            elif stage == 'executed':
+                # When transfer is executed, asset should go to EN_TRANSITO
                 if activo.estado == 'EN_ALMACEN':
                     cls.change_asset_state(
                         activo=activo,
                         new_state='EN_TRANSITO',
                         user=user,
-                        motivo=f'Traslado aprobado: {solicitud_traslado.numero_solicitud}',
+                        motivo=f'Traslado ejecutado: {solicitud_traslado.numero_solicitud}',
                         observaciones=f'Traslado de {solicitud_traslado.almacen_origen.prefijo} '
                                     f'a {solicitud_traslado.almacen_destino.prefijo}',
                         auto_triggered=True,
-                        trigger_condition='transfer_approved'
+                        trigger_condition='transfer_executed'
                     )
             
             elif stage == 'completed':

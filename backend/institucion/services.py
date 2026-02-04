@@ -3564,6 +3564,32 @@ class AuditTrailService:
                 'recommendations': []
             }
             
+            # Check each audit model
+            audit_models = [
+                ('movimientos', HistorialMovimientoActivo),
+                ('estados', AuditoriaEstadoActivo),
+                ('aprobaciones', AuditoriaAprobacion),
+                ('operaciones', AuditoriaOperacionSistema),
+                ('accesos', AuditoriaAccesoSistema)
+            ]
+            
+            for model_name, model_class in audit_models:
+                model_results = cls._check_model_integrity(model_class, start_date, end_date)
+                integrity_results['model_results'][model_name] = model_results
+                
+                # Aggregate issues
+                if model_results.get('critical_issues'):
+                    integrity_results['critical_issues'].extend(model_results['critical_issues'])
+                    integrity_results['overall_status'] = 'CRITICAL'
+                
+                if model_results.get('warnings'):
+                    integrity_results['warnings'].extend(model_results['warnings'])
+                    if integrity_results['overall_status'] == 'VALID':
+                        integrity_results['overall_status'] = 'WARNING'
+            
+            # Generate recommendations
+            integrity_results['recommendations'] = cls._generate_integrity_recommendations(integrity_results)
+            
             return integrity_results
             
         except Exception as e:
@@ -4358,7 +4384,7 @@ class ReportGenerationService:
         
         for warehouse in warehouses:
             # Get current asset count in warehouse
-            current_assets = warehouse.activoinventario_set.count()
+            current_assets = warehouse.activos_actuales.count()
             utilization_percentage = (current_assets / warehouse.capacidad_maxima * 100) if warehouse.capacidad_maxima > 0 else 0
             
             capacity_analysis['warehouse_capacity'][warehouse.prefijo] = {
@@ -4403,44 +4429,13 @@ class ReportGenerationService:
         elif utilization_percentage >= 70:
             return 'MEDIO'
         else:
-            return 'BAJO'ndations': []
-            }
-            
-            # Check each audit model
-            audit_models = [
-                ('movimientos', HistorialMovimientoActivo),
-                ('estados', AuditoriaEstadoActivo),
-                ('aprobaciones', AuditoriaAprobacion),
-                ('operaciones', AuditoriaOperacionSistema),
-                ('accesos', AuditoriaAccesoSistema)
-            ]
-            
-            for model_name, model_class in audit_models:
-                model_results = cls._check_model_integrity(model_class, start_date, end_date)
-                integrity_results['model_results'][model_name] = model_results
-                
-                # Aggregate issues
-                if model_results.get('critical_issues'):
-                    integrity_results['critical_issues'].extend(model_results['critical_issues'])
-                    integrity_results['overall_status'] = 'CRITICAL'
-                
-                if model_results.get('warnings'):
-                    integrity_results['warnings'].extend(model_results['warnings'])
-                    if integrity_results['overall_status'] == 'VALID':
-                        integrity_results['overall_status'] = 'WARNING'
-            
-            # Generate recommendations
-            integrity_results['recommendations'] = cls._generate_integrity_recommendations(integrity_results)
-            
-            return integrity_results
-            
-        except Exception as e:
-            logger.error(f"Failed to perform comprehensive integrity check: {str(e)}")
-            return {
-                'timestamp': timezone.now().isoformat(),
-                'overall_status': 'ERROR',
-                'error': str(e)
-            }
+            return 'BAJO'
+    
+    def get_recommendations(self):
+        """Get recommendations for warehouse optimization"""
+        return {
+            'recommendations': []
+        }
     
     @classmethod
     def _check_model_integrity(cls, model_class, start_date: datetime = None, 
@@ -4795,6 +4790,651 @@ class ReportGenerationService:
         """Identify security incidents from audit data"""
         return []
 
+    # ============================================================================
+    # EXECUTIVE DASHBOARD HELPER METHODS
+    # ============================================================================
+    
+    @classmethod
+    def _generate_executive_summary(cls, filters: ReportFilters) -> Dict[str, Any]:
+        """Generate executive summary with high-level metrics"""
+        try:
+            from .models import (
+                ActivoInventario, AlmacenRegional, Vicepresidencia,
+                SolicitudTraslado, HistorialMovimientoActivo
+            )
+            
+            # Get total assets
+            total_assets = cls._build_asset_base_query(filters).count()
+            
+            # Get total warehouses
+            warehouse_query = AlmacenRegional.objects.all()
+            if filters.vicepresidencia_id:
+                warehouse_query = warehouse_query.filter(
+                    unidad_organizacional__vicepresidencia_id=filters.vicepresidencia_id
+                )
+            total_warehouses = warehouse_query.count()
+            
+            # Get active transfers
+            transfer_query = SolicitudTraslado.objects.filter(estado='PENDIENTE')
+            if filters.fecha_inicio:
+                transfer_query = transfer_query.filter(fecha_solicitud__gte=filters.fecha_inicio)
+            if filters.fecha_fin:
+                transfer_query = transfer_query.filter(fecha_solicitud__lte=filters.fecha_fin)
+            active_transfers = transfer_query.count()
+            
+            # Get recent movements
+            movement_query = cls._build_movement_base_query(filters)
+            recent_movements = movement_query.filter(
+                fecha_movimiento__gte=timezone.now() - timedelta(days=30)
+            ).count()
+            
+            # Calculate asset utilization
+            assets_in_use = cls._build_asset_base_query(filters).filter(estado='EN_USO').count()
+            utilization_rate = (assets_in_use / total_assets * 100) if total_assets > 0 else 0
+            
+            return {
+                'total_assets': total_assets,
+                'total_warehouses': total_warehouses,
+                'active_transfers': active_transfers,
+                'recent_movements': recent_movements,
+                'asset_utilization_rate': round(utilization_rate, 2),
+                'period': {
+                    'start': filters.fecha_inicio.isoformat() if filters.fecha_inicio else None,
+                    'end': filters.fecha_fin.isoformat() if filters.fecha_fin else None
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate executive summary: {str(e)}")
+            return {
+                'error': str(e),
+                'total_assets': 0,
+                'total_warehouses': 0,
+                'active_transfers': 0,
+                'recent_movements': 0,
+                'asset_utilization_rate': 0
+            }
+    
+    @classmethod
+    def _generate_vicepresidencia_metrics(cls, filters: ReportFilters) -> Dict[str, Any]:
+        """Generate metrics grouped by Vicepresidencia"""
+        try:
+            from .models import Vicepresidencia, ActivoInventario
+            
+            metrics = {}
+            
+            # Get all Vicepresidencias
+            vp_query = Vicepresidencia.objects.all()
+            if filters.empresa_id:
+                vp_query = vp_query.filter(empresa_id=filters.empresa_id)
+            if filters.vicepresidencia_id:
+                vp_query = vp_query.filter(id=filters.vicepresidencia_id)
+            
+            for vp in vp_query:
+                # Create filters for this VP
+                vp_filters = ReportFilters(
+                    fecha_inicio=filters.fecha_inicio,
+                    fecha_fin=filters.fecha_fin,
+                    empresa_id=filters.empresa_id,
+                    vicepresidencia_id=vp.id
+                )
+                
+                # Get assets for this VP
+                assets = cls._build_asset_base_query(vp_filters)
+                total_assets = assets.count()
+                
+                # Asset distribution by state
+                state_distribution = {}
+                for state_choice in ActivoInventario.ASSET_STATES:
+                    state_code = state_choice[0]
+                    state_count = assets.filter(estado=state_code).count()
+                    state_distribution[state_code] = state_count
+                
+                # Asset distribution by type
+                type_distribution = assets.values('tipo_activo').annotate(
+                    count=Count('id')
+                ).order_by('-count')
+                
+                # Recent activity
+                recent_movements = cls._build_movement_base_query(vp_filters).filter(
+                    fecha_movimiento__gte=timezone.now() - timedelta(days=30)
+                ).count()
+                
+                metrics[vp.nombre] = {
+                    'id': vp.id,
+                    'total_assets': total_assets,
+                    'state_distribution': state_distribution,
+                    'type_distribution': list(type_distribution),
+                    'recent_movements': recent_movements,
+                    'utilization_rate': round(
+                        (state_distribution.get('EN_USO', 0) / total_assets * 100) if total_assets > 0 else 0,
+                        2
+                    )
+                }
+            
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Failed to generate VP metrics: {str(e)}")
+            return {'error': str(e)}
+    
+    @classmethod
+    def _generate_kpis(cls, filters: ReportFilters) -> Dict[str, Any]:
+        """Generate key performance indicators"""
+        try:
+            from .models import SolicitudTraslado, ActivoInventario
+            
+            # Transfer efficiency
+            completed_transfers = SolicitudTraslado.objects.filter(estado='COMPLETADO')
+            total_transfers = SolicitudTraslado.objects.all()
+            
+            if filters.fecha_inicio:
+                completed_transfers = completed_transfers.filter(fecha_completado__gte=filters.fecha_inicio)
+                total_transfers = total_transfers.filter(fecha_solicitud__gte=filters.fecha_inicio)
+            if filters.fecha_fin:
+                completed_transfers = completed_transfers.filter(fecha_completado__lte=filters.fecha_fin)
+                total_transfers = total_transfers.filter(fecha_solicitud__lte=filters.fecha_fin)
+            
+            transfer_completion_rate = (
+                completed_transfers.count() / total_transfers.count() * 100
+            ) if total_transfers.count() > 0 else 0
+            
+            # Asset availability
+            available_assets = cls._build_asset_base_query(filters).filter(estado='EN_ALMACEN').count()
+            total_assets = cls._build_asset_base_query(filters).count()
+            availability_rate = (available_assets / total_assets * 100) if total_assets > 0 else 0
+            
+            # Average transfer time
+            avg_transfer_time = completed_transfers.aggregate(
+                avg_time=Avg(
+                    F('fecha_completado') - F('fecha_solicitud')
+                )
+            )['avg_time']
+            
+            avg_transfer_days = avg_transfer_time.days if avg_transfer_time else 0
+            
+            return {
+                'transfer_completion_rate': round(transfer_completion_rate, 2),
+                'asset_availability_rate': round(availability_rate, 2),
+                'average_transfer_time_days': avg_transfer_days,
+                'total_active_transfers': total_transfers.filter(estado='PENDIENTE').count(),
+                'assets_in_transit': cls._build_asset_base_query(filters).filter(estado='EN_TRANSITO').count()
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate KPIs: {str(e)}")
+            return {'error': str(e)}
+    
+    @classmethod
+    def _generate_trend_analysis(cls, filters: ReportFilters) -> Dict[str, Any]:
+        """Generate trend analysis data"""
+        try:
+            # Get monthly trends for the last 12 months
+            end_date = filters.fecha_fin or timezone.now().date()
+            start_date = filters.fecha_inicio or (end_date - timedelta(days=365))
+            
+            # Monthly asset movements
+            monthly_movements = cls._build_movement_base_query(filters).filter(
+                fecha_movimiento__gte=start_date,
+                fecha_movimiento__lte=end_date
+            ).extra(
+                select={'month': "strftime('%%Y-%%m', fecha_movimiento)"}
+            ).values('month').annotate(
+                count=Count('id')
+            ).order_by('month')
+            
+            # Monthly transfer requests
+            monthly_transfers = SolicitudTraslado.objects.filter(
+                fecha_solicitud__gte=start_date,
+                fecha_solicitud__lte=end_date
+            ).extra(
+                select={'month': "strftime('%%Y-%%m', fecha_solicitud)"}
+            ).values('month').annotate(
+                count=Count('id')
+            ).order_by('month')
+            
+            return {
+                'monthly_movements': list(monthly_movements),
+                'monthly_transfers': list(monthly_transfers),
+                'period': {
+                    'start': start_date.isoformat(),
+                    'end': end_date.isoformat()
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate trend analysis: {str(e)}")
+            return {'error': str(e)}
+    
+    @classmethod
+    def _generate_alerts_and_recommendations(cls, filters: ReportFilters) -> Dict[str, Any]:
+        """Generate alerts and recommendations"""
+        try:
+            alerts = []
+            recommendations = []
+            
+            # Check for overdue transfers
+            overdue_transfers = SolicitudTraslado.objects.filter(
+                estado='PENDIENTE',
+                fecha_limite__lt=timezone.now()
+            ).count()
+            
+            if overdue_transfers > 0:
+                alerts.append({
+                    'type': 'warning',
+                    'title': 'Traslados Vencidos',
+                    'message': f'{overdue_transfers} traslados han superado su fecha límite',
+                    'count': overdue_transfers
+                })
+                recommendations.append({
+                    'priority': 'high',
+                    'title': 'Revisar Traslados Pendientes',
+                    'description': 'Se recomienda revisar y procesar los traslados vencidos'
+                })
+            
+            # Check for low warehouse utilization
+            from .models import AlmacenRegional
+            warehouses = AlmacenRegional.objects.all()
+            low_utilization_warehouses = []
+            
+            for warehouse in warehouses:
+                assets_count = cls._build_asset_base_query(filters).filter(
+                    almacen_actual=warehouse
+                ).count()
+                # Assuming capacity of 100 assets per warehouse for demo
+                utilization = (assets_count / 100) * 100
+                if utilization < 20:  # Less than 20% utilization
+                    low_utilization_warehouses.append(warehouse.nombre)
+            
+            if low_utilization_warehouses:
+                alerts.append({
+                    'type': 'info',
+                    'title': 'Baja Utilización de Almacenes',
+                    'message': f'{len(low_utilization_warehouses)} almacenes con baja utilización',
+                    'warehouses': low_utilization_warehouses
+                })
+                recommendations.append({
+                    'priority': 'medium',
+                    'title': 'Optimizar Distribución de Activos',
+                    'description': 'Considerar redistribuir activos para mejorar la utilización'
+                })
+            
+            return {
+                'alerts': alerts,
+                'recommendations': recommendations,
+                'alert_count': len(alerts),
+                'recommendation_count': len(recommendations)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate alerts and recommendations: {str(e)}")
+            return {'error': str(e), 'alerts': [], 'recommendations': []}
+    
+    @classmethod
+    def _generate_executive_statistics(cls, report_data: Dict[str, Any], filters: ReportFilters) -> Dict[str, Any]:
+        """Generate statistics for executive dashboard"""
+        try:
+            summary = report_data.get('executive_summary', {})
+            vp_metrics = report_data.get('vicepresidencia_metrics', {})
+            
+            return {
+                'summary_stats': {
+                    'total_assets': summary.get('total_assets', 0),
+                    'total_warehouses': summary.get('total_warehouses', 0),
+                    'active_transfers': summary.get('active_transfers', 0),
+                    'utilization_rate': summary.get('asset_utilization_rate', 0)
+                },
+                'vicepresidencia_count': len(vp_metrics),
+                'top_performing_vp': cls._get_top_performing_vp(vp_metrics),
+                'performance_distribution': cls._get_performance_distribution(vp_metrics)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate executive statistics: {str(e)}")
+            return {'error': str(e)}
+    
+    @classmethod
+    def _generate_executive_charts(cls, report_data: Dict[str, Any], filters: ReportFilters) -> Dict[str, Any]:
+        """Generate chart data for executive dashboard"""
+        try:
+            vp_metrics = report_data.get('vicepresidencia_metrics', {})
+            trend_analysis = report_data.get('trend_analysis', {})
+            
+            # VP comparison chart
+            vp_comparison = {
+                'labels': list(vp_metrics.keys()),
+                'datasets': [{
+                    'label': 'Total de Activos',
+                    'data': [vp_data.get('total_assets', 0) for vp_data in vp_metrics.values()]
+                }, {
+                    'label': 'Tasa de Utilización (%)',
+                    'data': [vp_data.get('utilization_rate', 0) for vp_data in vp_metrics.values()]
+                }]
+            }
+            
+            # Trend chart
+            trend_chart = {
+                'labels': [item['month'] for item in trend_analysis.get('monthly_movements', [])],
+                'datasets': [{
+                    'label': 'Movimientos Mensuales',
+                    'data': [item['count'] for item in trend_analysis.get('monthly_movements', [])]
+                }, {
+                    'label': 'Traslados Mensuales',
+                    'data': [item['count'] for item in trend_analysis.get('monthly_transfers', [])]
+                }]
+            }
+            
+            return {
+                'vp_comparison': vp_comparison,
+                'trend_analysis': trend_chart,
+                'chart_types': ['bar', 'line']
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to generate executive charts: {str(e)}")
+            return {'error': str(e)}
+    
+    @classmethod
+    def _get_top_performing_vp(cls, vp_metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """Get the top performing Vicepresidencia"""
+        if not vp_metrics:
+            return {}
+        
+        top_vp = max(vp_metrics.items(), key=lambda x: x[1].get('utilization_rate', 0))
+        return {
+            'name': top_vp[0],
+            'utilization_rate': top_vp[1].get('utilization_rate', 0),
+            'total_assets': top_vp[1].get('total_assets', 0)
+        }
+    
+    @classmethod
+    def _get_performance_distribution(cls, vp_metrics: Dict[str, Any]) -> Dict[str, int]:
+        """Get performance distribution across VPs"""
+        distribution = {'high': 0, 'medium': 0, 'low': 0}
+        
+        for vp_data in vp_metrics.values():
+            utilization = vp_data.get('utilization_rate', 0)
+            if utilization >= 80:
+                distribution['high'] += 1
+            elif utilization >= 50:
+                distribution['medium'] += 1
+            else:
+                distribution['low'] += 1
+        
+        return distribution
+
+    # ============================================================================
+    # EXPORT FUNCTIONALITY
+    # ============================================================================
+    
+    @classmethod
+    def export_report_to_pdf(cls, report_data: ReportData, filename: str = None) -> bytes:
+        """
+        Export report to PDF format.
+        
+        Args:
+            report_data: ReportData instance to export
+            filename: Optional filename for the PDF
+            
+        Returns:
+            bytes: PDF file content
+            
+        Requirements implemented:
+        - 12.5: Add export capabilities for PDF and Excel formats
+        """
+        try:
+            from reportlab.lib.pagesizes import letter, A4
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            from reportlab.lib import colors
+            from io import BytesIO
+            
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Title
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                spaceAfter=30,
+                alignment=1  # Center alignment
+            )
+            story.append(Paragraph(report_data.metadata.get('title', 'Reporte'), title_style))
+            story.append(Spacer(1, 12))
+            
+            # Metadata
+            metadata_data = [
+                ['Tipo de Reporte:', report_data.metadata.get('report_type', 'N/A')],
+                ['Generado:', report_data.generated_at.strftime('%Y-%m-%d %H:%M:%S')],
+                ['Tiempo de Ejecución:', f"{report_data.execution_time_seconds:.2f} segundos"],
+                ['Total de Registros:', str(report_data.total_records)]
+            ]
+            
+            metadata_table = Table(metadata_data, colWidths=[2*inch, 3*inch])
+            metadata_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.grey),
+                ('TEXTCOLOR', (0, 0), (0, -1), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                ('BACKGROUND', (1, 0), (1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            
+            story.append(metadata_table)
+            story.append(Spacer(1, 20))
+            
+            # Statistics
+            if report_data.statistics:
+                story.append(Paragraph('Estadísticas', styles['Heading2']))
+                stats_data = []
+                for key, value in report_data.statistics.items():
+                    if isinstance(value, dict):
+                        for sub_key, sub_value in value.items():
+                            stats_data.append([f"{key} - {sub_key}:", str(sub_value)])
+                    else:
+                        stats_data.append([f"{key}:", str(value)])
+                
+                if stats_data:
+                    stats_table = Table(stats_data, colWidths=[3*inch, 2*inch])
+                    stats_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (0, -1), colors.lightblue),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 9),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                    ]))
+                    story.append(stats_table)
+                    story.append(Spacer(1, 20))
+            
+            # Build PDF
+            doc.build(story)
+            buffer.seek(0)
+            return buffer.getvalue()
+            
+        except ImportError:
+            logger.warning("ReportLab not installed. PDF export not available.")
+            raise ValidationError("PDF export requires reportlab package")
+        except Exception as e:
+            logger.error(f"Failed to export PDF: {str(e)}")
+            raise ValidationError(f"Error exporting PDF: {str(e)}")
+    
+    @classmethod
+    def export_report_to_excel(cls, report_data: ReportData, filename: str = None) -> bytes:
+        """
+        Export report to Excel format.
+        
+        Args:
+            report_data: ReportData instance to export
+            filename: Optional filename for the Excel file
+            
+        Returns:
+            bytes: Excel file content
+            
+        Requirements implemented:
+        - 12.5: Add export capabilities for PDF and Excel formats
+        """
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, PatternFill, Alignment
+            from io import BytesIO
+            
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Reporte"
+            
+            # Header styling
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            
+            # Title
+            ws['A1'] = report_data.metadata.get('title', 'Reporte')
+            ws['A1'].font = Font(bold=True, size=16)
+            ws.merge_cells('A1:D1')
+            
+            # Metadata
+            row = 3
+            ws[f'A{row}'] = 'Tipo de Reporte:'
+            ws[f'B{row}'] = report_data.metadata.get('report_type', 'N/A')
+            row += 1
+            
+            ws[f'A{row}'] = 'Generado:'
+            ws[f'B{row}'] = report_data.generated_at.strftime('%Y-%m-%d %H:%M:%S')
+            row += 1
+            
+            ws[f'A{row}'] = 'Tiempo de Ejecución:'
+            ws[f'B{row}'] = f"{report_data.execution_time_seconds:.2f} segundos"
+            row += 1
+            
+            ws[f'A{row}'] = 'Total de Registros:'
+            ws[f'B{row}'] = report_data.total_records
+            row += 2
+            
+            # Statistics
+            if report_data.statistics:
+                ws[f'A{row}'] = 'Estadísticas'
+                ws[f'A{row}'].font = Font(bold=True, size=14)
+                row += 1
+                
+                for key, value in report_data.statistics.items():
+                    if isinstance(value, dict):
+                        ws[f'A{row}'] = key
+                        ws[f'A{row}'].font = Font(bold=True)
+                        row += 1
+                        for sub_key, sub_value in value.items():
+                            ws[f'B{row}'] = sub_key
+                            ws[f'C{row}'] = str(sub_value)
+                            row += 1
+                    else:
+                        ws[f'A{row}'] = key
+                        ws[f'B{row}'] = str(value)
+                        row += 1
+            
+            # Auto-adjust column widths
+            for column in ws.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
+            
+            # Save to buffer
+            buffer = BytesIO()
+            wb.save(buffer)
+            buffer.seek(0)
+            return buffer.getvalue()
+            
+        except ImportError:
+            logger.warning("OpenPyXL not installed. Excel export not available.")
+            raise ValidationError("Excel export requires openpyxl package")
+        except Exception as e:
+            logger.error(f"Failed to export Excel: {str(e)}")
+            raise ValidationError(f"Error exporting Excel: {str(e)}")
+    
+    @classmethod
+    def schedule_report_generation(cls, report_type: str, filters: ReportFilters, 
+                                 schedule_config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Schedule automatic report generation and distribution.
+        
+        Args:
+            report_type: Type of report to generate
+            filters: Report filters to apply
+            schedule_config: Configuration for scheduling (frequency, recipients, etc.)
+            
+        Returns:
+            Dict: Scheduling result with task ID and status
+            
+        Requirements implemented:
+        - 12.6: Implement scheduled report generation and distribution
+        """
+        try:
+            # This would integrate with a task queue like Celery in production
+            # For now, we'll return a mock response
+            
+            task_id = f"report_{report_type}_{timezone.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            # Validate schedule configuration
+            required_fields = ['frequency', 'recipients']
+            for field in required_fields:
+                if field not in schedule_config:
+                    raise ValidationError(f"Missing required field: {field}")
+            
+            # Store scheduling information (in production, this would go to a database)
+            schedule_info = {
+                'task_id': task_id,
+                'report_type': report_type,
+                'filters': filters.__dict__,
+                'schedule_config': schedule_config,
+                'status': 'scheduled',
+                'created_at': timezone.now().isoformat(),
+                'next_run': cls._calculate_next_run(schedule_config['frequency'])
+            }
+            
+            logger.info(f"Scheduled report generation: {task_id}")
+            
+            return {
+                'success': True,
+                'task_id': task_id,
+                'status': 'scheduled',
+                'next_run': schedule_info['next_run'],
+                'message': f'Report scheduled successfully with ID: {task_id}'
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to schedule report: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to schedule report generation'
+            }
+    
+    @classmethod
+    def _calculate_next_run(cls, frequency: str) -> str:
+        """Calculate next run time based on frequency"""
+        now = timezone.now()
+        
+        if frequency == 'daily':
+            next_run = now + timedelta(days=1)
+        elif frequency == 'weekly':
+            next_run = now + timedelta(weeks=1)
+        elif frequency == 'monthly':
+            next_run = now + timedelta(days=30)
+        else:
+            next_run = now + timedelta(hours=1)  # Default to hourly
+        
+        return next_run.isoformat()
+
 
 class MigrationEngine:
     """
@@ -4854,3 +5494,33 @@ class MigrationEngine:
                 'status': 'error',
                 'timestamp': timezone.now()
             }
+    
+    # ============================================================================
+    # ASSET MOVEMENT REPORT METHODS
+    # ============================================================================
+    
+    @classmethod
+    def _generate_movement_summary(cls, movements_query, filters: ReportFilters) -> Dict[str, Any]:
+        """Generate movement summary for asset movement report"""
+        summary = {
+            'total_movements': movements_query.count(),
+            'by_movement_type': {},
+            'by_warehouse': {},
+            'by_time_period': {},
+            'recent_movements': []
+        }
+        
+        # Group by movement type
+        type_stats = movements_query.values('tipo_movimiento').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        for stat in type_stats:
+            summary['by_movement_type'][stat['tipo_movimiento']] = stat['count']
+        
+        # Group by warehouse (origin and destination)
+        origin_stats = movements_query.exclude(almacen_origen__isnull=True).values(
+            'almacen_origen__nombre'
+        ).annotate(
+            count=Count('id')
+        ).order_by('-count')

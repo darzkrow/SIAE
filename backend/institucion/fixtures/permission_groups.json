@@ -1,0 +1,50 @@
+[
+  {
+    "model": "auth.group",
+    "pk": 1,
+    "fields": {
+      "name": "Administradores Hidroven",
+      "permissions": []
+    }
+  },
+  {
+    "model": "auth.group",
+    "pk": 2,
+    "fields": {
+      "name": "Gerentes Regionales",
+      "permissions": []
+    }
+  },
+  {
+    "model": "auth.group",
+    "pk": 3,
+    "fields": {
+      "name": "Supervisores de Almacén",
+      "permissions": []
+    }
+  },
+  {
+    "model": "auth.group",
+    "pk": 4,
+    "fields": {
+      "name": "Operadores de Inventario",
+      "permissions": []
+    }
+  },
+  {
+    "model": "auth.group",
+    "pk": 5,
+    "fields": {
+      "name": "Auditores",
+      "permissions": []
+    }
+  },
+  {
+    "model": "auth.group",
+    "pk": 6,
+    "fields": {
+      "name": "Aprobadores de Transferencias",
+      "permissions": []
+    }
+  }
+]

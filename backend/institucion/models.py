@@ -2228,7 +2228,7 @@ class SolicitudTraslado(models.Model):
             # 4. Handle state change using state management system
             AssetStateManager.handle_transfer_state_changes(
                 solicitud_traslado=self,
-                stage='approved',
+                stage='executed',  # Changed from 'approved' to 'executed'
                 user=executor
             )
             
@@ -2658,30 +2658,9 @@ class AprobacionTraslado(models.Model):
         # Update workflow state
         solicitud.update_workflow_state()
         
-        # Handle automatic state changes for asset ONLY if both approvals are complete
-        # and this is the final approval that completes the dual approval
-        if (solicitud.estado == 'APROBADA_COMPLETA' and 
-            solicitud.aprobacion_origen and solicitud.aprobacion_destino and
-            solicitud.aprobacion_origen.decision == 'APROBADO' and
-            solicitud.aprobacion_destino.decision == 'APROBADO'):
-            
-            from .state_management import AssetStateManager
-            
-            # Only change state if asset is still in warehouse (not already in transit)
-            if solicitud.activo.estado == 'EN_ALMACEN':
-                AssetStateManager.handle_transfer_state_changes(
-                    solicitud_traslado=solicitud,
-                    stage='approved',
-                    user=self.aprobador
-                )
-                
-                # Update solicitud state to EN_TRANSITO when asset state changes
-                if solicitud.activo.estado == 'EN_TRANSITO':
-                    from django.utils import timezone
-                    solicitud.estado = 'EN_TRANSITO'
-                    solicitud.fecha_ejecucion = timezone.now()
-                    solicitud.ejecutado_por = self.aprobador
-                    solicitud.save()
+        # NOTE: Asset state changes are now handled only during transfer execution,
+        # not during the approval process. This ensures proper dual approval workflow
+        # where both approvals must be received before any state changes occur.
     
     def can_be_modified(self):
         """Check if this approval can be modified"""
