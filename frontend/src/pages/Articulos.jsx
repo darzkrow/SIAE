@@ -4,12 +4,14 @@ import ChemicalForm from '../components/forms/ChemicalForm';
 import PipeForm from '../components/forms/PipeForm';
 import PumpForm from '../components/forms/PumpForm';
 import AccessoryForm from '../components/forms/AccessoryForm';
+import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { Plus, Search, Edit2, Trash2, Package, Droplets, Activity, Wrench } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
 export default function Articulos() {
     const { user } = useAuth();
+    const { addNotification } = useNotifications();
     const [activeTab, setActiveTab] = useState('chemical');
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,16 +23,14 @@ export default function Articulos() {
     const [categorias, setCategorias] = useState([]);
     const [units, setUnits] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
+    const [marcas, setMarcas] = useState([]);
 
     const tabs = [
-        { id: 'chemical', label: 'Químicos', icon: <Package size={18} /> },
-        { id: 'pipe', label: 'Tuberías', icon: <Droplets size={18} /> },
-        { id: 'pump', label: 'Bombas', icon: <Activity size={18} /> },
-        { id: 'accessory', label: 'Accesorios', icon: <Wrench size={18} /> },
+        { id: 'chemical', label: 'Químicos', icon: Package, color: 'primary' },
+        { id: 'pipe', label: 'Tuberías', icon: Droplets, color: 'info' },
+        { id: 'pump', label: 'Bombas', icon: Activity, color: 'success' },
+        { id: 'accessory', label: 'Accesorios', icon: Wrench, color: 'warning' },
     ];
-
-    // marcas para bombas
-    const [marcas, setMarcas] = useState([]);
 
     useEffect(() => {
         fetchAuxData();
@@ -54,6 +54,12 @@ export default function Articulos() {
             setMarcas(marRes.data.results || marRes.data);
         } catch (err) {
             console.error("Error loading auxiliary data", err);
+            addNotification({
+                type: 'error',
+                title: 'Error de carga',
+                message: 'No se pudieron cargar los datos auxiliares',
+                duration: 5000
+            });
         }
     };
 
@@ -71,6 +77,12 @@ export default function Articulos() {
             setItems(res.data.results || res.data);
         } catch (err) {
             console.error("Error fetching items", err);
+            addNotification({
+                type: 'error',
+                title: 'Error de conexión',
+                message: 'No se pudieron cargar los artículos',
+                duration: 5000
+            });
         } finally {
             setLoading(false);
         }
@@ -88,10 +100,20 @@ export default function Articulos() {
             }
             if (editingId) {
                 await service.update(editingId, payload);
-                Swal.fire('Actualizado', 'Artículo actualizado', 'success');
+                addNotification({
+                    type: 'success',
+                    title: 'Artículo actualizado',
+                    message: 'El artículo se actualizó correctamente',
+                    duration: 3000
+                });
             } else {
                 await service.create(payload);
-                Swal.fire('Creado', 'Artículo creado', 'success');
+                addNotification({
+                    type: 'success',
+                    title: 'Artículo creado',
+                    message: 'El artículo se creó correctamente',
+                    duration: 3000
+                });
             }
             setEditingId(null);
             setShowForm(false);
@@ -99,26 +121,53 @@ export default function Articulos() {
         } catch (err) {
             console.error("Error saving item", err);
             const msg = err.response?.data?.detail || JSON.stringify(err.response?.data) || "Error al guardar";
-            Swal.fire('Error', msg, 'error');
+            addNotification({
+                type: 'error',
+                title: 'Error',
+                message: msg,
+                duration: 5000
+            });
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('¿Eliminar este artículo?')) return;
-        try {
-            let service;
-            switch (activeTab) {
-                case 'chemical': service = InventoryService.chemicals; break;
-                case 'pipe': service = InventoryService.pipes; break;
-                case 'pump': service = InventoryService.pumps; break;
-                case 'accessory': service = InventoryService.accessories; break;
+        const result = await Swal.fire({
+            title: '¿Eliminar artículo?',
+            text: '¿Está seguro de eliminar este artículo?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                let service;
+                switch (activeTab) {
+                    case 'chemical': service = InventoryService.chemicals; break;
+                    case 'pipe': service = InventoryService.pipes; break;
+                    case 'pump': service = InventoryService.pumps; break;
+                    case 'accessory': service = InventoryService.accessories; break;
+                }
+                await service.delete(id);
+                fetchItems();
+                addNotification({
+                    type: 'success',
+                    title: 'Artículo eliminado',
+                    message: 'El artículo se eliminó correctamente',
+                    duration: 3000
+                });
+            } catch (err) {
+                console.error("Error deleting", err);
+                addNotification({
+                    type: 'error',
+                    title: 'Error',
+                    message: 'No se pudo eliminar el artículo',
+                    duration: 5000
+                });
             }
-            await service.delete(id);
-            fetchItems();
-            Swal.fire('Eliminado', 'Artículo eliminado', 'success');
-        } catch (err) {
-            console.error("Error deleting", err);
-            Swal.fire('Error', 'No se pudo eliminar', 'error');
         }
     };
 
@@ -133,103 +182,239 @@ export default function Articulos() {
     };
 
     const filteredItems = items.filter(item =>
-        item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.nombre && item.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
+    const currentTab = tabs.find(t => t.id === activeTab);
+
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold">Catálogo de Artículos</h1>
-                {user?.is_admin && (
-                    <button
-                        onClick={() => setShowForm(!showForm)}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                    >
-                        <Plus size={20} /> Nuevo {tabs.find(t => t.id === activeTab)?.label.slice(0, -1)}
-                    </button>
-                )}
+        <div>
+            {/* Header */}
+            <div className="row mb-4">
+                <div className="col-sm-6">
+                    <h1 className="h3 mb-0">
+                        <Package className="mr-2" size={24} />
+                        Catálogo de Artículos
+                    </h1>
+                    <p className="text-muted mb-0">
+                        Gestión de productos del inventario
+                    </p>
+                </div>
+                <div className="col-sm-6">
+                    <div className="float-sm-right">
+                        {user?.is_admin && (
+                            <button
+                                onClick={() => setShowForm(!showForm)}
+                                className="btn btn-primary"
+                            >
+                                <Plus size={16} className="mr-2" /> 
+                                Nuevo {currentTab?.label.slice(0, -1)}
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            {/* Tabs */}
-            <div className="bg-white rounded-lg shadow p-2 flex overflow-x-auto gap-2">
-                {tabs.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => { setActiveTab(tab.id); setShowForm(false); }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition whitespace-nowrap ${activeTab === tab.id
-                                ? 'bg-blue-600 text-white font-medium'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                    >
-                        {tab.icon} {tab.label}
-                    </button>
-                ))}
+            {/* Tabs Navigation */}
+            <div className="row mb-4">
+                <div className="col-12">
+                    <div className="card">
+                        <div className="card-header p-2">
+                            <ul className="nav nav-pills">
+                                {tabs.map(tab => {
+                                    const Icon = tab.icon;
+                                    return (
+                                        <li key={tab.id} className="nav-item">
+                                            <button
+                                                onClick={() => { 
+                                                    setActiveTab(tab.id); 
+                                                    setShowForm(false); 
+                                                    setEditingId(null);
+                                                }}
+                                                className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
+                                            >
+                                                <Icon size={16} className="mr-2" />
+                                                {tab.label}
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Form */}
             {showForm && (
-                <div className="bg-white rounded-lg shadow p-6 border-blue-500 border-l-4">
-                    <h2 className="text-xl font-bold mb-4">{editingId ? 'Editar' : 'Crear'} Artículo</h2>
-                    {activeTab === 'chemical' && (
-                      <ChemicalForm categorias={categorias} units={units} suppliers={suppliers} initialData={editingId ? items.find(i => i.id === editingId) : {}} onSubmit={handleSubmitByType} onCancel={resetForm} />
-                    )}
-                    {activeTab === 'pipe' && (
-                      <PipeForm categorias={categorias} units={units} suppliers={suppliers} initialData={editingId ? items.find(i => i.id === editingId) : {}} onSubmit={handleSubmitByType} onCancel={resetForm} />
-                    )}
-                    {activeTab === 'pump' && (
-                      <PumpForm categorias={categorias} units={units} suppliers={suppliers} marcas={marcas} initialData={editingId ? items.find(i => i.id === editingId) : {}} onSubmit={handleSubmitByType} onCancel={resetForm} />
-                    )}
-                    {activeTab === 'accessory' && (
-                      <AccessoryForm categorias={categorias} units={units} suppliers={suppliers} initialData={editingId ? items.find(i => i.id === editingId) : {}} onSubmit={handleSubmitByType} onCancel={resetForm} />
-                    )}
+                <div className="row mb-4">
+                    <div className="col-12">
+                        <AdminLTEWidget 
+                            type="card" 
+                            title={`${editingId ? 'Editar' : 'Crear'} ${currentTab?.label.slice(0, -1)}`}
+                            color="primary"
+                        >
+                            {activeTab === 'chemical' && (
+                              <ChemicalForm 
+                                categorias={categorias} 
+                                units={units} 
+                                suppliers={suppliers} 
+                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
+                                onSubmit={handleSubmitByType} 
+                                onCancel={resetForm} 
+                              />
+                            )}
+                            {activeTab === 'pipe' && (
+                              <PipeForm 
+                                categorias={categorias} 
+                                units={units} 
+                                suppliers={suppliers} 
+                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
+                                onSubmit={handleSubmitByType} 
+                                onCancel={resetForm} 
+                              />
+                            )}
+                            {activeTab === 'pump' && (
+                              <PumpForm 
+                                categorias={categorias} 
+                                units={units} 
+                                suppliers={suppliers} 
+                                marcas={marcas} 
+                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
+                                onSubmit={handleSubmitByType} 
+                                onCancel={resetForm} 
+                              />
+                            )}
+                            {activeTab === 'accessory' && (
+                              <AccessoryForm 
+                                categorias={categorias} 
+                                units={units} 
+                                suppliers={suppliers} 
+                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
+                                onSubmit={handleSubmitByType} 
+                                onCancel={resetForm} 
+                              />
+                            )}
+                        </AdminLTEWidget>
+                    </div>
                 </div>
             )}
 
-            {/* List */}
-            <div className="bg-white rounded-lg shadow p-4">
-                <div className="relative mb-4">
-                    <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Buscar..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg"
-                    />
+            {/* Search and List */}
+            <AdminLTEWidget 
+                type="table" 
+                title={`Lista de ${currentTab?.label}`}
+                icon={currentTab?.icon}
+                color={currentTab?.color}
+                onRefresh={fetchItems}
+            >
+                <div className="row mb-3">
+                    <div className="col-md-6">
+                        <div className="input-group">
+                            <div className="input-group-prepend">
+                                <span className="input-group-text">
+                                    <Search size={16} />
+                                </span>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Buscar artículos..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="form-control"
+                            />
+                        </div>
+                    </div>
+                    <div className="col-md-6">
+                        <div className="float-right">
+                            <span className="badge badge-info">
+                                {filteredItems.length} artículos encontrados
+                            </span>
+                        </div>
+                    </div>
                 </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
+                
+                <div className="table-responsive">
+                    <table className="table table-striped">
+                        <thead>
                             <tr>
-                                <th className="px-4 py-2 text-left">SKU</th>
-                                <th className="px-4 py-2 text-left">Nombre</th>
-                                <th className="px-4 py-2 text-left">Categoría</th>
-                                <th className="px-4 py-2 text-left">Stock</th>
-                                {user?.is_admin && <th className="px-4 py-2 text-left">Acciones</th>}
+                                <th>SKU</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Stock</th>
+                                {user?.is_admin && <th>Acciones</th>}
                             </tr>
                         </thead>
                         <tbody>
-                            {loading ? <tr><td colSpan="5" className="p-4 text-center">Cargando...</td></tr> :
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={user?.is_admin ? "5" : "4"} className="text-center py-4">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="sr-only">Cargando...</span>
+                                        </div>
+                                        <p className="mt-2 text-muted">Cargando artículos...</p>
+                                    </td>
+                                </tr>
+                            ) : filteredItems.length === 0 ? (
+                                <tr>
+                                    <td colSpan={user?.is_admin ? "5" : "4"} className="text-center py-4 text-muted">
+                                        <Package size={24} className="mb-2" />
+                                        <p>No se encontraron artículos</p>
+                                    </td>
+                                </tr>
+                            ) : (
                                 filteredItems.map(item => (
-                                    <tr key={item.id} className="border-b hover:bg-gray-50">
-                                        <td className="px-4 py-2 text-sm text-gray-500">{item.sku}</td>
-                                        <td className="px-4 py-2 font-medium">{item.nombre}</td>
-                                        <td className="px-4 py-2 text-sm">{item.categoria_nombre || item.categoria?.nombre}</td>
-                                        <td className="px-4 py-2 text-sm">{item.stock_actual} {item.unidad_medida_nombre || ''}</td>
+                                    <tr key={item.id}>
+                                        <td>
+                                            <code className="text-sm">{item.sku || '-'}</code>
+                                        </td>
+                                        <td className="font-weight-bold">{item.nombre}</td>
+                                        <td>
+                                            <span className="badge badge-secondary">
+                                                {item.categoria_nombre || item.categoria?.nombre || '-'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className={`badge ${(item.stock_actual || 0) > 10 ? 'badge-success' : (item.stock_actual || 0) > 0 ? 'badge-warning' : 'badge-danger'}`}>
+                                                {item.stock_actual || 0} {item.unidad_medida_nombre || ''}
+                                            </span>
+                                        </td>
                                         {user?.is_admin && (
-                                            <td className="px-4 py-2 flex gap-2">
-                                                <button onClick={() => handleEdit(item)} className="text-blue-600"><Edit2 size={16} /></button>
-                                                <button onClick={() => handleDelete(item.id)} className="text-red-600"><Trash2 size={16} /></button>
+                                            <td>
+                                                <div className="btn-group btn-group-sm">
+                                                    <button 
+                                                        onClick={() => handleEdit(item)} 
+                                                        className="btn btn-outline-info"
+                                                        title="Editar"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDelete(item.id)} 
+                                                        className="btn btn-outline-danger"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         )}
                                     </tr>
-                                ))}
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
-            </div>
+                
+                {filteredItems.length > 0 && (
+                    <div className="card-footer">
+                        <small className="text-muted">
+                            Mostrando {filteredItems.length} de {items.length} artículos
+                        </small>
+                    </div>
+                )}
+            </AdminLTEWidget>
         </div>
     );
 }

@@ -11,5 +11,21 @@ export default defineConfig({
         watch: {
             usePolling: true
         }
+    },
+    test: {
+        globals: true,
+        environment: 'jsdom',
+        setupFiles: './src/test/setup.js',
+        css: true,
+    },
+    resolve: {
+        alias: {
+            '@': '/src',
+            '@components': '/src/components',
+            '@pages': '/src/pages',
+            '@services': '/src/services',
+            '@utils': '/src/utils',
+            '@test': '/src/test'
+        }
     }
 })

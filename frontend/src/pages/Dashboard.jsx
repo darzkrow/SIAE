@@ -1,19 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { InventoryService } from '../services/inventory.service';
-import { Package, Droplets, Activity, AlertCircle, TrendingUp, Plus, Minus, ArrowRight, Calendar, Users, BarChart2, PieChart, ListChecks } from 'lucide-react';
+import { 
+  Package, 
+  Droplets, 
+  Activity, 
+  AlertCircle, 
+  TrendingUp, 
+  Plus, 
+  Minus, 
+  ArrowRight, 
+  Calendar, 
+  Users, 
+  BarChart2, 
+  PieChart, 
+  ListChecks,
+  DollarSign,
+  Building
+} from 'lucide-react';
+import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import Swal from 'sweetalert2';
-import StatCard from '../components/StatCard'; // Importar el nuevo componente
 
 export default function Dashboard() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { addNotification } = useNotifications();
     const [stats, setStats] = useState(null);
     const [movimientos, setMovimientos] = useState([]);
     const [alertas, setAlertas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const hasShownWelcome = useRef(false);
+
+    // Clear welcome notification when component unmounts
+    useEffect(() => {
+        return () => {
+            // Reset welcome flag when component unmounts
+            hasShownWelcome.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,15 +53,40 @@ export default function Dashboard() {
                 setStats(statsRes.data);
                 setMovimientos(movRes.data.results || movRes.data);
                 setAlertas(alertasRes.data.results || alertasRes.data);
+                
+                // Show welcome notification only once per session
+                const welcomeKey = `dashboard-welcome-${user?.id || 'unknown'}`;
+                if (!sessionStorage.getItem(welcomeKey) && !hasShownWelcome.current) {
+                    hasShownWelcome.current = true;
+                    addNotification({
+                        type: 'success',
+                        title: '¡Bienvenido!',
+                        message: `Dashboard cargado correctamente para ${user?.username}`,
+                        duration: 3000
+                    });
+                    sessionStorage.setItem(welcomeKey, 'true');
+                }
             } catch (err) {
                 console.error("Error fetching dashboard data", err);
-                setError("No se pudieron cargar los datos del dashboard. Verifique la conexión con el servidor.");
+                const errorMessage = "No se pudieron cargar los datos del dashboard. Verifique la conexión con el servidor.";
+                setError(errorMessage);
+                
+                addNotification({
+                    type: 'error',
+                    title: 'Error de conexión',
+                    message: errorMessage,
+                    duration: 5000
+                });
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
-    }, []);
+        
+        // Only fetch data if user is available
+        if (user) {
+            fetchData();
+        }
+    }, [user?.id]); // Only depend on user ID to prevent unnecessary re-renders
 
     const handleQuickAction = (action) => {
         if (action === 'entrada') {
@@ -49,10 +100,12 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full">
+            <div className="d-flex justify-content-center align-items-center" style={{ height: '400px' }}>
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando dashboard...</p>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="sr-only">Cargando...</span>
+                    </div>
+                    <p className="mt-3 text-muted">Cargando dashboard...</p>
                 </div>
             </div>
         );
@@ -60,199 +113,259 @@ export default function Dashboard() {
 
     if (error) {
         return (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
-                <p className="font-bold">Error</p>
+            <div className="alert alert-danger" role="alert">
+                <h4 className="alert-heading">Error</h4>
                 <p>{error}</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8">
+        <div>
             {/* Welcome Section */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl p-8 shadow-lg">
-                <h1 className="text-4xl font-bold">¡Bienvenido de nuevo, {user?.username}!</h1>
-                <p className="text-blue-100 mt-2 text-lg">
-                    Resumen de la actividad reciente en el inventario.
-                </p>
-                <p className="text-blue-200 text-sm mt-1">
-                    {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
+            <div className="row mb-4">
+                <div className="col-12">
+                    <div className="card bg-gradient-primary">
+                        <div className="card-body">
+                            <h1 className="text-white">¡Bienvenido de nuevo, {user?.username}!</h1>
+                            <p className="text-white-50 mb-1">
+                                Resumen de la actividad reciente en el inventario.
+                            </p>
+                            <small className="text-white-75">
+                                {new Date().toLocaleDateString('es-ES', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}
+                            </small>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                    title="Artículos Totales"
-                    value={stats?.total_articulos || 0}
-                    icon={Package}
-                    color="bg-blue-500"
-                    trendLabel="En todas las sucursales"
-                />
-                <StatCard
-                    title="Valor del Inventario"
-                    value={`$${(stats?.valor_total_inventario || 0).toLocaleString('es-CL')}`}
-                    icon={BarChart2}
-                    color="bg-green-500"
-                    trendLabel="Valor monetario total"
-                />
-                <StatCard
-                    title="Sucursales Activas"
-                    value={stats?.total_sucursales || 0}
-                    icon={Users}
-                    color="bg-amber-500"
-                    trendLabel="Gestionando inventario"
-                />
-                <StatCard
-                    title="Alertas de Stock"
-                    value={stats?.alertas_stock_bajo || 0}
-                    icon={AlertCircle}
-                    color="bg-red-500"
-                    trendLabel="Requieren atención"
-                />
+            <div className="row mb-4">
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Artículos Totales"
+                        value={stats?.total_articulos || 0}
+                        icon={Package}
+                        color="primary"
+                        trend={{
+                            direction: 'up',
+                            value: '12%',
+                            period: 'vs mes anterior'
+                        }}
+                    />
+                </div>
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Valor Inventario"
+                        value={`$${(stats?.valor_total_inventario || 0).toLocaleString('es-CL')}`}
+                        icon={DollarSign}
+                        color="success"
+                        trend={{
+                            direction: 'up',
+                            value: '8%',
+                            period: 'vs mes anterior'
+                        }}
+                    />
+                </div>
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Sucursales Activas"
+                        value={stats?.total_sucursales || 0}
+                        icon={Building}
+                        color="warning"
+                        trend={{
+                            direction: 'neutral',
+                            value: '0%',
+                            period: 'sin cambios'
+                        }}
+                    />
+                </div>
+                <div className="col-lg-3 col-6">
+                    <AdminLTEWidget
+                        type="metric"
+                        title="Alertas de Stock"
+                        value={stats?.alertas_stock_bajo || 0}
+                        icon={AlertCircle}
+                        color="danger"
+                        trend={{
+                            direction: 'down',
+                            value: '5%',
+                            period: 'vs semana anterior'
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Quick Actions & Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 space-y-6">
+            <div className="row">
+                <div className="col-lg-4">
                     {/* Quick Actions */}
-                    <div className="bg-white rounded-xl shadow-md p-6">
-                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
-                            <TrendingUp className="text-purple-500" />
-                            Acciones Rápidas
-                        </h3>
-                        <div className="space-y-3">
+                    <AdminLTEWidget
+                        type="card"
+                        title="Acciones Rápidas"
+                        icon={TrendingUp}
+                        color="info"
+                    >
+                        <div className="d-grid gap-2">
                             <button
                                 onClick={() => handleQuickAction('entrada')}
-                                className="w-full p-4 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold flex items-center justify-center gap-2"
+                                className="btn btn-success btn-block"
                             >
-                                <Plus size={20} />
+                                <Plus size={16} className="mr-2" />
                                 Nueva Entrada
                             </button>
                             <button
                                 onClick={() => handleQuickAction('salida')}
-                                className="w-full p-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-semibold flex items-center justify-center gap-2"
+                                className="btn btn-danger btn-block"
                             >
-                                <Minus size={20} />
+                                <Minus size={16} className="mr-2" />
                                 Registrar Salida
                             </button>
                             <button
                                 onClick={() => handleQuickAction('ajuste')}
-                                className="w-full p-4 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition font-semibold flex items-center justify-center gap-2"
+                                className="btn btn-warning btn-block"
                             >
-                                <ListChecks size={20} />
+                                <ListChecks size={16} className="mr-2" />
                                 Realizar Ajuste
                             </button>
                         </div>
-                    </div>
-                     {/* Admin Panel */}
-                    {user?.is_admin && (
-                        <div className="bg-white rounded-xl shadow-md p-6">
-                            <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
-                                <PieChart className="text-indigo-500" />
-                                Panel de Administración
-                            </h3>
-                            <div className="space-y-3">
+                    </AdminLTEWidget>
+
+                    {/* Admin Panel */}
+                    {(user?.is_admin || user?.role === 'ADMIN') && (
+                        <AdminLTEWidget
+                            type="card"
+                            title="Panel de Administración"
+                            icon={PieChart}
+                            color="secondary"
+                        >
+                            <div className="d-grid gap-2">
                                 <button
                                     onClick={() => navigate('/administracion')}
-                                    className="w-full p-3 bg-indigo-100 text-indigo-800 rounded-lg hover:bg-indigo-200 transition font-medium"
+                                    className="btn btn-outline-secondary btn-block"
                                 >
                                     Gestionar Sucursales
                                 </button>
                                 <button
                                     onClick={() => navigate('/usuarios')}
-                                    className="w-full p-3 bg-indigo-100 text-indigo-800 rounded-lg hover:bg-indigo-200 transition font-medium"
+                                    className="btn btn-outline-secondary btn-block"
                                 >
                                     Gestionar Usuarios
                                 </button>
                                 <button
                                     onClick={() => navigate('/reportes')}
-                                    className="w-full p-3 bg-indigo-100 text-indigo-800 rounded-lg hover:bg-indigo-200 transition font-medium"
+                                    className="btn btn-outline-secondary btn-block"
                                 >
                                     Ver Reportes
                                 </button>
                             </div>
-                        </div>
+                        </AdminLTEWidget>
                     )}
                 </div>
 
-                <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
-                     {/* Recent Movements */}
-                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-gray-800">
-                        <Calendar className="text-blue-500" />
-                        Movimientos Recientes
-                    </h3>
-                    {movimientos.length === 0 ? (
-                        <div className="text-center py-12">
-                            <p className="text-gray-500">No hay movimientos recientes.</p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="border-b-2 border-gray-100">
+                <div className="col-lg-8">
+                    {/* Recent Movements */}
+                    <AdminLTEWidget
+                        type="table"
+                        title="Movimientos Recientes"
+                        icon={Calendar}
+                        onRefresh={() => window.location.reload()}
+                    >
+                        {movimientos.length === 0 ? (
+                            <div className="text-center py-4">
+                                <p className="text-muted">No hay movimientos recientes.</p>
+                            </div>
+                        ) : (
+                            <table className="table table-striped">
+                                <thead>
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-semibold text-gray-600">Tipo</th>
-                                        <th className="px-4 py-3 text-left font-semibold text-gray-600">Artículo</th>
-                                        <th className="px-4 py-3 text-left font-semibold text-gray-600">Cantidad</th>
-                                        <th className="px-4 py-3 text-left font-semibold text-gray-600">Fecha</th>
+                                        <th>Tipo</th>
+                                        <th>Artículo</th>
+                                        <th>Cantidad</th>
+                                        <th>Fecha</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody>
                                     {movimientos.map((mov) => (
-                                        <tr key={mov.id} className="hover:bg-gray-50">
-                                            <td className="px-4 py-3">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${getTipoColor(mov.tipo_movimiento)}`}>
+                                        <tr key={mov.id}>
+                                            <td>
+                                                <span className={`badge ${getTipoBadgeClass(mov.tipo_movimiento)}`}>
                                                     {mov.tipo_movimiento}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 font-medium text-gray-800">{mov.articulo_nombre}</td>
-                                            <td className="px-4 py-3 font-bold text-gray-800">{mov.cantidad}</td>
-                                            <td className="px-4 py-3 text-gray-500">
+                                            <td className="font-weight-bold">{mov.articulo_nombre}</td>
+                                            <td className="font-weight-bold">{mov.cantidad}</td>
+                                            <td className="text-muted">
                                                 {new Date(mov.fecha_movimiento).toLocaleDateString()}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                        )}
+                        <div className="card-footer">
+                            <button
+                                onClick={() => navigate('/movimientos')}
+                                className="btn btn-primary btn-sm"
+                            >
+                                Ver todos los movimientos
+                                <ArrowRight size={14} className="ml-1" />
+                            </button>
                         </div>
-                    )}
-                    <button
-                        onClick={() => navigate('/movimientos')}
-                        className="w-full mt-4 p-2 text-blue-600 hover:bg-blue-50 rounded-lg font-semibold text-sm transition"
-                    >
-                        Ver todos los movimientos →
-                    </button>
+                    </AdminLTEWidget>
                 </div>
             </div>
 
             {/* Alerts Section */}
             {alertas.length > 0 && (
-                <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-red-600">
-                        <AlertCircle />
-                        Alertas de Stock Bajo ({alertas.length})
-                    </h3>
-                    <div className="space-y-3">
-                        {alertas.map((alerta) => (
-                            <div key={alerta.id} className="flex justify-between items-center p-4 bg-red-50 rounded-lg border border-red-200">
-                                <div>
-                                    <p className="font-bold text-gray-800">{alerta.articulo_nombre}</p>
-                                    <p className="text-sm text-gray-600">{alerta.sucursal_nombre}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-extrabold text-2xl text-red-600">{alerta.cantidad_actual}</p>
-                                    <p className="text-xs text-gray-500">Umbral: {alerta.articulo_umbral_minimo}</p>
-                                </div>
+                <div className="row mt-4">
+                    <div className="col-12">
+                        <AdminLTEWidget
+                            type="card"
+                            title={`Alertas de Stock Bajo (${alertas.length})`}
+                            icon={AlertCircle}
+                            color="danger"
+                        >
+                            <div className="row">
+                                {alertas.map((alerta) => (
+                                    <div key={alerta.id} className="col-md-6 col-lg-4 mb-3">
+                                        <div className="card bg-light">
+                                            <div className="card-body">
+                                                <h6 className="card-title">{alerta.articulo_nombre}</h6>
+                                                <p className="card-text text-muted small">{alerta.sucursal_nombre}</p>
+                                                <div className="d-flex justify-content-between align-items-center">
+                                                    <span className="badge badge-danger badge-lg">
+                                                        {alerta.cantidad_actual}
+                                                    </span>
+                                                    <small className="text-muted">
+                                                        Umbral: {alerta.articulo_umbral_minimo}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                        {stats?.alertas_stock_bajo > 5 && (
-                            <button
-                                onClick={() => navigate('/alertas')}
-                                className="w-full mt-3 p-2 text-red-600 hover:bg-red-100 rounded-lg font-semibold text-sm transition"
-                            >
-                                Ver todas las alertas ({stats.alertas_stock_bajo})
-                            </button>
-                        )}
+                            {stats?.alertas_stock_bajo > 5 && (
+                                <div className="card-footer">
+                                    <button
+                                        onClick={() => navigate('/alertas')}
+                                        className="btn btn-danger btn-sm"
+                                    >
+                                        Ver todas las alertas ({stats.alertas_stock_bajo})
+                                        <ArrowRight size={14} className="ml-1" />
+                                    </button>
+                                </div>
+                            )}
+                        </AdminLTEWidget>
                     </div>
                 </div>
             )}
@@ -260,12 +373,12 @@ export default function Dashboard() {
     );
 }
 
-function getTipoColor(tipo) {
+function getTipoBadgeClass(tipo) {
     switch (tipo) {
-        case 'ENTRADA': return 'bg-green-100 text-green-800';
-        case 'SALIDA': return 'bg-red-100 text-red-800';
-        case 'TRANSFERENCIA': return 'bg-blue-100 text-blue-800';
-        case 'AJUSTE': return 'bg-yellow-100 text-yellow-800';
-        default: return 'bg-gray-100 text-gray-800';
+        case 'ENTRADA': return 'badge-success';
+        case 'SALIDA': return 'badge-danger';
+        case 'TRANSFERENCIA': return 'badge-info';
+        case 'AJUSTE': return 'badge-warning';
+        default: return 'badge-secondary';
     }
 }

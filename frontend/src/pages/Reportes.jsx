@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, Download, Filter, Calendar } from 'lucide-react';
+import { BarChart3, Download, Filter, Calendar, TrendingUp, Package, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { InventoryService } from '../services/inventory.service';
+import AdminLTEWidget from '../components/adminlte/AdminLTEWidget';
 
 export default function Reportes() {
     const { user } = useAuth();

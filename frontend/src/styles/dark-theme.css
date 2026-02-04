@@ -1,0 +1,329 @@
+/* Dark Theme Styles for GSIH System */
+
+/* Root variables for dark theme */
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --text-muted: #888888;
+  --border-color: #404040;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --card-bg: #2d2d2d;
+  --table-bg: #2d2d2d;
+  --table-stripe: #3a3a3a;
+  --input-bg: #3a3a3a;
+  --input-border: #555555;
+}
+
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #495057;
+  --text-muted: #6c757d;
+  --border-color: #dee2e6;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --card-bg: #ffffff;
+  --table-bg: #ffffff;
+  --table-stripe: #f8f9fa;
+  --input-bg: #ffffff;
+  --input-border: #ced4da;
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Cards and containers */
+[data-theme="dark"] .card {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .card-header {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .card-body {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .card-footer {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Tables */
+[data-theme="dark"] .table {
+  background-color: var(--table-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .table th {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table td {
+  background-color: var(--table-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
+  background-color: var(--table-stripe) !important;
+}
+
+[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd) td {
+  background-color: var(--table-stripe) !important;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover td {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* Text colors */
+[data-theme="dark"] .text-muted {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .font-weight-bold {
+  color: var(--text-primary) !important;
+}
+
+/* Forms */
+[data-theme="dark"] .form-control {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .form-control:focus {
+  background-color: var(--input-bg) !important;
+  border-color: #007bff !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+}
+
+[data-theme="dark"] .form-control::placeholder {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] .form-group label {
+  color: var(--text-primary) !important;
+}
+
+/* Buttons */
+[data-theme="dark"] .btn-outline-primary {
+  color: #007bff !important;
+  border-color: #007bff !important;
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+  background-color: #007bff !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+  color: var(--text-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .btn-outline-info {
+  color: #17a2b8 !important;
+  border-color: #17a2b8 !important;
+}
+
+[data-theme="dark"] .btn-outline-info:hover {
+  background-color: #17a2b8 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+  color: #dc3545 !important;
+  border-color: #dc3545 !important;
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+  background-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+/* Alerts */
+[data-theme="dark"] .alert {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .alert-danger {
+  background-color: rgba(220, 53, 69, 0.1) !important;
+  border-color: rgba(220, 53, 69, 0.3) !important;
+  color: #f5c6cb !important;
+}
+
+/* Badges */
+[data-theme="dark"] .badge-success {
+  background-color: #28a745 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .badge-danger {
+  background-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .badge-info {
+  background-color: #17a2b8 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .badge-warning {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+[data-theme="dark"] .badge-secondary {
+  background-color: #6c757d !important;
+  color: #ffffff !important;
+}
+
+/* Spinners */
+[data-theme="dark"] .spinner-border {
+  color: var(--text-primary) !important;
+}
+
+/* Dropdowns */
+[data-theme="dark"] .dropdown-menu {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .dropdown-item {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Modals */
+[data-theme="dark"] .modal-content {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .modal-header {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-body {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .modal-footer {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* AdminLTE specific overrides */
+[data-theme="dark"] .content-wrapper {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .main-footer {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}
+
+/* Gradient cards */
+[data-theme="dark"] .bg-gradient-primary {
+  background: linear-gradient(45deg, #007bff, #0056b3) !important;
+}
+
+/* Custom scrollbar for dark theme */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* Notification styles for dark theme */
+[data-theme="dark"] .notification-card {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Table responsive wrapper */
+[data-theme="dark"] .table-responsive {
+  border-color: var(--border-color) !important;
+}
+
+/* Loading states */
+[data-theme="dark"] .sr-only {
+  color: var(--text-primary) !important;
+}
+
+/* Eye comfort improvements */
+[data-theme="dark"] {
+  /* Reduce blue light emission */
+  filter: hue-rotate(5deg) saturate(0.9);
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* High contrast mode for better readability */
+[data-theme="dark"] .high-contrast {
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --text-muted: #999999;
+}
+
+/* Focus indicators for accessibility */
+[data-theme="dark"] *:focus {
+  outline: 2px solid #007bff !important;
+  outline-offset: 2px !important;
+}

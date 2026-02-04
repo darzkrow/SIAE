@@ -13,12 +13,19 @@ class AuditMiddleware:
         _thread_locals.user = request.user if hasattr(request, 'user') else None
         _thread_locals.remote_addr = self._get_client_ip(request)
         _thread_locals.user_agent = request.META.get('HTTP_USER_AGENT', '')
+        _thread_locals.session_key = request.session.session_key if hasattr(request, 'session') else None
         
         response = self.get_response(request)
         
         # Cleanup
         if hasattr(_thread_locals, 'user'):
             del _thread_locals.user
+        if hasattr(_thread_locals, 'remote_addr'):
+            del _thread_locals.remote_addr
+        if hasattr(_thread_locals, 'user_agent'):
+            del _thread_locals.user_agent
+        if hasattr(_thread_locals, 'session_key'):
+            del _thread_locals.session_key
         return response
 
     def _get_client_ip(self, request):
@@ -34,4 +41,5 @@ def get_current_request_data():
         'user': getattr(_thread_locals, 'user', None),
         'ip': getattr(_thread_locals, 'remote_addr', None),
         'user_agent': getattr(_thread_locals, 'user_agent', None),
+        'session_key': getattr(_thread_locals, 'session_key', None),
     }
