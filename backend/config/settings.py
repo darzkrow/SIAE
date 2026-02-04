@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'django_filters',
     'drf_spectacular',
+    'mptt',  # Django MPTT for hierarchical models
     # Project apps
     'accounts',
     'catalogo',
@@ -262,3 +263,18 @@ CHANNEL_LAYERS = {
     },
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+# ============================================================================
+# DJANGO MPTT SETTINGS
+# ============================================================================
+# Configure MPTT for optimal performance with hierarchical organizational structure
+MPTT_ADMIN_LEVEL_INDENT = 20  # Indentation in admin interface
+MPTT_DEFAULT_LEVEL_INDICATOR = '---'  # Level indicator for admin display
+
+# Performance optimizations for MPTT
+# Enable bulk operations for better performance with large hierarchies
+MPTT_ALLOW_BULK_OPERATIONS = True
+
+# Cache tree structure for better query performance
+# This helps with frequent hierarchical queries in the organizational structure
+MPTT_CACHE_TREE_CHILDREN = True

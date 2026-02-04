@@ -13,7 +13,7 @@ This implementation plan modernizes the GSIH Django + React inventory management
   - Create project structure for new components
   - _Requirements: All requirements (foundation)_
 
-- [ ] 2. Database Schema Extensions
+- [~] 2. Database Schema Extensions
   - [x] 2.1 Create dynamic permission models (Permission, Role, UserRole)
     - Implement Permission model with content type relationships
     - Create Role model with many-to-many permission relationships
@@ -44,63 +44,63 @@ This implementation plan modernizes the GSIH Django + React inventory management
     - Add support for environment-specific settings
     - _Requirements: 8.1, 8.4_
 
-- [ ] 3. Backend API Enhancement
+- [~] 3. Backend API Enhancement
   - [x] 3.1 Implement base API viewset with common functionality
     - Create BaseAPIViewSet with pagination, filtering, permissions
     - Add bulk operation endpoints (create, update, delete)
     - Implement advanced search and filtering
     - _Requirements: 2.1, 2.2, 2.3_
   
-  - [ ] 3.2 Write property test for API endpoint completeness
+  - [-] 3.2 Write property test for API endpoint completeness
     - **Property 6: API Endpoint Completeness**
     - **Validates: Requirements 2.1**
   
-  - [ ] 3.3 Write property test for bulk operations reliability
+  - [-] 3.3 Write property test for bulk operations reliability
     - **Property 8: Bulk Operations Reliability**
     - **Validates: Requirements 2.3**
   
-  - [ ] 3.4 Implement dynamic permission system
+  - [~] 3.4 Implement dynamic permission system
     - Create DynamicPermission class for API views
     - Implement permission evaluation logic
     - Add permission conflict resolution
     - _Requirements: 3.2, 3.5, 3.6_
   
-  - [ ] 3.5 Write property test for dynamic permission evaluation
+  - [~] 3.5 Write property test for dynamic permission evaluation
     - **Property 13: Dynamic Permission Evaluation**
     - **Validates: Requirements 3.2**
   
-  - [ ] 3.6 Write property test for permission conflict resolution
+  - [~] 3.6 Write property test for permission conflict resolution
     - **Property 15: Permission Conflict Resolution**
     - **Validates: Requirements 3.5**
   
-  - [ ] 3.7 Create advanced search and filtering system
+  - [~] 3.7 Create advanced search and filtering system
     - Implement AdvancedSearchFilter class
     - Add full-text search capabilities
     - Support complex query syntax
     - _Requirements: 7.1, 7.2, 7.5_
   
-  - [ ] 3.8 Write property test for advanced search functionality
+  - [~] 3.8 Write property test for advanced search functionality
     - **Property 7: Advanced Search Functionality**
     - **Validates: Requirements 2.2, 5.2, 7.1, 7.2, 7.4, 7.5**
 
 - [x] 4. Export and Import System
-  - [ ] 4.1 Implement comprehensive export functionality
+  - [~] 4.1 Implement comprehensive export functionality
     - Create export endpoints for PDF, Excel, JSON formats
     - Add data formatting and validation
     - Support dashboard and report exports
     - _Requirements: 2.5, 4.6_
   
-  - [ ] 4.2 Write property test for export functionality reliability
+  - [~] 4.2 Write property test for export functionality reliability
     - **Property 10: Export Functionality Reliability**
     - **Validates: Requirements 2.5, 4.6, 8.6**
   
-  - [ ] 4.3 Create data import system with validation
+  - [~] 4.3 Create data import system with validation
     - Implement import endpoints with comprehensive validation
     - Add error reporting and partial failure handling
     - Support multiple data formats
     - _Requirements: 2.6_
   
-  - [ ] 4.4 Write property test for data import validation
+  - [~] 4.4 Write property test for data import validation
     - **Property 11: Data Import Validation**
     - **Validates: Requirements 2.6**
 
