@@ -11,7 +11,8 @@ from inventario.models import (
     UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
-    FichaTecnicaMotor, RegistroMantenimiento
+    FichaTecnicaMotor, RegistroMantenimiento,
+    MaterialEstrategico, ActivoFijo
 )
 from catalogo.models import CategoriaProducto, Marca
 from django.contrib.auth import get_user_model
@@ -129,6 +130,80 @@ class AcueductoSerializer(BaseModelSerializer):
 
     def get_sucursal_nombre(self, obj):
         return obj.sucursal.nombre if obj.sucursal else None
+
+
+# ============================================================================
+# SERIALIZERS DE GESTION ESTRATEGICA
+# ============================================================================
+
+class MaterialEstrategicoSerializer(BaseModelSerializer):
+    """Serializer para materiales estratégicos."""
+    producto_str = serializers.SerializerMethodField()
+    nivel_criticidad_display = serializers.CharField(source='get_nivel_criticidad_display', read_only=True)
+    proveedor_alternativo_nombre = serializers.SerializerMethodField()
+    responsable_nombre = serializers.SerializerMethodField()
+    
+    class Meta(BaseModelSerializer.Meta):
+        model = MaterialEstrategico
+        fields = BaseModelSerializer.Meta.fields + [
+            'producto', 'content_type', 'object_id', 'producto_str',
+            'nivel_criticidad', 'nivel_criticidad_display',
+            'plan_contingencia', 
+            'proveedor_alternativo', 'proveedor_alternativo_nombre',
+            'stock_seguridad_dias', 'requiere_aprobacion_especial',
+            'responsable', 'responsable_nombre',
+            'alerta_stock_bajo', 'alerta_vencimiento', 'dias_alerta_vencimiento'
+        ]
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
+            'producto_str'
+        ]
+        
+    def get_producto_str(self, obj):
+        return str(obj.producto) if obj.producto else "Producto no encontrado"
+
+    def get_proveedor_alternativo_nombre(self, obj):
+        return obj.proveedor_alternativo.nombre if obj.proveedor_alternativo else None
+
+    def get_responsable_nombre(self, obj):
+        return obj.responsable.get_full_name() or obj.responsable.username if obj.responsable else None
+
+
+class ActivoFijoSerializer(BaseModelSerializer):
+    """Serializer para activos fijos."""
+    producto_str = serializers.SerializerMethodField()
+    responsable_nombre = serializers.SerializerMethodField()
+    ubicacion_nombre = serializers.SerializerMethodField()
+    metodo_depreciacion_display = serializers.CharField(source='get_metodo_depreciacion_display', read_only=True)
+    estado_fisico_display = serializers.CharField(source='get_estado_fisico_display', read_only=True)
+    depreciacion_anual_estimada = serializers.SerializerMethodField()
+    
+    class Meta(BaseModelSerializer.Meta):
+        model = ActivoFijo
+        fields = BaseModelSerializer.Meta.fields + [
+            'producto', 'content_type', 'object_id', 'producto_str',
+            'valor_adquisicion', 'fecha_adquisicion', 'vida_util_anos',
+            'valor_residual', 'metodo_depreciacion', 'metodo_depreciacion_display',
+            'depreciacion_acumulada',
+            'codigo_activo', 'ubicacion', 'ubicacion_nombre',
+            'responsable', 'responsable_nombre',
+            'estado_fisico', 'estado_fisico_display',
+            'depreciacion_anual_estimada'
+        ]
+        read_only_fields = BaseModelSerializer.Meta.read_only_fields + [
+            'producto_str', 'depreciacion_anual_estimada'
+        ]
+
+    def get_producto_str(self, obj):
+        return str(obj.producto) if obj.producto else "Producto no encontrado"
+
+    def get_responsable_nombre(self, obj):
+        return obj.responsable.get_full_name() or obj.responsable.username if obj.responsable else None
+
+    def get_ubicacion_nombre(self, obj):
+        return str(obj.ubicacion) if obj.ubicacion else None
+
+    def get_depreciacion_anual_estimada(self, obj):
+        return obj.calcular_depreciacion_anual()
 
 
 # ============================================================================

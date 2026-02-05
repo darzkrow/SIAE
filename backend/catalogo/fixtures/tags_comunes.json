@@ -1,0 +1,112 @@
+[
+    {
+        "model": "catalogo.tag",
+        "pk": 1,
+        "fields": {
+            "name": "Urgente",
+            "color": "#FF0000",
+            "description": "Productos de alta prioridad o necesidad urgente",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 2,
+        "fields": {
+            "name": "Importado",
+            "color": "#0066CC",
+            "description": "Productos importados del extranjero",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 3,
+        "fields": {
+            "name": "Nacional",
+            "color": "#00AA00",
+            "description": "Productos de fabricación nacional",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 4,
+        "fields": {
+            "name": "Crítico",
+            "color": "#FF6600",
+            "description": "Productos críticos para operación",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 5,
+        "fields": {
+            "name": "Nuevo",
+            "color": "#9900FF",
+            "description": "Productos recientemente agregados al inventario",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 6,
+        "fields": {
+            "name": "Descontinuado",
+            "color": "#999999",
+            "description": "Productos que ya no se fabrican o compran",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 7,
+        "fields": {
+            "name": "Alta Rotación",
+            "color": "#FFAA00",
+            "description": "Productos de uso frecuente",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 8,
+        "fields": {
+            "name": "Baja Rotación",
+            "color": "#666666",
+            "description": "Productos de uso poco frecuente",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 9,
+        "fields": {
+            "name": "Peligroso",
+            "color": "#CC0000",
+            "description": "Productos químicos peligrosos que requieren manejo especial",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    },
+    {
+        "model": "catalogo.tag",
+        "pk": 10,
+        "fields": {
+            "name": "Garantía",
+            "color": "#0099FF",
+            "description": "Productos con garantía activa",
+            "created_at": "2026-02-05T10:00:00Z",
+            "updated_at": "2026-02-05T10:00:00Z"
+        }
+    }
+]

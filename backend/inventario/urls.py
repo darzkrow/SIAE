@@ -1,9 +1,5 @@
-"""
-URLs para el sistema de inventario refactorizado.
-"""
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
-
 from inventario import views
 
 # Crear router para las nuevas rutas
@@ -34,6 +30,10 @@ router.register(r'movimientos', views.MovimientoInventarioViewSet, basename='mov
 
 # Reportes
 router.register(r'reportes-v2', views.RefactoredReportesViewSet, basename='reportes-v2')
+
+# Gestión Estratégica
+router.register(r'materiales-estrategicos', views.MaterialEstrategicoViewSet, basename='material-estrategico')
+router.register(r'activos-fijos', views.ActivoFijoViewSet, basename='activo-fijo')
 
 # Mantenimiento
 router.register(r'fichas-tecnicas', views.FichaTecnicaMotorViewSet, basename='ficha-tecnica')

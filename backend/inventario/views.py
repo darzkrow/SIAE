@@ -21,7 +21,8 @@ from inventario.models import (
     UnitOfMeasure, Supplier,
     ChemicalProduct, Pipe, PumpAndMotor, Accessory,
     StockChemical, StockPipe, StockPumpAndMotor, StockAccessory,
-    FichaTecnicaMotor, RegistroMantenimiento
+    FichaTecnicaMotor, RegistroMantenimiento,
+    MaterialEstrategico, ActivoFijo
 )
 from catalogo.models import CategoriaProducto, Marca
 from django.contrib.auth import get_user_model
@@ -36,7 +37,8 @@ from inventario.serializers import (
     PumpAndMotorListSerializer, AccessoryListSerializer,
     MovimientoInventarioSerializer,
     OrganizacionCentralSerializer, SucursalSerializer, UserSerializer,
-    FichaTecnicaMotorSerializer, RegistroMantenimientoSerializer
+    FichaTecnicaMotorSerializer, RegistroMantenimientoSerializer,
+    MaterialEstrategicoSerializer, ActivoFijoSerializer
 )
 
 
@@ -707,6 +709,32 @@ class RefactoredReportesViewSet(viewsets.ViewSet):
                 'detail': str(e),
                 'data': []
             }, status=200)  # Devolver 200 con array vacío en lugar de 500
+
+
+# ============================================================================
+# VIEWSETS DE GESTION ESTRATEGICA
+# ============================================================================
+
+class MaterialEstrategicoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
+    """ViewSet para materiales estratégicos."""
+    queryset = MaterialEstrategico.objects.select_related('proveedor_alternativo', 'responsable', 'content_type').all()
+    serializer_class = MaterialEstrategicoSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['nivel_criticidad', 'responsable']
+    search_fields = ['plan_contingencia']
+    ordering_fields = ['nivel_criticidad', 'stock_seguridad_dias']
+
+
+class ActivoFijoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
+    """ViewSet para activos fijos."""
+    queryset = ActivoFijo.objects.select_related('ubicacion', 'responsable', 'content_type').all()
+    serializer_class = ActivoFijoSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['estado_fisico', 'ubicacion', 'responsable']
+    search_fields = ['codigo_activo']
+    ordering_fields = ['fecha_adquisicion', 'valor_adquisicion']
 
 
 # ============================================================================

@@ -12,7 +12,7 @@ from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
 from institucion.models import Acueducto, Sucursal, OrganizacionCentral
 from geography.models import Ubicacion
-from catalogo.models import CategoriaProducto, Marca
+from catalogo.models import CategoriaProducto, Marca, Tag
 from core.models import SoftDeleteModel, TimeStampedModel
 
 # Optional import for JSON schema validation
@@ -27,24 +27,9 @@ except ImportError:
 # MODELOS AUXILIARES DEL NUEVO SISTEMA
 # ============================================================================
 
-class Tag(TimeStampedModel):
-
-    name = models.CharField(max_length=50, unique=True)
-    color = models.CharField(max_length=7, default='#007bff', help_text='Hex color code for the tag')
-    description = models.TextField(blank=True)
-
-    class Meta:
-        verbose_name = 'Tag'
-        verbose_name_plural = 'Tags'
-        ordering = ['name']
-
-    def __str__(self):
-        return self.name
-
-
-
 
 class UnitOfMeasure(SoftDeleteModel):
+
     """Unidades de medida normalizadas."""
     
     class TipoUnidad(models.TextChoices):
@@ -116,7 +101,21 @@ class ProductBase(SoftDeleteModel):
     nombre = models.CharField(max_length=250)
     descripcion = models.TextField(blank=True)
     
-    # Clasificación
+    # Clasificación de Inventario
+    class TipoInventario(models.TextChoices):
+        ESTRATEGICO = 'ESTRATEGICO', 'Estratégico Hídrico'
+        OPERACIONAL = 'OPERACIONAL', 'Operacional'
+        CONSUMIBLE = 'CONSUMIBLE', 'Consumible'
+        ACTIVO_FIJO = 'ACTIVO_FIJO', 'Activo Fijo'
+    
+    tipo_inventario = models.CharField(
+        max_length=20,
+        choices=TipoInventario.choices,
+        default=TipoInventario.OPERACIONAL,
+        help_text='Clasificación del inventario'
+    )
+    
+    # Clasificación Original
     categoria = models.ForeignKey(
         CategoriaProducto,
         on_delete=models.PROTECT,
@@ -132,6 +131,56 @@ class ProductBase(SoftDeleteModel):
     tags = models.ManyToManyField(Tag, blank=True, related_name='%(class)s_products')
     custom_fields = models.JSONField(default=dict, blank=True, help_text='Custom fields for flexible data storage')
     search_vector = SearchVectorField(null=True, blank=True)
+    
+    # Gestión de Stock y Criticidad
+    es_critico = models.BooleanField(
+        default=False,
+        help_text='¿Es material crítico para operación?'
+    )
+    nivel_criticidad = models.CharField(
+        max_length=10,
+        choices=[
+            ('BAJO', 'Bajo'),
+            ('MEDIO', 'Medio'),
+            ('ALTO', 'Alto'),
+            ('CRITICO', 'Crítico'),
+        ],
+        default='MEDIO',
+        blank=True
+    )
+    tiempo_reposicion_dias = models.IntegerField(
+        default=30,
+        help_text='Tiempo estimado de reposición en días'
+    )
+    prioridad_reposicion = models.CharField(
+        max_length=10,
+        choices=[
+            ('BAJA', 'Baja'),
+            ('MEDIA', 'Media'),
+            ('ALTA', 'Alta'),
+            ('URGENTE', 'Urgente'),
+        ],
+        default='MEDIA'
+    )
+    stock_seguridad_dias = models.IntegerField(
+        default=30,
+        help_text='Días de stock de seguridad requeridos'
+    )
+    punto_reorden = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal('0.000'),
+        help_text='Nivel de stock donde se debe reordenar (calculado)'
+    )
+    
+    # Trazabilidad
+    lote = models.CharField(max_length=50, blank=True, help_text='Número de lote actual')
+    numero_serie = models.CharField(max_length=100, blank=True, help_text='Número de serie (si aplica)')
+    ubicacion_fisica = models.CharField(max_length=200, blank=True, help_text='Ubicación física en almacén')
+    
+    # Control de Calidad
+    requiere_certificacion = models.BooleanField(default=False)
+    certificaciones = models.JSONField(default=list, blank=True, help_text='Lista de certificaciones requeridas')
     
     # Stock y Precio
     stock_actual = models.DecimalField(
@@ -315,6 +364,178 @@ class ProductBase(SoftDeleteModel):
         """Remove a custom field."""
         if self.custom_fields and field_name in self.custom_fields:
             del self.custom_fields[field_name]
+
+
+# ============================================================================
+# MODELO BASE ABSTRACTO
+# ============================================================================
+
+# ... (ProductBase code is here) ...
+
+# ============================================================================
+# MODELOS DE GESTION ESTRATEGICA
+# ============================================================================
+
+
+class MaterialEstrategico(TimeStampedModel):
+    """
+    🛡️ Información adicional para materiales estratégicos hídricos
+    
+    Permite gestionar información crítica, planes de contingencia
+    y datos de proveedores alternativos para materiales esenciales.
+    """
+    # Relación genérica con cualquier producto
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    producto = GenericForeignKey('content_type', 'object_id')
+    
+    # Información estratégica
+    nivel_criticidad = models.CharField(
+        max_length=10,
+        choices=[
+            ('BAJO', 'Bajo'),
+            ('MEDIO', 'Medio'),
+            ('ALTO', 'Alto'),
+            ('CRITICO', 'Crítico'),
+        ],
+        default='MEDIO'
+    )
+    plan_contingencia = models.TextField(
+        blank=True,
+        help_text='Acciones a tomar en caso de desabastecimiento'
+    )
+    proveedor_alternativo = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='materiales_estrategicos_alternativos'
+    )
+    stock_seguridad_dias = models.IntegerField(
+        default=90,
+        help_text='Días de stock de seguridad estratégico (mayor al operacional)'
+    )
+    
+    # Aprobaciones y Responsables
+    requiere_aprobacion_especial = models.BooleanField(
+        default=True,
+        help_text='¿Requiere aprobación especial para movimientos?'
+    )
+    responsable = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='materiales_estrategicos_asignados',
+        help_text='Usuario responsable de este material'
+    )
+    
+    # Alertas
+    alerta_stock_bajo = models.BooleanField(
+        default=True,
+        help_text='Enviar alerta proactiva de stock bajo'
+    )
+    alerta_vencimiento = models.BooleanField(
+        default=True,
+        help_text='Enviar alerta anticipada de vencimiento'
+    )
+    dias_alerta_vencimiento = models.IntegerField(
+        default=60,
+        help_text='Días de anticipación para alerta de vencimiento'
+    )
+
+    class Meta:
+        verbose_name = 'Material Estratégico'
+        verbose_name_plural = 'Materiales Estratégicos'
+        indexes = [
+            models.Index(fields=['nivel_criticidad']),
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+
+    def __str__(self):
+        return f"Estratégico: {self.producto} ({self.get_nivel_criticidad_display()})"
+
+
+class ActivoFijo(TimeStampedModel):
+    """
+    🏗️ Gestión de Activos Fijos
+    
+    Control de equipos de alto valor, depreciación y vida útil.
+    """
+    # Relación genérica con producto
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    producto = GenericForeignKey('content_type', 'object_id')
+    
+    # Información financiera
+    valor_adquisicion = models.DecimalField(max_digits=12, decimal_places=2)
+    fecha_adquisicion = models.DateField()
+    vida_util_anos = models.IntegerField(help_text='Vida útil estimada en años')
+    valor_residual = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0,
+        help_text='Valor estimado al final de la vida útil'
+    )
+    
+    # Depreciación
+    metodo_depreciacion = models.CharField(
+        max_length=20,
+        choices=[
+            ('LINEAL', 'Línea Recta'),
+            ('ACELERADA', 'Acelerada'),
+            ('UNIDADES', 'Unidades Producidas'),
+        ],
+        default='LINEAL'
+    )
+    depreciacion_acumulada = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0
+    )
+    
+    # Control Físico
+    codigo_activo = models.CharField(
+        max_length=50, 
+        unique=True,
+        help_text='Código de etiqueta de activo fijo'
+    )
+    ubicacion = models.ForeignKey(
+        Ubicacion, 
+        on_delete=models.PROTECT,
+        related_name='activos_fijos'
+    )
+    responsable = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='activos_fijos_asignados'
+    )
+    estado_fisico = models.CharField(
+        max_length=20,
+        choices=[
+            ('EXCELENTE', 'Excelente'),
+            ('BUENO', 'Bueno'),
+            ('REGULAR', 'Regular'),
+            ('MALO', 'Malo'),
+            ('FUERA_SERVICIO', 'Fuera de Servicio'),
+        ],
+        default='BUENO'
+    )
+
+    class Meta:
+        verbose_name = 'Activo Fijo'
+        verbose_name_plural = 'Activos Fijos'
+        indexes = [
+            models.Index(fields=['codigo_activo']),
+            models.Index(fields=['estado_fisico']),
+        ]
+
+    def __str__(self):
+        return f"{self.codigo_activo} - {self.producto}"
+
+    def calcular_depreciacion_anual(self):
+        """Calcula depreciación anual lineal."""
+        if self.metodo_depreciacion == 'LINEAL' and self.vida_util_anos > 0:
+            return (self.valor_adquisicion - self.valor_residual) / self.vida_util_anos
+        return Decimal('0.00')
 
 
 # ============================================================================

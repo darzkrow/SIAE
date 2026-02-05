@@ -1,0 +1,68 @@
+[
+    {
+        "model": "catalogo.categoriaproducto",
+        "pk": 1,
+        "fields": {
+            "nombre": "Productos Químicos",
+            "codigo": "QUI",
+            "descripcion": "Productos químicos para tratamiento de agua potable",
+            "activo": true,
+            "orden": 1
+        }
+    },
+    {
+        "model": "catalogo.categoriaproducto",
+        "pk": 2,
+        "fields": {
+            "nombre": "Tuberías",
+            "codigo": "TUB",
+            "descripcion": "Tuberías para sistemas de distribución de agua",
+            "activo": true,
+            "orden": 2
+        }
+    },
+    {
+        "model": "catalogo.categoriaproducto",
+        "pk": 3,
+        "fields": {
+            "nombre": "Bombas y Motores",
+            "codigo": "BOM",
+            "descripcion": "Equipos de bombeo y motores eléctricos",
+            "activo": true,
+            "orden": 3
+        }
+    },
+    {
+        "model": "catalogo.categoriaproducto",
+        "pk": 4,
+        "fields": {
+            "nombre": "Accesorios",
+            "codigo": "ACC",
+            "descripcion": "Válvulas, codos, tees y otros accesorios",
+            "activo": true,
+            "orden": 4
+        }
+    },
+    {
+        "model": "catalogo.categoriaproducto",
+        "pk": 5,
+        "fields": {
+            "nombre": "Medidores",
+            "codigo": "MED",
+            "descripcion": "Medidores de agua y accesorios",
+            "activo": true,
+            "orden": 5
+        }
+    },
+    {
+        "model": "catalogo.categoriaproducto",
+        "pk": 6,
+        "fields": {
+            "nombre": "Herramientas",
+            "codigo": "HER",
+            "descripcion": "Herramientas y equipos de trabajo",
+            "activo": true,
+            "orden": 6
+        }
+    }
+]

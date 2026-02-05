@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from core.serializers import SoftDeleteSerializer
-from .models import CategoriaProducto, Marca
+from .models import CategoriaProducto, Marca, Tag
 
 
 class CategoriaProductoSerializer(SoftDeleteSerializer):
@@ -17,3 +17,12 @@ class MarcaSerializer(SoftDeleteSerializer):
         model = Marca
         fields = SoftDeleteSerializer.Meta.fields + ['nombre', 'descripcion']
         read_only_fields = SoftDeleteSerializer.Meta.read_only_fields
+
+
+class TagSerializer(serializers.ModelSerializer):
+    """Serializer para tags de productos"""
+    
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'color', 'description', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
