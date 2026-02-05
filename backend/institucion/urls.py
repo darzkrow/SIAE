@@ -19,13 +19,6 @@ router.register(r'empresas', views.EmpresaViewSet, basename='empresa')
 router.register(r'vicepresidencias', views.VicepresidenciaViewSet, basename='vicepresidencia')
 router.register(r'unidades-organizacionales', views.UnidadOrganizacionalViewSet, basename='unidad-organizacional')
 router.register(r'almacenes-regionales', views.AlmacenRegionalViewSet, basename='almacen-regional')
-
-# Asset tracking endpoints
-# router.register(r'activos', views.ActivoInventarioViewSet, basename='activo')
-# router.register(r'historial-movimientos', views.HistorialMovimientoActivoViewSet, basename='historial-movimiento')
-
-# Transfer workflow endpoints
-# router.register(r'solicitudes-traslado', views.SolicitudTrasladoViewSet, basename='solicitud-traslado')
 router.register(r'subalmacenes', views.SubalmacenViewSet, basename='subalmacen')
 
 
@@ -47,14 +40,10 @@ router.register(r'acueductos', views.AcueductoViewSet, basename='acueducto')
 
 urlpatterns = [
     # Include all router URLs
-    path('api/institucion/', include(router.urls)),
-    
-    # Additional custom endpoints can be added here
-    # path('api/institucion/custom-endpoint/', views.custom_view, name='custom-endpoint'),
+    path('', include(router.urls)),
 ]
 
 # For backward compatibility, also expose endpoints at root level
-# This maintains compatibility with existing frontend code
 legacy_router = DefaultRouter()
 legacy_router.register(r'organizaciones', views.OrganizacionCentralViewSet, basename='organizacion-legacy')
 legacy_router.register(r'sucursales', views.SucursalViewSet, basename='sucursal-legacy')
@@ -62,5 +51,5 @@ legacy_router.register(r'acueductos', views.AcueductoViewSet, basename='acueduct
 
 urlpatterns += [
     # Legacy endpoints at root level for backward compatibility
-    path('api/', include(legacy_router.urls)),
+    path('', include(legacy_router.urls)),
 ]

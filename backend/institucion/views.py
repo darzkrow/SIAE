@@ -15,7 +15,6 @@ from .models import (
     Subalmacen,
     # New hierarchical models
     Empresa, Vicepresidencia, UnidadOrganizacional, AlmacenRegional,
-    ActivoInventario, HistorialMovimientoActivo, SolicitudTraslado, AprobacionTraslado,
     MigracionOrganizacional,
     # Legacy models for backward compatibility
     OrganizacionCentral, Sucursal, Acueducto
@@ -24,12 +23,11 @@ from .serializers import (
     SubalmacenSerializer,
     # New hierarchical serializers
     EmpresaSerializer, VicepresidenciaSerializer, UnidadOrganizacionalSerializer,
-    AlmacenRegionalSerializer, ActivoInventarioSerializer, HistorialMovimientoActivoSerializer,
-    SolicitudTrasladoSerializer, AprobacionTrasladoSerializer, MigracionOrganizacionalSerializer,
+    AlmacenRegionalSerializer, MigracionOrganizacionalSerializer,
     # Backward compatibility serializers
     OrganizacionCentralSerializer, SucursalSerializer, AcueductoSerializer,
     # Specialized serializers
-    AssetTrackingSerializer, TransferWorkflowSerializer, HierarchyTreeSerializer
+    HierarchyTreeSerializer
 )
 
 User = get_user_model()
@@ -51,33 +49,11 @@ class EmpresaViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     ordering = ['nombre']
     
     def get_queryset(self):
-        """Optimize queryset with prefetch_related."""
+        """Optimize queryset with prefetch_related for hierarchy."""
         return super().get_queryset().prefetch_related(
-            'subsidiarias', 'vicepresidencias'
+            'subsidiarias',
+            'vicepresidencias'
         )
-    
-    @action(detail=True, methods=['get'])
-    def hierarchy_tree(self, request, pk=None):
-        """Get complete hierarchy tree for this empresa."""
-        empresa = self.get_object()
-        serializer = HierarchyTreeSerializer(empresa, context={'request': request})
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['get'])
-    def vicepresidencias(self, request, pk=None):
-        """Get all vicepresidencias under this empresa."""
-        empresa = self.get_object()
-        vicepresidencias = empresa.vicepresidencias.filter(activo=True)
-        serializer = VicepresidenciaSerializer(vicepresidencias, many=True, context={'request': request})
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'])
-    def migration_status(self, request):
-        """Get migration status for organizational restructuring."""
-        from .services import MigrationEngine
-        
-        status_info = MigrationEngine.get_migration_status()
-        return Response(status_info)
 
 
 class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
@@ -87,15 +63,15 @@ class VicepresidenciaViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     serializer_class = VicepresidenciaSerializer
     permission_classes = [permissions.IsAuthenticated]
     filterset_fields = ['empresa', 'tipo', 'activo']
-    search_fields = ['nombre', 'codigo', 'descripcion']
-    ordering_fields = ['nombre', 'tipo', 'fecha_creacion']
-    ordering = ['empresa', 'tipo', 'nombre']
+    search_fields = ['nombre', 'codigo']
+    ordering_fields = ['nombre', 'codigo', 'empresa']
+    ordering = ['empresa', 'nombre']
     
     def get_queryset(self):
         """Optimize queryset with select_related."""
-        return super().get_queryset().select_related(
-            'empresa', 'responsable'
-        ).prefetch_related('unidades_organizacionales')
+        return super().get_queryset().select_related('empresa', 'responsable').prefetch_related(
+            'unidades_organizacionales'
+        )
 
 
 class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
@@ -105,9 +81,9 @@ class UnidadOrganizacionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     serializer_class = UnidadOrganizacionalSerializer
     permission_classes = [permissions.IsAuthenticated]
     filterset_fields = ['vicepresidencia', 'tipo', 'activo']
-    search_fields = ['nombre', 'codigo', 'descripcion', 'ubicacion']
-    ordering_fields = ['nombre', 'tipo', 'fecha_creacion']
-    ordering = ['vicepresidencia', 'tipo', 'nombre']
+    search_fields = ['nombre', 'codigo']
+    ordering_fields = ['nombre', 'codigo', 'vicepresidencia']
+    ordering = ['vicepresidencia', 'nombre']
     
     def get_queryset(self):
         """Optimize queryset with select_related."""
@@ -123,10 +99,10 @@ class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
     queryset = AlmacenRegional.objects.all()
     serializer_class = AlmacenRegionalSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['unidad_organizacional', 'prefijo', 'activo', 'manager']
-    search_fields = ['nombre', 'prefijo', 'ubicacion', 'descripcion']
-    ordering_fields = ['nombre', 'prefijo', 'fecha_creacion']
-    ordering = ['prefijo']
+    filterset_fields = ['unidad_organizacional', 'activo']
+    search_fields = ['nombre', 'prefijo']
+    ordering_fields = ['nombre', 'prefijo', 'unidad_organizacional']
+    ordering = ['unidad_organizacional', 'nombre']
     
     def get_queryset(self):
         """Optimize queryset with select_related."""
@@ -136,263 +112,15 @@ class AlmacenRegionalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
         )
 
 
-# ============================================================================
-# BACKWARD COMPATIBILITY VIEWSETS
-# ============================================================================
-
-class OrganizacionCentralViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
-    """Backward compatibility ViewSet for OrganizacionCentral."""
+class SubalmacenViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
+    """ViewSet for Subalmacén management (Inherited from original system)."""
     
-    queryset = OrganizacionCentral.objects.all()
-    serializer_class = OrganizacionCentralSerializer
+    queryset = Subalmacen.objects.all()
+    serializer_class = SubalmacenSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['parent']
-    search_fields = ['nombre', 'rif']
-    ordering_fields = ['nombre']
-    ordering = ['nombre']
-    
-    def get_queryset(self):
-        """Optimize queryset with select_related."""
-        return super().get_queryset().select_related('parent').prefetch_related('sucursales')
-
-
-class SucursalViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
-    """Backward compatibility ViewSet for Sucursal."""
-    
-    queryset = Sucursal.objects.all()
-    serializer_class = SucursalSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['organizacion_central']
+    filterset_fields = ['sucursal', 'estado', 'activo']
     search_fields = ['nombre', 'codigo']
     ordering_fields = ['nombre', 'codigo']
-    ordering = ['organizacion_central', 'nombre']
-    
-    def get_queryset(self):
-        """Optimize queryset with select_related."""
-        return super().get_queryset().select_related('organizacion_central').prefetch_related('acueductos')
-
-
-class AcueductoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
-    """Backward compatibility ViewSet for Acueducto."""
-    
-    queryset = Acueducto.objects.all()
-    serializer_class = AcueductoSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['sucursal']
-    search_fields = ['nombre', 'codigo', 'ubicacion']
-    ordering_fields = ['nombre', 'codigo']
-    ordering = ['sucursal', 'nombre']
-    
-    def get_queryset(self):
-        """Optimize queryset with select_related."""
-        return super().get_queryset().select_related('sucursal__organizacion_central')
-
-
-class ActivoInventarioViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
-    """ViewSet for ActivoInventario management with asset tracking."""
-    
-    queryset = ActivoInventario.objects.all()
-    serializer_class = ActivoInventarioSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['almacen_actual', 'tipo_activo', 'estado']
-    search_fields = ['codigo_actual', 'codigo_original', 'descripcion', 'numero_serie']
-    ordering_fields = ['codigo_actual', 'fecha_ingreso', 'valor_unitario']
-    ordering = ['-fecha_ingreso']
-    
-    def get_queryset(self):
-        """Optimize queryset with select_related."""
-        return super().get_queryset().select_related(
-            'tipo_activo',
-            'almacen_actual__unidad_organizacional',
-            'unidad_organizacional__vicepresidencia'
-        ).prefetch_related('movimientos')
-
-
-class SolicitudTrasladoViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
-    """ViewSet for SolicitudTraslado management with dual approval workflow."""
-    
-    queryset = SolicitudTraslado.objects.all()
-    serializer_class = SolicitudTrasladoSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['estado', 'prioridad', 'almacen_origen', 'almacen_destino', 'solicitante']
-    search_fields = ['numero_solicitud', 'activo__codigo_actual', 'motivo']
-    ordering_fields = ['fecha_solicitud', 'fecha_limite', 'prioridad']
-    ordering = ['-fecha_solicitud']
-    
-    def get_queryset(self):
-        """Optimize queryset with select_related and prefetch_related."""
-        return super().get_queryset().select_related(
-            'activo__tipo_activo',
-            'almacen_origen__unidad_organizacional',
-            'almacen_destino__unidad_organizacional',
-            'solicitante'
-        ).prefetch_related('aprobaciones')
-
-
-
-    
-    @action(detail=True, methods=['post'], url_path='aprobar-origen')
-    def aprobar_origen(self, request, pk=None):
-        """
-        Aprobar solicitud desde almacén de origen.
-        Puede ser llamado escaneando el QR code.
-        """
-        solicitud = self.get_object()
-        
-        # Validar que el usuario es responsable del almacén origen
-        if not solicitud.almacen_origen.manager or solicitud.almacen_origen.manager != request.user:
-            if not request.user.is_staff:
-                return Response(
-                    {'error': 'No tiene permisos para aprobar desde este almacén'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
-        # Validar estado
-        if solicitud.estado != 'PENDIENTE':
-            return Response(
-                {'error': f'Solicitud en estado {solicitud.estado}, no se puede aprobar'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Crear aprobación
-        from .models import AprobacionTraslado
-        aprobacion = AprobacionTraslado.objects.create(
-            solicitud=solicitud,
-            tipo_aprobacion='ORIGEN',
-            aprobador=request.user,
-            decision='APROBADO',
-            comentarios=request.data.get('comentarios', '')
-        )
-        
-        # Actualizar solicitud
-        solicitud.aprobacion_origen = aprobacion
-        solicitud.estado = 'APROBADA_ORIGEN'
-        solicitud.save()
-        
-        return Response({
-            'message': 'Solicitud aprobada por origen',
-            'estado': solicitud.estado,
-            'siguiente_paso': 'Esperando aprobación de destino'
-        })
-    
-    @action(detail=True, methods=['post'], url_path='aprobar-destino')
-    def aprobar_destino(self, request, pk=None):
-        """
-        Aprobar solicitud desde almacén de destino.
-        Puede ser llamado escaneando el QR code.
-        """
-        solicitud = self.get_object()
-        
-        # Validar que el usuario es responsable del almacén destino
-        if not solicitud.almacen_destino.manager or solicitud.almacen_destino.manager != request.user:
-            if not request.user.is_staff:
-                return Response(
-                    {'error': 'No tiene permisos para aprobar desde este almacén'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
-        # Validar estado
-        if solicitud.estado != 'APROBADA_ORIGEN':
-            return Response(
-                {'error': 'Solicitud debe estar aprobada por origen primero'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Crear aprobación
-        from .models import AprobacionTraslado
-        aprobacion = AprobacionTraslado.objects.create(
-            solicitud=solicitud,
-            tipo_aprobacion='DESTINO',
-            aprobador=request.user,
-            decision='APROBADO',
-            comentarios=request.data.get('comentarios', '')
-        )
-        
-        # Actualizar solicitud
-        solicitud.aprobacion_destino = aprobacion
-        solicitud.estado = 'APROBADA_COMPLETA'
-        solicitud.save()
-        
-        # Ejecutar traslado automáticamente
-        try:
-            solicitud.ejecutar_traslado(request.user)
-        except Exception as e:
-            return Response(
-                {'error': f'Error al ejecutar traslado: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        return Response({
-            'message': 'Solicitud completamente aprobada y ejecutada',
-            'estado': solicitud.estado,
-        })
-    
-    @action(detail=True, methods=['post'], url_path='rechazar')
-    def rechazar(self, request, pk=None):
-        """Rechazar solicitud de traslado"""
-        solicitud = self.get_object()
-        
-        # Validar permisos
-        if not request.user.is_staff:
-            if solicitud.almacen_origen.manager != request.user and solicitud.almacen_destino.manager != request.user:
-                return Response(
-                    {'error': 'No tiene permisos para rechazar esta solicitud'},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-        
-        # Validar estado
-        if solicitud.estado not in ['PENDIENTE', 'APROBADA_ORIGEN']:
-            return Response(
-                {'error': f'No se puede rechazar solicitud en estado {solicitud.estado}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Actualizar estado
-        solicitud.estado = 'RECHAZADA'
-        solicitud.observaciones += f"\n[{timezone.now()}] Rechazada por {request.user.username}: {request.data.get('motivo', 'Sin motivo')}"
-        solicitud.save()
-        
-        return Response({
-            'message': 'Solicitud rechazada',
-            'estado': solicitud.estado,
-        })
-    
-    @action(detail=True, methods=['get'], url_path='qr-code')
-    def obtener_qr(self, request, pk=None):
-        """Obtener o regenerar el QR code de la solicitud"""
-        solicitud = self.get_object()
-        
-        if not solicitud.qr_code:
-            solicitud.generar_qr_code(request)
-        
-        return Response({
-            'qr_url': request.build_absolute_uri(solicitud.qr_code.url) if solicitud.qr_code else None,
-            'approval_url': solicitud.qr_url,
-            'numero_solicitud': solicitud.numero_solicitud,
-            'estado': solicitud.estado,
-        })
-
-
-class HistorialMovimientoActivoViewSet(BaseModelViewSet):
-    """Read-only ViewSet for HistorialMovimientoActivo (immutable audit trail)."""
-    
-    queryset = HistorialMovimientoActivo.objects.all()
-    serializer_class = HistorialMovimientoActivoSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    filterset_fields = ['activo', 'tipo_movimiento', 'almacen_origen', 'almacen_destino', 'usuario_responsable']
-    search_fields = ['activo__codigo_actual', 'motivo', 'observaciones']
-    ordering_fields = ['fecha_movimiento']
-    ordering = ['-fecha_movimiento']
-    
-    def get_queryset(self):
-        """Optimize queryset with select_related."""
-        return super().get_queryset().select_related(
-            'activo__tipo_activo',
-            'almacen_origen',
-            'almacen_destino',
-            'usuario_responsable',
-            'solicitud_traslado'
-        )
 
 
 class MigracionOrganizacionalViewSet(BaseModelViewSet):
@@ -441,3 +169,28 @@ class MigracionOrganizacionalViewSet(BaseModelViewSet):
             'completion_rate': (completed / total * 100) if total > 0 else 0,
             'validation_rate': (validated / completed * 100) if completed > 0 else 0
         })
+
+
+# ============================================================================
+# BACKWARD COMPATIBILITY VIEWSETS
+# ============================================================================
+
+class OrganizacionCentralViewSet(SoftDeleteViewSet):
+    """Backward compatibility ViewSet for OrganizacionCentral."""
+    queryset = OrganizacionCentral.objects.all()
+    serializer_class = OrganizacionCentralSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class SucursalViewSet(SoftDeleteViewSet):
+    """Backward compatibility ViewSet for Sucursal."""
+    queryset = Sucursal.objects.all()
+    serializer_class = SucursalSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class AcueductoViewSet(SoftDeleteViewSet):
+    """Backward compatibility ViewSet for Acueducto."""
+    queryset = Acueducto.objects.all()
+    serializer_class = AcueductoSerializer
+    permission_classes = [permissions.IsAuthenticated]

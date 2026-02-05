@@ -31,6 +31,11 @@ urlpatterns = [
     path('api/suppliers/', include('proveedores.urls')),
     path('api/', include('inventario.urls')),
     
+    # Organizational and operational endpoints
+    path('api/institucion/', include('institucion.urls')),
+    path('api/operaciones/', include('operaciones.urls')),
+    path('api/flota/', include('flota.urls')),  # Fleet management
+    
     # API Documentation (OpenAPI/Swagger)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

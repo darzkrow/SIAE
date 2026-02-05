@@ -8,9 +8,6 @@ from .models import (
     Vicepresidencia,
     UnidadOrganizacional,
     AlmacenRegional,
-    ActivoInventario,
-    SolicitudTraslado,
-    AprobacionTraslado,
     OrganizacionCentral,
     Sucursal,
     Acueducto,
@@ -75,27 +72,6 @@ class AlmacenRegionalAdmin(admin.ModelAdmin):
     list_display = ['prefijo', 'nombre', 'unidad_organizacional', 'activo']
     list_filter = ['unidad_organizacional', 'activo']
     search_fields = ['nombre', 'codigo']
-
-
-@admin.register(ActivoInventario)
-class ActivoInventarioAdmin(admin.ModelAdmin):
-    list_display = ['codigo_actual', 'tipo_activo', 'almacen_actual', 'estado']
-    list_filter = ['tipo_activo', 'estado', 'almacen_actual']
-    search_fields = ['codigo_actual', 'codigo_anterior']
-
-
-@admin.register(SolicitudTraslado)
-class SolicitudTrasladoAdmin(admin.ModelAdmin):
-    list_display = ['numero_solicitud', 'estado', 'activo', 'almacen_origen', 'almacen_destino', 'fecha_solicitud']
-    list_filter = ['estado', 'prioridad', 'fecha_solicitud']
-    search_fields = ['numero_solicitud']
-    readonly_fields = ['qr_code', 'qr_url', 'qr_generado_en']
-
-
-@admin.register(AprobacionTraslado)
-class AprobacionTrasladoAdmin(admin.ModelAdmin):
-    list_display = ['solicitud', 'tipo_aprobacion', 'aprobador', 'decision', 'fecha_decision']
-    list_filter = ['tipo_aprobacion', 'decision']
 
 
 @admin.register(OrganizacionCentral)
