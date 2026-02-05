@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'operaciones',
     'geography',
     'flota',  # Fleet management
+    'tareas',  # Task scheduling
     'jazzmin',
 ]
 
