@@ -88,4 +88,16 @@ class DynamicPermission(BasePermission):
         # Admin bypass role checking
         if hasattr(user, 'role') and user.role == 'ADMIN':
             return True
-        return False # Default for now, implementation depends on accounts app logic
+        
+        # Check standard Django permissions (e.g., 'productos.view_productbase')
+        app_label = model._meta.app_label
+        model_name = model._meta.model_name
+        perm_codename = f"{app_label}.{action}_{model_name}"
+        
+        if user.has_perm(perm_codename):
+            return True
+            
+        # Fallback for specific roles if needed
+        # if user.role == 'OPERADOR' and action in ['view', 'add']: return True
+        
+        return False

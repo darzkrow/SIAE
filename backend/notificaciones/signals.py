@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from .models import Notificacion, Alerta
 from .tasks import broadcast_notification, send_telegram_notification
-from inventario.models import Stock, MovimientoInventario
+from stock.models import Stock, MovimientoInventario
 from compras.models import OrdenCompra
 
 def create_and_broadcast(mensaje, tipo='INFO', usuario=None):
@@ -34,7 +34,7 @@ def create_and_broadcast(mensaje, tipo='INFO', usuario=None):
 def stock_alert_signal(sender, instance, **kwargs):
     """Monitorea el stock actual contra el mínimo."""
     if instance.stock_actual <= instance.stock_minimo:
-        mensaje = f"⚠️ Stock Bajo: {instance.content_object} tiene {instance.stock_actual} unidades (Mínimo: {instance.stock_minimo})."
+        mensaje = f"⚠️ Stock Bajo: {instance.producto} tiene {instance.cantidad} unidades en {instance.ubicacion} (Mínimo: {instance.stock_minimo})."
         create_and_broadcast(mensaje, tipo='WARNING')
 
 @receiver(post_save, sender=OrdenCompra)
@@ -64,6 +64,6 @@ def orden_compra_workflow_signal(sender, instance, created, **kwargs):
 @receiver(post_save, sender=MovimientoInventario)
 def movimiento_inventario_signal(sender, instance, **kwargs):
     """Notifica sobre transferencias y ajustes."""
-    if instance.tipo_movimiento == instance.T_TRANSFER and instance.es_entrada:
+    if instance.tipo_movimiento == MovimientoInventario.TipoMovimiento.TRANSFER and instance.ubicacion_destino:
         mensaje = f"🚛 Transferencia recibida: {instance.cantidad} de {instance.producto} en {instance.ubicacion_destino}."
         create_and_broadcast(mensaje, tipo='SUCCESS', usuario=instance.creado_por)
