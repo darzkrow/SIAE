@@ -12,7 +12,7 @@ import qrcode
 from io import BytesIO
 from django.core.files import File
 from django.urls import reverse
-
+from .choices import VicepresidenciaTypes, TipoUnidadChoices, AlmacenPrefijos
 User = get_user_model()
 
 class Empresa(TimeStampedModel, MPTTModel):
@@ -59,6 +59,8 @@ class Empresa(TimeStampedModel, MPTTModel):
         return ' → '.join([ancestor.nombre for ancestor in ancestors])
 
 
+
+
 class Vicepresidencia(TimeStampedModel, MPTTModel):
     """
     🏛️ Vicepresidencias (Comercialización, Operaciones Hídricas, Administrativa)
@@ -66,11 +68,6 @@ class Vicepresidencia(TimeStampedModel, MPTTModel):
     Segundo nivel en jerarquía organizacional.
     Hereda created_at y updated_at de TimeStampedModel.
     """
-    VP_TYPES = [
-        ('COMERCIALIZACION', 'Vicepresidencia de Comercialización'),
-        ('OPERACIONES_HIDRICAS', 'Vicepresidencia de Operaciones Hídricas'),
-        ('ADMINISTRATIVA', 'Vicepresidencia Administrativa'),
-    ]
     
     empresa = models.ForeignKey(
         Empresa,
@@ -79,7 +76,7 @@ class Vicepresidencia(TimeStampedModel, MPTTModel):
     )
     nombre = models.CharField(max_length=200)
     codigo = models.CharField(max_length=20, unique=True)
-    tipo = models.CharField(max_length=50, choices=VP_TYPES)
+    tipo = models.CharField(max_length=50, choices=VicepresidenciaTypes.choices)
     descripcion = models.TextField(blank=True)
     responsable = models.ForeignKey(
         User,
@@ -133,17 +130,6 @@ class UnidadOrganizacional(TimeStampedModel, MPTTModel):
     Tercer nivel en jerarquía organizacional.
     Hereda created_at y updated_at de TimeStampedModel.
     """
-    TIPO_UNIDAD_CHOICES = [
-        ('GERENCIA', 'Gerencia'),
-        ('COORDINACION', 'Coordinación'),
-        ('DEPARTAMENTO', 'Departamento'),
-        ('DIVISION', 'División'),
-        ('SECCION', 'Sección'),
-        ('OFICINA', 'Oficina'),
-        ('ALMACEN', 'Almacén'),
-        ('PLANTA', 'Planta de Tratamiento'),
-        ('ESTACION', 'Estación de Bombeo'),
-    ]
     
     vicepresidencia = models.ForeignKey(
         Vicepresidencia,
@@ -152,7 +138,7 @@ class UnidadOrganizacional(TimeStampedModel, MPTTModel):
     )
     nombre = models.CharField(max_length=200)
     codigo = models.CharField(max_length=30, unique=True)
-    tipo = models.CharField(max_length=50, choices=TIPO_UNIDAD_CHOICES)
+    tipo = models.CharField(max_length=50, choices=TipoUnidadChoices.choices)
     descripcion = models.TextField(blank=True)
     ubicacion = models.CharField(max_length=255, blank=True)
     responsable = models.ForeignKey(
@@ -208,18 +194,6 @@ class AlmacenRegional(TimeStampedModel):
     Cada almacén tiene un código único de tres letras.
     Hereda created_at y updated_at de TimeStampedModel.
     """
-    # Predefined warehouse prefixes as per requirements
-    PREFIJOS_VALIDOS = [
-        ('ZUL', 'Zulia'),
-        ('CAR', 'Carabobo'),
-        ('MIR', 'Miranda'),
-        ('ARA', 'Aragua'),
-        ('LAR', 'Lara'),
-        ('TAC', 'Táchira'),
-        ('BOL', 'Bolívar'),
-        ('ANZ', 'Anzoátegui'),
-        ('NVA', 'Nueva Esparta'),
-    ]
     
     unidad_organizacional = models.ForeignKey(
         UnidadOrganizacional,
@@ -234,7 +208,7 @@ class AlmacenRegional(TimeStampedModel):
     prefijo = models.CharField(
         max_length=3,
         unique=True,
-        choices=PREFIJOS_VALIDOS,
+        choices=AlmacenPrefijos.choices,
         help_text='Código único de tres letras para identificar el almacén'
     )
     ubicacion = models.CharField(

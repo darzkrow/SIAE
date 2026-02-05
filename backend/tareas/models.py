@@ -17,6 +17,12 @@ from django.utils import timezone
 from core.models import TimeStampedModel
 import logging
 
+import logging
+from .choices import (
+    TipoColumnaKanban, PrioridadTarea, EstadoTarea, PatronRecurrencia,
+    RolAsignacion, TipoRecordatorio, AccionHistorial
+)
+
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
@@ -85,19 +91,13 @@ class ColumnaKanban(TimeStampedModel):
     
     Por defecto: Pendiente, En Progreso, Completada
     """
-    TIPOS_COLUMNA = [
-        ('INICIO', 'Estado Inicial'),
-        ('PROGRESO', 'En Progreso'),
-        ('FIN', 'Estado Final'),
-    ]
-    
     nombre = models.CharField(
         max_length=50,
         help_text='Nombre de la columna'
     )
     tipo = models.CharField(
         max_length=20,
-        choices=TIPOS_COLUMNA,
+        choices=TipoColumnaKanban.choices,
         default='PROGRESO',
         help_text='Tipo de columna'
     )
@@ -141,66 +141,15 @@ class Tarea(TimeStampedModel):
     - Vinculación a entidades del sistema
     """
     
-    PRIORIDADES = [
-        ('BAJA', 'Baja'),
-        ('MEDIA', 'Media'),
-        ('ALTA', 'Alta'),
-        ('URGENTE', 'Urgente'),
-    ]
-    
-    ESTADOS = [
-        ('PENDIENTE', 'Pendiente'),
-        ('EN_PROGRESO', 'En Progreso'),
-        ('EN_REVISION', 'En Revisión'),
-        ('COMPLETADA', 'Completada'),
-        ('CANCELADA', 'Cancelada'),
-        ('PAUSADA', 'Pausada'),
-    ]
-    
-    PATRONES_RECURRENCIA = [
-        ('DIARIO', 'Diario'),
-        ('SEMANAL', 'Semanal'),
-        ('QUINCENAL', 'Quincenal'),
-        ('MENSUAL', 'Mensual'),
-        ('TRIMESTRAL', 'Trimestral'),
-        ('ANUAL', 'Anual'),
-    ]
-    
-    # Información básica
-    titulo = models.CharField(
-        max_length=200,
-        help_text='Título de la tarea'
-    )
-    descripcion = models.TextField(
-        blank=True,
-        help_text='Descripción detallada'
-    )
-    categoria = models.ForeignKey(
-        CategoriaTarea,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='tareas',
-        help_text='Categoría de la tarea'
-    )
-    columna_kanban = models.ForeignKey(
-        ColumnaKanban,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='tareas',
-        help_text='Columna en el tablero Kanban'
-    )
-    
     # Prioridad y estado
     prioridad = models.CharField(
         max_length=10,
-        choices=PRIORIDADES,
+        choices=PrioridadTarea.choices,
         default='MEDIA'
     )
     estado = models.CharField(
         max_length=15,
-        choices=ESTADOS,
+        choices=EstadoTarea.choices,
         default='PENDIENTE'
     )
     
@@ -249,7 +198,7 @@ class Tarea(TimeStampedModel):
     )
     patron_recurrencia = models.CharField(
         max_length=15,
-        choices=PATRONES_RECURRENCIA,
+        choices=PatronRecurrencia.choices,
         blank=True,
         help_text='Patrón de repetición'
     )
@@ -423,12 +372,6 @@ class AsignacionTarea(TimeStampedModel):
     Roles: Responsable (principal), Colaborador, Observador
     """
     
-    ROLES = [
-        ('RESPONSABLE', 'Responsable'),
-        ('COLABORADOR', 'Colaborador'),
-        ('OBSERVADOR', 'Observador'),
-    ]
-    
     tarea = models.ForeignKey(
         Tarea,
         on_delete=models.CASCADE,
@@ -443,7 +386,7 @@ class AsignacionTarea(TimeStampedModel):
     )
     rol = models.CharField(
         max_length=15,
-        choices=ROLES,
+        choices=RolAsignacion.choices,
         default='RESPONSABLE',
         help_text='Rol en la tarea'
     )
@@ -557,18 +500,6 @@ class RecordatorioTarea(TimeStampedModel):
     Recordatorios programados para tareas.
     """
     
-    TIPOS_RECORDATORIO = [
-        ('PUSH', 'Notificación Push'),
-        ('EMAIL', 'Correo Electrónico'),
-        ('TELEGRAM', 'Telegram'),
-    ]
-    
-    tarea = models.ForeignKey(
-        Tarea,
-        on_delete=models.CASCADE,
-        related_name='recordatorios',
-        help_text='Tarea'
-    )
     usuario = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -580,7 +511,7 @@ class RecordatorioTarea(TimeStampedModel):
     )
     tipo = models.CharField(
         max_length=10,
-        choices=TIPOS_RECORDATORIO,
+        choices=TipoRecordatorio.choices,
         default='PUSH',
         help_text='Tipo de notificación'
     )
@@ -621,28 +552,6 @@ class HistorialTarea(TimeStampedModel):
     Registro de cambios y acciones en tareas.
     """
     
-    ACCIONES = [
-        ('CREADA', 'Tarea Creada'),
-        ('EDITADA', 'Tarea Editada'),
-        ('ASIGNADA', 'Tarea Asignada'),
-        ('DESASIGNADA', 'Asignación Removida'),
-        ('ESTADO_CAMBIADO', 'Estado Cambiado'),
-        ('PRIORIDAD_CAMBIADA', 'Prioridad Cambiada'),
-        ('FECHA_CAMBIADA', 'Fecha Modificada'),
-        ('COMENTARIO', 'Comentario Agregado'),
-        ('ARCHIVO', 'Archivo Adjuntado'),
-        ('COMPLETADA', 'Tarea Completada'),
-        ('CANCELADA', 'Tarea Cancelada'),
-        ('REABIERTA', 'Tarea Reabierta'),
-        ('RECURRENCIA_GENERADA', 'Recurrencia Generada'),
-    ]
-    
-    tarea = models.ForeignKey(
-        Tarea,
-        on_delete=models.CASCADE,
-        related_name='historial',
-        help_text='Tarea'
-    )
     usuario = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -652,7 +561,7 @@ class HistorialTarea(TimeStampedModel):
     )
     accion = models.CharField(
         max_length=25,
-        choices=ACCIONES,
+        choices=AccionHistorial.choices,
         help_text='Tipo de acción'
     )
     descripcion = models.TextField(

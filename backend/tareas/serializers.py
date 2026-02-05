@@ -14,6 +14,7 @@ from .models import (
     RecordatorioTarea,
     HistorialTarea,
 )
+from .choices import EstadoTarea, RolAsignacion
 
 User = get_user_model()
 
@@ -400,7 +401,7 @@ class TareaKanbanSerializer(serializers.ModelSerializer):
 
 class CambiarEstadoSerializer(serializers.Serializer):
     """Serializer para cambiar estado de tarea"""
-    estado = serializers.ChoiceField(choices=Tarea.ESTADOS)
+    estado = serializers.ChoiceField(choices=EstadoTarea.choices)
 
 
 class CambiarColumnaSerializer(serializers.Serializer):
@@ -413,7 +414,7 @@ class AsignarTareaSerializer(serializers.Serializer):
     """Serializer para asignar tarea"""
     usuario_id = serializers.IntegerField()
     rol = serializers.ChoiceField(
-        choices=AsignacionTarea.ROLES,
+        choices=RolAsignacion.choices,
         default='RESPONSABLE'
     )
 

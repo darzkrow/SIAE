@@ -14,6 +14,7 @@ import qrcode
 from io import BytesIO
 from django.core.files import File
 import logging
+from .choices import TipoVehiculoChoices, EstadoVehiculo, TipoDocumentoVehiculo
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -36,16 +37,6 @@ class TipoVehiculo(TimeStampedModel):
     - Maquinaria (retroexcavadoras, grúas, compresores)
     """
     
-    CATEGORIAS = [
-        ('MOTO', 'Motocicleta'),
-        ('LIVIANO', 'Vehículo Liviano'),
-        ('PESADO', 'Vehículo Pesado'),
-        ('TRANSPORTE', 'Transporte de Personal'),
-        ('EMBARCACION', 'Embarcación'),
-        ('MAQUINARIA', 'Maquinaria Pesada'),
-        ('ESPECIAL', 'Vehículo Especial'),
-    ]
-    
     nombre = models.CharField(
         max_length=100,
         unique=True,
@@ -53,7 +44,7 @@ class TipoVehiculo(TimeStampedModel):
     )
     categoria = models.CharField(
         max_length=20,
-        choices=CATEGORIAS,
+        choices=TipoVehiculoChoices.choices,
         help_text='Categoría general del vehículo'
     )
     codigo = models.CharField(
@@ -125,17 +116,6 @@ class Vehiculo(TimeStampedModel):
     documentación, historial de mantenimiento y asignaciones.
     """
     
-    ESTADOS = [
-        ('DISPONIBLE', 'Disponible'),
-        ('EN_USO', 'En Uso'),
-        ('ASIGNADO', 'Asignado Permanente'),
-        ('MANTENIMIENTO', 'En Mantenimiento'),
-        ('REPARACION', 'En Reparación'),
-        ('RESERVADO', 'Reservado'),
-        ('FUERA_SERVICIO', 'Fuera de Servicio'),
-        ('SINIESTRADO', 'Siniestrado'),
-        ('BAJA', 'Dado de Baja'),
-    ]
     
     TIPOS_COMBUSTIBLE = [
         ('GASOLINA_91', 'Gasolina 91'),
@@ -264,8 +244,8 @@ class Vehiculo(TimeStampedModel):
     # =========================================================================
     estado = models.CharField(
         max_length=20,
-        choices=ESTADOS,
-        default='DISPONIBLE',
+        choices=EstadoVehiculo.choices,
+        default=EstadoVehiculo.DISPONIBLE,
         help_text='Estado actual del vehículo'
     )
     kilometraje_actual = models.PositiveIntegerField(
@@ -566,28 +546,9 @@ class DocumentoVehiculo(TimeStampedModel):
     con seguimiento de vencimiento y alertas automáticas.
     """
     
-    TIPOS_DOCUMENTO = [
-        ('REGISTRO', 'Certificado de Registro'),
-        ('SEGURO', 'Póliza de Seguro'),
-        ('REVISION', 'Revisión Técnica'),
-        ('PERMISO_CIRCULACION', 'Permiso de Circulación'),
-        ('LICENCIA_OPERACION', 'Licencia de Operación'),
-        ('MATRICULA', 'Certificado de Matrícula'),
-        ('INSPECCION', 'Certificado de Inspección'),
-        ('FUMIGACION', 'Certificado de Fumigación'),
-        ('GARANTIA', 'Certificado de Garantía'),
-        ('OTRO', 'Otro Documento'),
-    ]
-    
-    vehiculo = models.ForeignKey(
-        Vehiculo,
-        on_delete=models.CASCADE,
-        related_name='documentos',
-        help_text='Vehículo al que pertenece el documento'
-    )
     tipo_documento = models.CharField(
         max_length=30,
-        choices=TIPOS_DOCUMENTO,
+        choices=TipoDocumentoVehiculo.choices,
         help_text='Tipo de documento'
     )
     nombre = models.CharField(

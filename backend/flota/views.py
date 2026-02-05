@@ -16,6 +16,7 @@ from .models import (
     AsignacionVehiculo,
     RegistroCombustible,
 )
+from .choices import TipoVehiculoChoices, EstadoVehiculo
 from .serializers import (
     TipoVehiculoSerializer,
     VehiculoListSerializer,
@@ -57,7 +58,7 @@ class TipoVehiculoViewSet(viewsets.ModelViewSet):
     def por_categoria(self, request):
         """Obtener tipos agrupados por categoría"""
         result = {}
-        for cat_code, cat_name in TipoVehiculo.CATEGORIAS:
+        for cat_code, cat_name in TipoVehiculoChoices.choices:
             tipos = TipoVehiculo.objects.filter(categoria=cat_code, activo=True)
             result[cat_code] = {
                 'nombre': cat_name,
@@ -144,7 +145,7 @@ class VehiculoViewSet(viewsets.ModelViewSet):
         
         # Por estado
         por_estado = {}
-        for estado_code, estado_name in Vehiculo.ESTADOS:
+        for estado_code, estado_name in EstadoVehiculo.choices:
             count = vehiculos.filter(estado=estado_code).count()
             if count > 0:
                 por_estado[estado_code] = {
@@ -154,7 +155,7 @@ class VehiculoViewSet(viewsets.ModelViewSet):
         
         # Por categoría
         por_categoria = {}
-        for cat_code, cat_name in TipoVehiculo.CATEGORIAS:
+        for cat_code, cat_name in TipoVehiculoChoices.choices:
             count = vehiculos.filter(tipo_vehiculo__categoria=cat_code).count()
             if count > 0:
                 por_categoria[cat_code] = {

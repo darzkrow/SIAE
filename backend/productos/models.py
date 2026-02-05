@@ -10,14 +10,12 @@ from catalogo.models import CategoriaProducto, Marca, Tag
 from core.models import SoftDeleteModel, TimeStampedModel
 from proveedores.models import Supplier
 
-class UnitOfMeasure(SoftDeleteModel):
-    class TipoUnidad(models.TextChoices):
-        LONGITUD = 'LONGITUD', 'Longitud'
-        VOLUMEN = 'VOLUMEN', 'Volumen'
-        PESO = 'PESO', 'Peso'
-        UNIDAD = 'UNIDAD', 'Unidad'
-        AREA = 'AREA', 'Área'
+from .choices import (
+    TipoUnidad, TipoInventario, NivelCriticidad, NivelPeligrosidad,
+    TipoPresentacion, MaterialTuberia, TipoEquipo
+)
 
+class UnitOfMeasure(SoftDeleteModel):
     nombre = models.CharField(max_length=50, unique=True)
     simbolo = models.CharField(max_length=10, unique=True)
     tipo = models.CharField(max_length=20, choices=TipoUnidad.choices)
@@ -32,19 +30,10 @@ class UnitOfMeasure(SoftDeleteModel):
     def __str__(self):
         return f"{self.nombre} ({self.simbolo})"
 
-    def __str__(self):
-        return f"{self.nombre} ({self.simbolo})"
-
 class ProductBase(SoftDeleteModel):
     sku = models.CharField(max_length=50, unique=True, verbose_name='SKU')
     nombre = models.CharField(max_length=250)
     descripcion = models.TextField(blank=True)
-    
-    class TipoInventario(models.TextChoices):
-        ESTRATEGICO = 'ESTRATEGICO', 'Estratégico Hídrico'
-        OPERACIONAL = 'OPERACIONAL', 'Operacional'
-        CONSUMIBLE = 'CONSUMIBLE', 'Consumible'
-        ACTIVO_FIJO = 'ACTIVO_FIJO', 'Activo Fijo'
     
     tipo_inventario = models.CharField(max_length=20, choices=TipoInventario.choices, default=TipoInventario.OPERACIONAL)
     categoria = models.ForeignKey(CategoriaProducto, on_delete=models.PROTECT, related_name='%(class)s_productos')
@@ -57,7 +46,7 @@ class ProductBase(SoftDeleteModel):
     es_critico = models.BooleanField(default=False)
     nivel_criticidad = models.CharField(
         max_length=10,
-        choices=[('BAJO', 'Bajo'), ('MEDIO', 'Medio'), ('ALTO', 'Alto'), ('CRITICO', 'Crítico')],
+        choices=NivelCriticidad.choices,
         default='MEDIO'
     )
     
@@ -91,20 +80,6 @@ class ProductBase(SoftDeleteModel):
         super().save(*args, **kwargs)
 
 class ChemicalProduct(ProductBase):
-    class NivelPeligrosidad(models.TextChoices):
-        BAJO = 'BAJO', 'Bajo'
-        MEDIO = 'MEDIO', 'Medio'
-        ALTO = 'ALTO', 'Alto'
-        MUY_ALTO = 'MUY_ALTO', 'Muy Alto'
-    
-    class TipoPresentacion(models.TextChoices):
-        SACO = 'SACO', 'Saco'
-        TAMBOR = 'TAMBOR', 'Tambor/Bidón'
-        GRANEL = 'GRANEL', 'Granel'
-        GALON = 'GALON', 'Galón'
-        CILINDRO = 'CILINDRO', 'Cilindro'
-        OTRO = 'OTRO', 'Otro'
-
     es_peligroso = models.BooleanField(default=False)
     nivel_peligrosidad = models.CharField(max_length=15, choices=NivelPeligrosidad.choices, blank=True)
     fecha_caducidad = models.DateField(null=True, blank=True)
@@ -117,13 +92,7 @@ class ChemicalProduct(ProductBase):
         verbose_name_plural = 'Productos Químicos'
 
 class Pipe(ProductBase):
-    class Material(models.TextChoices):
-        PVC = 'PVC', 'PVC'
-        PEAD = 'PEAD', 'PEAD'
-        ACERO = 'ACERO', 'Acero'
-        HIERRO = 'HIERRO_DUCTIL', 'Hierro Dúctil'
-
-    material = models.CharField(max_length=20, choices=Material.choices)
+    material = models.CharField(max_length=20, choices=MaterialTuberia.choices)
     diametro_nominal = models.DecimalField(max_digits=8, decimal_places=2)
     presion_nominal = models.CharField(max_length=10)
     presion_psi = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
@@ -135,10 +104,6 @@ class Pipe(ProductBase):
         verbose_name_plural = 'Tuberías'
 
 class PumpAndMotor(ProductBase):
-    class TipoEquipo(models.TextChoices):
-        BOMBA = 'BOMBA', 'Bomba'
-        MOTOR = 'MOTOR', 'Motor'
-    
     tipo_equipo = models.CharField(max_length=30, choices=TipoEquipo.choices, default='BOMBA')
     marca = models.ForeignKey(Marca, on_delete=models.PROTECT, related_name='equipos')
     modelo = models.CharField(max_length=150)
