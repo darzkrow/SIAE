@@ -25,6 +25,10 @@ urlpatterns = [
     path('api/auditoria/', include('auditoria.urls')),
     path('api/notificaciones/', include('notificaciones.urls')),
     # path('', include('institucion.urls')),  # Include institucion URLs for API compatibility - temporarily disabled
+    path('api/products/', include('productos.urls')),
+    path('api/stock/', include('stock.urls')),
+    path('api/assets/', include('activos.urls')),
+    path('api/suppliers/', include('proveedores.urls')),
     path('api/', include('inventario.urls')),
     
     # API Documentation (OpenAPI/Swagger)

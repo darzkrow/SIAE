@@ -1,11 +1,7 @@
 from rest_framework import serializers
 
 class BaseModelSerializer(serializers.ModelSerializer):
-    """
-    🏗️ Serializer Base para Modelos
-    
-    Incluye campos comunes y validaciones estándar.
-    """
+
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 
@@ -16,11 +12,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
 
 
 class SoftDeleteSerializer(BaseModelSerializer):
-    """
-    🗑️ Serializer para Modelos con Soft Delete
-    
-    Incluye el campo deleted_at.
-    """
+
     deleted_at = serializers.DateTimeField(read_only=True)
     is_deleted = serializers.BooleanField(read_only=True)
 

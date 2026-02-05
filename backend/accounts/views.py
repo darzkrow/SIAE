@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from core.viewsets import BaseModelViewSet
 from .models import CustomUser
 from .serializers import CustomUserSerializer
-from inventario.permissions import CanManageUsers
+from core.permissions import CanManageUsers
 from drf_spectacular.utils import extend_schema
 
 class CustomAuthToken(ObtainAuthToken):

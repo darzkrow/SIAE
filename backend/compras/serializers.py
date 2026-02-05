@@ -54,22 +54,53 @@ class ItemOrdenSerializer(SoftDeleteSerializer):
         return super().create(validated_data)
 
 class OrdenCompraSerializer(SoftDeleteSerializer):
-    """Serializer para OrdenCompra con soft delete"""
+    """Serializer para OrdenCompra con soft delete y workflow"""
     items = ItemOrdenSerializer(many=True, read_only=True)
     solicitante_nombre = serializers.SerializerMethodField()
-    aprobador_nombre = serializers.SerializerMethodField()
+    
+    # Workflow fields
+    aprobado_comercializacion_nombre = serializers.SerializerMethodField()
+    aprobado_presupuesto_nombre = serializers.SerializerMethodField()
+    aprobado_finanzas_nombre = serializers.SerializerMethodField()
+    ejecutado_compras_nombre = serializers.SerializerMethodField()
     
     class Meta(SoftDeleteSerializer.Meta):
         model = OrdenCompra
         fields = SoftDeleteSerializer.Meta.fields + [
-            'codigo', 'movimiento', 'fecha_creacion', 
-            'solicitante', 'solicitante_nombre', 'aprobador', 'aprobador_nombre',
-            'status', 'notas', 'items'
+            'codigo', 'tipo', 'parent_order', 'movimiento', 
+            'fecha_creacion', 'solicitante', 'solicitante_nombre',
+            'aprobado_comercializacion_por', 'aprobado_comercializacion_nombre', 'fecha_aprobacion_comercializacion',
+            'aprobado_presupuesto_por', 'aprobado_presupuesto_nombre', 'fecha_aprobacion_presupuesto',
+            'aprobado_finanzas_por', 'aprobado_finanzas_nombre', 'fecha_aprobacion_finanzas',
+            'ejecutado_compras_por', 'ejecutado_compras_nombre', 'fecha_ejecucion_compras',
+            'status', 'notas', 'motivo_cancelacion', 'items'
         ]
-        read_only_fields = SoftDeleteSerializer.Meta.read_only_fields + ['codigo', 'fecha_creacion']
+        read_only_fields = SoftDeleteSerializer.Meta.read_only_fields + [
+            'codigo', 'fecha_creacion', 
+            'aprobado_comercializacion_por', 'fecha_aprobacion_comercializacion',
+            'aprobado_presupuesto_por', 'fecha_aprobacion_presupuesto',
+            'aprobado_finanzas_por', 'fecha_aprobacion_finanzas',
+            'ejecutado_compras_por', 'fecha_ejecucion_compras'
+        ]
 
     def get_solicitante_nombre(self, obj):
         return obj.solicitante.username if obj.solicitante else None
 
-    def get_aprobador_nombre(self, obj):
-        return obj.aprobador.username if obj.aprobador else None
+    def get_aprobado_comercializacion_nombre(self, obj):
+        return obj.aprobado_comercializacion_por.username if obj.aprobado_comercializacion_por else None
+
+    def get_aprobado_presupuesto_nombre(self, obj):
+        return obj.aprobado_presupuesto_por.username if obj.aprobado_presupuesto_por else None
+
+    def get_aprobado_finanzas_nombre(self, obj):
+        return obj.aprobado_finanzas_por.username if obj.aprobado_finanzas_por else None
+
+    def get_ejecutado_compras_nombre(self, obj):
+        return obj.ejecutado_compras_por.username if obj.ejecutado_compras_por else None
+
+class ConsolidacionSerializer(serializers.Serializer):
+    """Serializer para la acción de consolidar órdenes"""
+    ordenes_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        help_text="Lista de IDs de órdenes individuales a consolidar"
+    )

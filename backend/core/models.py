@@ -84,3 +84,19 @@ class BaseModel(SoftDeleteModel):
         elif hasattr(self, 'nombre'):
             return self.nombre
         return f"{self.__class__.__name__} #{self.pk}"
+class SystemConfiguration(models.Model):
+    """Configuración global del sistema."""
+    key = models.CharField(max_length=100, unique=True)
+    value = models.JSONField()
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'inventario_systemconfiguration'
+        verbose_name = 'Configuración'
+        verbose_name_plural = 'Configuraciones'
+
+    def __str__(self):
+        return self.key

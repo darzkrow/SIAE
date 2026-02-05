@@ -1,45 +1,53 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
-from inventario import views
+from productos.views import (
+    UnitOfMeasureViewSet, ChemicalProductViewSet,
+    PipeViewSet, PumpAndMotorViewSet, AccessoryViewSet
+)
+from proveedores.views import SupplierViewSet
+from stock.views import (
+    StockViewSet, MovimientoInventarioViewSet, 
+    InventoryAuditViewSet, InventoryReportViewSet
+)
+from activos.views import (
+    MaterialEstrategicoViewSet, ActivoFijoViewSet,
+    FichaTecnicaMotorViewSet, RegistroMantenimientoViewSet
+)
+from institucion.views import (
+    OrganizacionCentralViewSet, SucursalViewSet, AcueductoViewSet
+)
+from accounts.views import UserViewSet
 
-# Crear router para las nuevas rutas
+# New router for the legacy 'api/' prefix
 router = DefaultRouter()
 
-# Modelos auxiliares
-router.register(r'organizaciones', views.OrganizacionCentralViewSet, basename='organizacion')
-router.register(r'sucursales', views.SucursalViewSet, basename='sucursal')
-router.register(r'units', views.UnitOfMeasureViewSet, basename='unit')
-router.register(r'suppliers', views.SupplierViewSet, basename='supplier')
-router.register(r'acueductos', views.AcueductoViewSet, basename='acueducto')
-router.register(r'users', views.UserViewSet, basename='user')
+# Auxiliares / Organizacionales
+router.register(r'organizaciones', OrganizacionCentralViewSet, basename='organizacion')
+router.register(r'sucursales', SucursalViewSet, basename='sucursal')
+router.register(r'acueductos', AcueductoViewSet, basename='acueducto')
+router.register(r'users', UserViewSet, basename='user')
 
-# Productos
-router.register(r'chemicals', views.ChemicalProductViewSet, basename='chemical')
-router.register(r'pipes', views.PipeViewSet, basename='pipe')
-router.register(r'pumps', views.PumpAndMotorViewSet, basename='pump')
-router.register(r'accessories', views.AccessoryViewSet, basename='accessory')
+# Auxiliares / Productos
+router.register(r'units', UnitOfMeasureViewSet, basename='unit')
+router.register(r'suppliers', SupplierViewSet, basename='supplier')
+router.register(r'chemicals', ChemicalProductViewSet, basename='chemical')
+router.register(r'pipes', PipeViewSet, basename='pipe')
+router.register(r'pumps', PumpAndMotorViewSet, basename='pump')
+router.register(r'accessories', AccessoryViewSet, basename='accessory')
 
-# Stock
-router.register(r'stock-chemicals', views.StockChemicalViewSet, basename='stock-chemical')
-router.register(r'stock-pipes', views.StockPipeViewSet, basename='stock-pipe')
-router.register(r'stock-pumps', views.StockPumpAndMotorViewSet, basename='stock-pump')
-router.register(r'stock-accessories', views.StockAccessoryViewSet, basename='stock-accessory')
-
-# Movimientos
-router.register(r'movimientos', views.MovimientoInventarioViewSet, basename='movimiento')
+# Stock / Movimientos
+router.register(r'stock', StockViewSet, basename='stock')
+router.register(r'movimientos', MovimientoInventarioViewSet, basename='movimiento')
+router.register(r'auditoria', InventoryAuditViewSet, basename='auditoria')
 
 # Reportes
-router.register(r'reportes-v2', views.RefactoredReportesViewSet, basename='reportes-v2')
+router.register(r'reportes-v2', InventoryReportViewSet, basename='reportes-v2')
 
-# Gestión Estratégica
-router.register(r'materiales-estrategicos', views.MaterialEstrategicoViewSet, basename='material-estrategico')
-router.register(r'activos-fijos', views.ActivoFijoViewSet, basename='activo-fijo')
-
-# Mantenimiento
-router.register(r'fichas-tecnicas', views.FichaTecnicaMotorViewSet, basename='ficha-tecnica')
-router.register(r'mantenimientos', views.RegistroMantenimientoViewSet, basename='mantenimiento')
-
-# urlpatterns
+# Gestión Estratégica / Activos
+router.register(r'materiales-estrategicos', MaterialEstrategicoViewSet, basename='material-estrategico')
+router.register(r'activos-fijos', ActivoFijoViewSet, basename='activo-fijo')
+router.register(r'fichas-tecnicas', FichaTecnicaMotorViewSet, basename='ficha-tecnica')
+router.register(r'mantenimientos', RegistroMantenimientoViewSet, basename='mantenimiento')
 
 urlpatterns = [
     path('', include(router.urls)),

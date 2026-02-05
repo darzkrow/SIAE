@@ -15,10 +15,6 @@ from django.urls import reverse
 
 User = get_user_model()
 
-# ============================================================================
-# NUEVOS MODELOS ORGANIZACIONALES JERÁRQUICOS (MPTT)
-# ============================================================================
-
 class Empresa(TimeStampedModel, MPTTModel):
     """
     🏢 Empresa en jerarquía organizacional
@@ -32,9 +28,7 @@ class Empresa(TimeStampedModel, MPTTModel):
     telefono = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
     activo = models.BooleanField(default=True)
-    # fecha_creacion y fecha_actualizacion heredados de TimeStampedModel (created_at, updated_at)
-    
-    # MPTT fields
+
     parent = TreeForeignKey(
         'self',
         on_delete=models.CASCADE,

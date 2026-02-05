@@ -52,8 +52,20 @@ class Ubicacion(models.Model):
         null=True, blank=True
     )
     acueducto = models.ForeignKey(
-        'institucion.Acueducto',  # String reference to avoid circular import
-        on_delete=models.CASCADE,
+        'institucion.Acueducto',
+        on_delete=models.SET_NULL,
+        related_name='ubicaciones',
+        null=True, blank=True
+    )
+    almacen_regional = models.ForeignKey(
+        'institucion.AlmacenRegional',
+        on_delete=models.SET_NULL,
+        related_name='ubicaciones',
+        null=True, blank=True
+    )
+    subalmacen = models.ForeignKey(
+        'institucion.Subalmacen',
+        on_delete=models.SET_NULL,
         related_name='ubicaciones',
         null=True, blank=True
     )
@@ -67,6 +79,10 @@ class Ubicacion(models.Model):
         ordering = ['parish', 'acueducto', 'nombre']
 
     def __str__(self):
+        if self.subalmacen:
+            return f"{self.nombre} ({self.subalmacen.nombre})"
+        if self.almacen_regional:
+            return f"{self.nombre} ({self.almacen_regional.nombre})"
         if self.acueducto:
             return f"{self.nombre} ({self.acueducto.nombre})"
         if self.parish:

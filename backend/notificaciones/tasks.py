@@ -24,15 +24,19 @@ def send_telegram_notification(message, chat_id=None):
             print(f"Error enviando notificación a Telegram: {e}")
 
 @shared_task
-def broadcast_notification(message, group_name='notifications_global'):
+def broadcast_notification(payload, group_name='notifications_global', user_id=None):
     """
-    Tarea para enviar notificación via WebSockets (Channels) desde Celery.
+    Tarea para enviar notificación via WebSockets (Channels).
+    Si user_id está presente, apunta al grupo específico del usuario.
     """
     channel_layer = get_channel_layer()
+    
+    target_group = f'user_{user_id}' if user_id else group_name
+    
     async_to_sync(channel_layer.group_send)(
-        group_name,
+        target_group,
         {
             'type': 'send_notification',
-            'message': message
+            'payload': payload
         }
     )

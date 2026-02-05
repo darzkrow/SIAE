@@ -34,40 +34,89 @@ class OrdenCompra(SoftDeleteModel):
     Orden para adquisición de stock.
     Hereda timestamps y soft delete de SoftDeleteModel.
     """
+    class Tipo(models.TextChoices):
+        INDIVIDUAL = 'INDIVIDUAL', 'Individual'
+        GLOBAL = 'GLOBAL', 'Global'
+
     class Status(models.TextChoices):
         BORRADOR = 'BORRADOR', 'Borrador'
-        SOLICITADO = 'SOLICITADO', 'Solicitado'
-        PROCESO = 'EN_PROCESO', 'En Proceso'
+        PENDIENTE_COMERCIALIZACION = 'PENDIENTE_COMERCIALIZACION', 'Pendiente Comercialización'
+        PENDIENTE_PRESUPUESTO = 'PENDIENTE_PRESUPUESTO', 'Pendiente Presupuesto'
+        PENDIENTE_FINANZAS = 'PENDIENTE_FINANZAS', 'Pendiente Finanzas'
+        PENDIENTE_COMPRAS = 'PENDIENTE_COMPRAS', 'Pendiente Compras'
+        EN_PROCESO = 'EN_PROCESO', 'En Proceso'
         COMPLETADO = 'COMPLETADO', 'Completado'
         CANCELADO = 'CANCELADO', 'Cancelado'
 
-    codigo = models.CharField(max_length=50, unique=True)
+    codigo = models.CharField(max_length=50, unique=True, blank=True)
+    tipo = models.CharField(
+        max_length=20,
+        choices=Tipo.choices,
+        default=Tipo.INDIVIDUAL
+    )
+    
+    # Jerarquía
+    parent_order = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='child_orders',
+        help_text='Orden Global a la que pertenece esta orden individual'
+    )
+
+    # Relación con movimiento (Solo para individuales)
     movimiento = models.OneToOneField(
-        'inventario.MovimientoInventario',
+        'stock.MovimientoInventario',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='orden_compra_v2' 
     )
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    # Solicitante original
     solicitante = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name='ordenes_compra_solicitadas'
     )
-    aprobador = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name='ordenes_compra_aprobadas'
+
+    # Workflow de Aprobación
+    # 1. Comercialización
+    aprobado_comercializacion_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='ordenes_aprobadas_comercializacion'
     )
+    fecha_aprobacion_comercializacion = models.DateTimeField(null=True, blank=True)
+    
+    # 2. Presupuesto
+    aprobado_presupuesto_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='ordenes_aprobadas_presupuesto'
+    )
+    fecha_aprobacion_presupuesto = models.DateTimeField(null=True, blank=True)
+
+    # 3. Finanzas
+    aprobado_finanzas_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='ordenes_aprobadas_finanzas'
+    )
+    fecha_aprobacion_finanzas = models.DateTimeField(null=True, blank=True)
+
+    # 4. Compras (Ejecución)
+    ejecutado_compras_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='ordenes_ejecutadas_compras'
+    )
+    fecha_ejecucion_compras = models.DateTimeField(null=True, blank=True)
+
+    # Estado
     status = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=Status.choices,
         default=Status.BORRADOR
     )
+    
     notas = models.TextField(blank=True)
+    motivo_cancelacion = models.TextField(blank=True)
 
     class Meta:
         verbose_name = 'Orden de Compra'
@@ -81,7 +130,7 @@ class OrdenCompra(SoftDeleteModel):
         if not self.codigo:
             correlativo, _ = Correlativo.objects.get_or_create(
                 tipo='ORDEN_COMPRA',
-                defaults={'prefijo': 'OC', 'anio': timezone.now().year}
+                defaults={'prefijo': 'OC-G' if self.tipo == self.Tipo.GLOBAL else 'OC', 'anio': timezone.now().year}
             )
             self.codigo = correlativo.siguiente()
         super().save(*args, **kwargs)

@@ -27,13 +27,18 @@ class ParishSerializer(serializers.ModelSerializer):
 class UbicacionSerializer(serializers.ModelSerializer):
     parish_nombre = serializers.SerializerMethodField()
     acueducto_nombre = serializers.SerializerMethodField()
+    almacen_regional_nombre = serializers.SerializerMethodField()
+    subalmacen_nombre = serializers.SerializerMethodField()
 
     class Meta:
         from .models import Ubicacion
         model = Ubicacion
         fields = [
             'id', 'nombre', 'tipo', 'parish', 'parish_nombre',
-            'acueducto', 'acueducto_nombre', 'descripcion', 'activa'
+            'acueducto', 'acueducto_nombre', 
+            'almacen_regional', 'almacen_regional_nombre',
+            'subalmacen', 'subalmacen_nombre',
+            'descripcion', 'activa'
         ]
 
     def get_parish_nombre(self, obj):
@@ -41,3 +46,9 @@ class UbicacionSerializer(serializers.ModelSerializer):
 
     def get_acueducto_nombre(self, obj):
         return obj.acueducto.nombre if obj.acueducto else None
+
+    def get_almacen_regional_nombre(self, obj):
+        return obj.almacen_regional.nombre if obj.almacen_regional else None
+
+    def get_subalmacen_nombre(self, obj):
+        return obj.subalmacen.nombre if obj.subalmacen else None

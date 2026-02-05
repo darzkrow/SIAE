@@ -17,6 +17,8 @@ from .models import (
 
 User = get_user_model()
 
+from .subalmacen_serializer import SubalmacenSerializer
+
 
 # ============================================================================
 # NEW HIERARCHICAL API SERIALIZERS
