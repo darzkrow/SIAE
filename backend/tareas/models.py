@@ -141,6 +141,35 @@ class Tarea(TimeStampedModel):
     - Vinculación a entidades del sistema
     """
     
+    # Identificación
+    titulo = models.CharField(
+        max_length=200,
+        help_text='Título de la tarea'
+    )
+    descripcion = models.TextField(
+        blank=True,
+        help_text='Descripción detallada'
+    )
+
+    # Clasificación
+    categoria = models.ForeignKey(
+        CategoriaTarea,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tareas',
+        help_text='Categoría de la tarea'
+    )
+
+    columna_kanban = models.ForeignKey(
+        ColumnaKanban,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tareas',
+        help_text='Columna del tablero Kanban'
+    )
+
     # Prioridad y estado
     prioridad = models.CharField(
         max_length=10,
@@ -500,6 +529,13 @@ class RecordatorioTarea(TimeStampedModel):
     Recordatorios programados para tareas.
     """
     
+    tarea = models.ForeignKey(
+        Tarea,
+        on_delete=models.CASCADE,
+        related_name='recordatorios',
+        help_text='Tarea asociada'
+    )
+    
     usuario = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -551,6 +587,13 @@ class HistorialTarea(TimeStampedModel):
     """
     Registro de cambios y acciones en tareas.
     """
+    
+    tarea = models.ForeignKey(
+        Tarea,
+        on_delete=models.CASCADE,
+        related_name='historial',
+        help_text='Tarea asociada'
+    )
     
     usuario = models.ForeignKey(
         User,

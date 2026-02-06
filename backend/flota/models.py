@@ -546,6 +546,13 @@ class DocumentoVehiculo(TimeStampedModel):
     con seguimiento de vencimiento y alertas automáticas.
     """
     
+    vehiculo = models.ForeignKey(
+        Vehiculo,
+        on_delete=models.CASCADE,
+        related_name='documentos',
+        help_text='Vehículo al que pertenece el documento'
+    )
+    
     tipo_documento = models.CharField(
         max_length=30,
         choices=TipoDocumentoVehiculo.choices,

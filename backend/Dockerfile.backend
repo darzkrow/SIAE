@@ -37,16 +37,18 @@ RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
-COPY --chown=appuser:appuser . .
+# Copy entrypoint separately to avoid volume overwrite issues and fix line endings
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
-# Make entrypoint executable
-RUN chmod +x /app/entrypoint.sh
+# Copy the rest of the application
+COPY --chown=appuser:appuser . .
 
 # We start as root to fix volume permissions in the entrypoint, then drop to appuser
 USER root
 
 # Entrypoint for initialization tasks
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Default command to run the application
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
