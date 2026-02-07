@@ -35,25 +35,7 @@ if [ "$(id -u)" = '0' ]; then
     gosu appuser python manage.py collectstatic --noinput
     
     echo "Loading initial data if empty..."
-    gosu appuser python manage.py shell -c "
-from geography.models import State
-from institucion.models import OrganizacionCentral
-from catalogo.models import Marca
-import os
-import subprocess
-
-if State.objects.count() == 0:
-    print('Loading geography data...')
-    subprocess.run(['python', 'manage.py', 'loaddata', 'venezuela_full.json'])
-
-if OrganizacionCentral.objects.count() == 0:
-    print('Loading institutional data...')
-    subprocess.run(['python', 'manage.py', 'loaddata', 'organizacion_inicial.json'])
-
-if Marca.objects.count() == 0:
-    print('Loading popular brands...')
-    subprocess.run(['python', 'manage.py', 'loaddata', 'marcas_populares.json'])
-"
+    gosu appuser python load_initial_data.py
     
     echo "Starting server as appuser..."
     exec gosu appuser "$@"
@@ -64,25 +46,7 @@ else
     python manage.py collectstatic --noinput
     
     echo "Loading initial data if empty..."
-    python manage.py shell -c "
-from geography.models import State
-from institucion.models import OrganizacionCentral
-from catalogo.models import Marca
-import os
-import subprocess
-
-if State.objects.count() == 0:
-    print('Loading geography data...')
-    subprocess.run(['python', 'manage.py', 'loaddata', 'venezuela_full.json'])
-
-if OrganizacionCentral.objects.count() == 0:
-    print('Loading institutional data...')
-    subprocess.run(['python', 'manage.py', 'loaddata', 'organizacion_inicial.json'])
-
-if Marca.objects.count() == 0:
-    print('Loading popular brands...')
-    subprocess.run(['python', 'manage.py', 'loaddata', 'marcas_populares.json'])
-"
+    python load_initial_data.py
     
     exec "$@"
 fi

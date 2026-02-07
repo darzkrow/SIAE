@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { InventoryService } from '../services/inventory.service';
+import { UserService } from '../services/userService';
+import { InventoryService } from '../services/inventory.service'; // Keep for sucursales
 
 export default function Usuarios() {
     const { user } = useAuth();
@@ -35,7 +36,7 @@ export default function Usuarios() {
     const fetchData = async () => {
         try {
             const [usersRes, sucRes] = await Promise.all([
-                InventoryService.users.getAll(),
+                UserService.getAll(),
                 InventoryService.sucursales.getAll()
             ]);
 
@@ -74,14 +75,14 @@ export default function Usuarios() {
             }
 
             if (editingId) {
-                await InventoryService.users.update(editingId, payload);
+                await UserService.update(editingId, payload);
                 setSuccess("Usuario actualizado exitosamente");
             } else {
                 if (!formData.password) {
                     setError("La contraseña es requerida para nuevos usuarios");
                     return;
                 }
-                await InventoryService.users.create(payload);
+                await UserService.create(payload);
                 setSuccess("Usuario creado exitosamente");
             }
 
@@ -97,7 +98,7 @@ export default function Usuarios() {
         if (!window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) return;
 
         try {
-            await InventoryService.users.delete(id);
+            await UserService.delete(id);
             setSuccess("Usuario eliminado exitosamente");
             fetchData();
         } catch (err) {
@@ -348,8 +349,8 @@ export default function Usuarios() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${usuario.role === 'ADMIN'
-                                                    ? 'bg-red-100 text-red-800'
-                                                    : 'bg-blue-100 text-blue-800'
+                                                ? 'bg-red-100 text-red-800'
+                                                : 'bg-blue-100 text-blue-800'
                                                 }`}>
                                                 {usuario.role === 'ADMIN' ? 'Administrador' : 'Operador'}
                                             </span>

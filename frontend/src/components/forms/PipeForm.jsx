@@ -36,57 +36,108 @@ export default function PipeForm({ categorias = [], units = [], suppliers = [], 
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium mb-1">Nombre *</label>
-          <input name="nombre" value={data.nombre} onChange={handleChange} className="w-full border p-2 rounded" required />
+    <form onSubmit={submit}>
+      <div className="row">
+        <div className="col-md-8">
+          <div className="form-group">
+            <label>Nombre *</label>
+            <input
+              name="nombre"
+              value={data.nombre}
+              onChange={handleChange}
+              className="form-control"
+              placeholder="Nombre de la tubería/material"
+              required
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Categoría *</label>
-          <select name="categoria" value={data.categoria} onChange={handleChange} className="w-full border p-2 rounded" required>
-            <option value="">Seleccionar...</option>
-            {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Unidad *</label>
-          <select name="unidad_medida" value={data.unidad_medida} onChange={handleChange} className="w-full border p-2 rounded" required>
-            <option value="">Seleccionar...</option>
-            {units.map(u => <option key={u.id} value={u.id}>{u.nombre} ({u.simbolo})</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Proveedor *</label>
-          <select name="proveedor" value={data.proveedor} onChange={handleChange} className="w-full border p-2 rounded" required>
-            <option value="">Seleccionar...</option>
-            {suppliers.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Mínimo Stock</label>
-          <input type="number" name="stock_minimo" value={data.stock_minimo} onChange={handleChange} className="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Precio Unitario</label>
-          <input type="number" step="0.01" name="precio_unitario" value={data.precio_unitario} onChange={handleChange} className="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Material</label>
-          <select name="material" value={data.material} onChange={handleChange} className="w-full border p-2 rounded">
-            <option value="PVC">PVC</option>
-            <option value="PEAD">PEAD</option>
-            <option value="ACERO">Acero</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Diámetro (mm)</label>
-          <input type="number" name="diametro_nominal" value={data.diametro_nominal} onChange={handleChange} className="w-full border p-2 rounded" />
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Categoría *</label>
+            <select name="categoria" value={data.categoria} onChange={handleChange} className="form-control" required>
+              <option value="">Seleccionar...</option>
+              {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </div>
         </div>
       </div>
-      <div className="flex gap-2 justify-end">
-        <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancelar</button>
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+
+      <div className="row">
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Unidad de Medida *</label>
+            <select name="unidad_medida" value={data.unidad_medida} onChange={handleChange} className="form-control" required>
+              <option value="">Seleccionar...</option>
+              {units.map(u => <option key={u.id} value={u.id}>{u.nombre} ({u.simbolo})</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Proveedor *</label>
+            <select name="proveedor" value={data.proveedor} onChange={handleChange} className="form-control" required>
+              <option value="">Seleccionar...</option>
+              {suppliers.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Material</label>
+            <select name="material" value={data.material} onChange={handleChange} className="form-control">
+              <option value="PVC">PVC</option>
+              <option value="PEAD">PEAD</option>
+              <option value="ACERO">Acero</option>
+              <option value="HIERRO_FUNDIDO">Hierro Fundido</option>
+              <option value="GALVANIZADO">Galvanizado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Diámetro Nominal (mm/pulg)</label>
+            <input type="number" name="diametro_nominal" value={data.diametro_nominal} onChange={handleChange} className="form-control" />
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Stock Mínimo</label>
+            <input type="number" name="stock_minimo" value={data.stock_minimo} onChange={handleChange} className="form-control" />
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Precio Unitario Est.</label>
+            <div className="input-group">
+              <div className="input-group-prepend">
+                <span className="input-group-text">$</span>
+              </div>
+              <input type="number" step="0.01" name="precio_unitario" value={data.precio_unitario} onChange={handleChange} className="form-control" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label>Descripción / Especificaciones</label>
+        <textarea
+          name="descripcion"
+          value={data.descripcion}
+          onChange={handleChange}
+          className="form-control"
+          rows="2"
+          placeholder="Ej: PN10, SDR17, etc..."
+        ></textarea>
+      </div>
+
+      <div className="card-footer px-0 pb-0 bg-transparent text-right">
+        <button type="button" onClick={onCancel} className="btn btn-default mr-2">Cancelar</button>
+        <button type="submit" className="btn btn-primary">
+          {initialData?.id ? 'Actualizar Tubería' : 'Crear Tubería'}
+        </button>
       </div>
     </form>
   );

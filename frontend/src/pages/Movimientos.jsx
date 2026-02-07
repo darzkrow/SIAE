@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
-import { Plus, Filter, Package, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
+import { Plus, Filter, Package, TrendingUp, Calendar, AlertCircle, ArrowDown, ArrowUp, Repeat } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function Movimientos() {
+    const location = useLocation();
     const { addNotification } = useNotifications();
     const [movimientos, setMovimientos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -42,7 +44,21 @@ export default function Movimientos() {
     // Cargar datos iniciales
     useEffect(() => {
         fetchInitialData();
-    }, []);
+
+        // Handle pre-filled data from location state
+        if (location.state) {
+            const { product_type, product_id, type } = location.state;
+            if (product_type || product_id || type) {
+                setFormData(prev => ({
+                    ...prev,
+                    product_type: product_type || prev.product_type,
+                    product_id: product_id || prev.product_id,
+                    tipo_movimiento: type || prev.tipo_movimiento
+                }));
+                setShowForm(true);
+            }
+        }
+    }, [location]);
 
     const fetchInitialData = async () => {
         try {
@@ -50,11 +66,11 @@ export default function Movimientos() {
                 InventoryService.movimientos.getAll(),
                 InventoryService.acueductos.getAll()
             ]);
-            
+
             const movimientos = movRes.data.results || movRes.data;
             setMovimientos(movimientos);
             setAcueductos(acuRes.data.results || acuRes.data);
-            
+
             // Calcular estadísticas
             const stats = {
                 total: movimientos.length,
@@ -63,7 +79,7 @@ export default function Movimientos() {
                 transferencias: movimientos.filter(m => m.tipo_movimiento === 'TRANSFERENCIA').length
             };
             setStats(stats);
-            
+
         } catch (err) {
             console.error("Error fetching initial data", err);
             addNotification({
@@ -85,24 +101,14 @@ export default function Movimientos() {
 
     const fetchProducts = async () => {
         setLoadingProducts(true);
-        setProductsList([]);
         try {
             let res;
             switch (formData.product_type) {
-                case 'chemical':
-                    res = await InventoryService.chemicals.getAll();
-                    break;
-                case 'pipe':
-                    res = await InventoryService.pipes.getAll();
-                    break;
-                case 'pump':
-                    res = await InventoryService.pumps.getAll();
-                    break;
-                case 'accessory':
-                    res = await InventoryService.accessories.getAll();
-                    break;
-                default:
-                    res = { data: [] };
+                case 'chemical': res = await InventoryService.chemicals.getAll(); break;
+                case 'pipe': res = await InventoryService.pipes.getAll(); break;
+                case 'pump': res = await InventoryService.pumps.getAll(); break;
+                case 'accessory': res = await InventoryService.accessories.getAll(); break;
+                default: res = { data: [] };
             }
             setProductsList(res.data.results || res.data);
         } catch (err) {
@@ -306,10 +312,10 @@ export default function Movimientos() {
                                         name="product_type"
                                         value={formData.product_type}
                                         onChange={(e) => {
-                                            setFormData(prev => ({ 
-                                                ...prev, 
-                                                product_type: e.target.value, 
-                                                product_id: '' 
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                product_type: e.target.value,
+                                                product_id: ''
                                             }));
                                         }}
                                         className="form-control"
@@ -365,43 +371,43 @@ export default function Movimientos() {
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                {(formData.tipo_movimiento === 'SALIDA' || 
-                                  formData.tipo_movimiento === 'TRANSFERENCIA' || 
-                                  formData.tipo_movimiento === 'AJUSTE') && (
-                                    <div className="form-group">
-                                        <label>Acueducto Origen *</label>
-                                        <select
-                                            name="acueducto_origen"
-                                            value={formData.acueducto_origen}
-                                            onChange={handleFormChange}
-                                            className="form-control"
-                                            required
-                                        >
-                                            <option value="">Seleccionar...</option>
-                                            {acueductos.map(a => (
-                                                <option key={a.id} value={a.id}>{a.nombre}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                                {(formData.tipo_movimiento === 'ENTRADA' || 
-                                  formData.tipo_movimiento === 'TRANSFERENCIA') && (
-                                    <div className="form-group">
-                                        <label>Acueducto Destino *</label>
-                                        <select
-                                            name="acueducto_destino"
-                                            value={formData.acueducto_destino}
-                                            onChange={handleFormChange}
-                                            className="form-control"
-                                            required
-                                        >
-                                            <option value="">Seleccionar...</option>
-                                            {acueductos.map(a => (
-                                                <option key={a.id} value={a.id}>{a.nombre}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
+                                {(formData.tipo_movimiento === 'SALIDA' ||
+                                    formData.tipo_movimiento === 'TRANSFERENCIA' ||
+                                    formData.tipo_movimiento === 'AJUSTE') && (
+                                        <div className="form-group">
+                                            <label>Acueducto Origen *</label>
+                                            <select
+                                                name="acueducto_origen"
+                                                value={formData.acueducto_origen}
+                                                onChange={handleFormChange}
+                                                className="form-control"
+                                                required
+                                            >
+                                                <option value="">Seleccionar...</option>
+                                                {acueductos.map(a => (
+                                                    <option key={a.id} value={a.id}>{a.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                {(formData.tipo_movimiento === 'ENTRADA' ||
+                                    formData.tipo_movimiento === 'TRANSFERENCIA') && (
+                                        <div className="form-group">
+                                            <label>Acueducto Destino *</label>
+                                            <select
+                                                name="acueducto_destino"
+                                                value={formData.acueducto_destino}
+                                                onChange={handleFormChange}
+                                                className="form-control"
+                                                required
+                                            >
+                                                <option value="">Seleccionar...</option>
+                                                {acueductos.map(a => (
+                                                    <option key={a.id} value={a.id}>{a.nombre}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                             </div>
                         </div>
 

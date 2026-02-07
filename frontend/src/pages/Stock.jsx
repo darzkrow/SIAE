@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
-import { Search, Package, Droplets, Activity, Wrench, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Search, Package, Droplets, Activity, Wrench, AlertTriangle, TrendingUp, PlusCircle, MinusCircle } from 'lucide-react';
 
 export default function Stock() {
+    const navigate = useNavigate();
     const { addNotification } = useNotifications();
     const [activeTab, setActiveTab] = useState('chemical');
     const [items, setItems] = useState([]);
@@ -48,10 +50,10 @@ export default function Stock() {
                 default:
                     res = { data: [] };
             }
-            
+
             const itemsData = res.data.results || res.data;
             setItems(itemsData);
-            
+
             // Calcular estadísticas
             const stats = {
                 total: itemsData.length,
@@ -63,7 +65,7 @@ export default function Stock() {
                 stockNormal: itemsData.filter(item => (item.stock_actual || item.cantidad || 0) > 5).length
             };
             setStats(stats);
-            
+
         } catch (err) {
             console.error("Error fetching stock data", err);
             addNotification({
@@ -223,13 +225,13 @@ export default function Stock() {
                                 <th>Stock Actual</th>
                                 <th>Unidad</th>
                                 <th>Estado</th>
-                                <th>Categoría</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center py-4">
+                                    <td colSpan="6" className="text-center py-4">
                                         <div className="spinner-border text-primary" role="status">
                                             <span className="sr-only">Cargando...</span>
                                         </div>
@@ -238,7 +240,7 @@ export default function Stock() {
                                 </tr>
                             ) : filteredItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="text-center py-4 text-muted">
+                                    <td colSpan="6" className="text-center py-4 text-muted">
                                         <Package size={24} className="mb-2" />
                                         <p>No se encontraron artículos</p>
                                     </td>
@@ -248,31 +250,52 @@ export default function Stock() {
                                     const stock = item.stock_actual ?? item.cantidad ?? 0;
                                     return (
                                         <tr key={item.id}>
-                                            <td className="text-muted">
-                                                <code>{item.sku || '-'}</code>
+                                            <td><code>{item.sku || 'N/A'}</code></td>
+                                            <td>{item.nombre}</td>
+                                            <td>
+                                                <small className="text-muted d-block">
+                                                    {item.marca_nombre || item.marca || '-'}
+                                                </small>
+                                                {item.modelo && <span className="badge badge-light">{item.modelo}</span>}
                                             </td>
                                             <td className="font-weight-bold">
-                                                {item.nombre}
+                                                {stock}
                                             </td>
-                                            <td className="text-muted">
-                                                {item.marca || '-'}
-                                                {item.modelo ? ` / ${item.modelo}` : ''}
-                                            </td>
-                                            <td className="font-weight-bold">
-                                                <span className={stock <= 5 ? 'text-danger' : 'text-success'}>
-                                                    {stock}
-                                                </span>
-                                            </td>
-                                            <td className="text-muted">
-                                                {item.unidad_medida_nombre || item.unidad_medida || '-'}
-                                            </td>
+                                            <td>{item.unidad_medida_simbolo || item.unidad_medida || 'UN'}</td>
                                             <td>
                                                 <span className={`badge ${getStockBadgeClass(stock)}`}>
                                                     {getStockLabel(stock)}
                                                 </span>
                                             </td>
-                                            <td className="text-muted">
-                                                {item.categoria_nombre || item.categoria?.nombre || '-'}
+                                            <td>
+                                                <div className="btn-group btn-group-sm">
+                                                    <button
+                                                        className="btn btn-success"
+                                                        title="Entrada rápida"
+                                                        onClick={() => navigate('/movimientos', {
+                                                            state: {
+                                                                product_type: activeTab,
+                                                                product_id: item.id,
+                                                                type: 'ENTRADA'
+                                                            }
+                                                        })}
+                                                    >
+                                                        <PlusCircle size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-danger"
+                                                        title="Salida rápida"
+                                                        onClick={() => navigate('/movimientos', {
+                                                            state: {
+                                                                product_type: activeTab,
+                                                                product_id: item.id,
+                                                                type: 'SALIDA'
+                                                            }
+                                                        })}
+                                                    >
+                                                        <MinusCircle size={14} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -281,7 +304,7 @@ export default function Stock() {
                         </tbody>
                     </table>
                 </div>
-                
+
                 {filteredItems.length > 0 && (
                     <div className="card-footer">
                         <small className="text-muted">

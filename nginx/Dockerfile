@@ -3,8 +3,8 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY frontend/package*.json ./
 COPY frontend/.npmrc ./
-# Install dependencies with legacy peer deps and ignore scripts to avoid husky issues
-RUN npm install --legacy-peer-deps --ignore-scripts
+# Install dependencies with legacy peer deps
+RUN npm install --legacy-peer-deps
 COPY frontend/ ./
 RUN npm run build
 

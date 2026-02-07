@@ -2,17 +2,20 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import UserAvatar from '../UserAvatar'
-import { 
-  Home, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  BarChart3, 
-  Settings, 
+import {
+  Home,
+  Package,
+  ShoppingCart,
+  Users,
+  BarChart3,
+  Settings,
   Bell,
   FileText,
   MapPin,
-  Shield
+  Shield,
+  Truck,
+  ClipboardList,
+  Box
 } from 'lucide-react'
 
 /**
@@ -33,7 +36,7 @@ const AdminLTESidebar = ({ collapsed, theme }) => {
     {
       title: 'Inventario',
       icon: Package,
-      path: '/inventario',
+      path: '#',
       children: [
         { title: 'Artículos', path: '/articulos' },
         { title: 'Stock', path: '/stock' },
@@ -50,6 +53,26 @@ const AdminLTESidebar = ({ collapsed, theme }) => {
       title: 'Catálogo',
       icon: FileText,
       path: '/catalogo'
+    },
+    {
+      title: 'Proveedores',
+      icon: Users,
+      path: '/proveedores'
+    },
+    {
+      title: 'Flota',
+      icon: Truck,
+      path: '/flota'
+    },
+    {
+      title: 'Tareas',
+      icon: ClipboardList,
+      path: '/tareas'
+    },
+    {
+      title: 'Activos',
+      icon: Box,
+      path: '/activos'
     },
     {
       title: 'Geografía',
@@ -90,14 +113,20 @@ const AdminLTESidebar = ({ collapsed, theme }) => {
     )
   }
 
-  const isActive = (path) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/')
+  const checkActive = (item) => {
+    if (item.path && item.path !== '#' && (location.pathname === item.path || location.pathname.startsWith(item.path + '/'))) {
+      return true
+    }
+    if (item.children) {
+      return item.children.some(child => location.pathname === child.path)
+    }
+    return false
   }
 
   const renderMenuItem = (item, index) => {
     const Icon = item.icon
     const hasChildren = item.children && item.children.length > 0
-    const isItemActive = isActive(item.path)
+    const isItemActive = checkActive(item)
 
     if (hasChildren) {
       return (
@@ -117,9 +146,9 @@ const AdminLTESidebar = ({ collapsed, theme }) => {
           <ul className="nav nav-treeview">
             {item.children.map((child, childIndex) => (
               <li key={childIndex} className="nav-item">
-                <Link 
-                  to={child.path} 
-                  className={`nav-link ${isActive(child.path) ? 'active' : ''}`}
+                <Link
+                  to={child.path}
+                  className={`nav-link ${checkActive(child) ? 'active' : ''}`}
                 >
                   <i className="far fa-circle nav-icon"></i>
                   <p>{child.title}</p>
@@ -172,9 +201,9 @@ const AdminLTESidebar = ({ collapsed, theme }) => {
       <div className="sidebar">
         <div className="user-panel mt-3 pb-3 mb-3 d-flex">
           <div className="image">
-            <UserAvatar 
-              username={user?.username} 
-              size={34} 
+            <UserAvatar
+              username={user?.username}
+              size={34}
               className="elevation-2"
             />
           </div>
@@ -195,10 +224,10 @@ const AdminLTESidebar = ({ collapsed, theme }) => {
 
         <div className="form-inline">
           <div className="input-group" data-widget="sidebar-search">
-            <input 
-              className="form-control form-control-sidebar" 
-              type="search" 
-              placeholder="Buscar..." 
+            <input
+              className="form-control form-control-sidebar"
+              type="search"
+              placeholder="Buscar..."
               aria-label="Search"
             />
             <div className="input-group-append">

@@ -1,0 +1,66 @@
+[
+  {
+    "model": "flota.tipovehiculo",
+    "pk": 1,
+    "fields": {
+      "nombre": "Pickup Doble Cabina",
+      "categoria": "LIVIANO",
+      "codigo": "PICK",
+      "descripcion": "Camioneta pickup doble cabina 4x4",
+      "usa_kilometraje": true,
+      "usa_horas_motor": false,
+      "km_mantenimiento_preventivo": 5000,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "flota.tipovehiculo",
+    "pk": 2,
+    "fields": {
+      "nombre": "Camión Cisterna",
+      "categoria": "PESADO",
+      "codigo": "CIST",
+      "descripcion": "Camión cisterna para transporte de agua",
+      "usa_kilometraje": true,
+      "usa_horas_motor": true,
+      "km_mantenimiento_preventivo": 10000,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "flota.tipovehiculo",
+    "pk": 3,
+    "fields": {
+      "nombre": "Motocicleta 150cc",
+      "categoria": "MOTO",
+      "codigo": "MOTO",
+      "descripcion": "Motocicleta estándar para supervisión",
+      "usa_kilometraje": true,
+      "usa_horas_motor": false,
+      "km_mantenimiento_preventivo": 2000,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "flota.tipovehiculo",
+    "pk": 4,
+    "fields": {
+      "nombre": "Retroexcavadora",
+      "categoria": "MAQUINARIA",
+      "codigo": "RETR",
+      "descripcion": "Maquinaria pesada para excavación",
+      "usa_kilometraje": false,
+      "usa_horas_motor": true,
+      "horas_mantenimiento_preventivo": 250,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  }
+]

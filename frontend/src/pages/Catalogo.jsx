@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { InventoryService } from '../services/inventory.service';
+import { CatalogService } from '../services/catalogService';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { BookOpen, Tag, Package, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,7 @@ export default function Catalogo() {
   const [showMarcaForm, setShowMarcaForm] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState(null);
   const [editingMarca, setEditingMarca] = useState(null);
-  
+
   // Form data
   const [categoriaForm, setCategoriaForm] = useState({ nombre: '', descripcion: '' });
   const [marcaForm, setMarcaForm] = useState({ nombre: '' });
@@ -28,8 +28,8 @@ export default function Catalogo() {
     setLoading(true);
     try {
       const [catRes, marRes] = await Promise.all([
-        InventoryService.categories.getAll(),
-        InventoryService.marcas.getAll(),
+        CatalogService.categorias.getAll(),
+        CatalogService.marcas.getAll(),
       ]);
       setCategorias(Array.isArray(catRes.data) ? catRes.data : (catRes.data?.results || []));
       setMarcas(Array.isArray(marRes.data) ? marRes.data : (marRes.data?.results || []));
@@ -54,9 +54,9 @@ export default function Catalogo() {
         nombre: categoriaForm.nombre.trim(),
         descripcion: categoriaForm.descripcion.trim()
       };
-      
+
       if (editingCategoria) {
-        await InventoryService.categories.update(editingCategoria.id, cleanedData);
+        await CatalogService.categorias.update(editingCategoria.id, cleanedData);
         addNotification({
           type: 'success',
           title: 'Categoría actualizada',
@@ -64,7 +64,7 @@ export default function Catalogo() {
           duration: 3000
         });
       } else {
-        await InventoryService.categories.create(cleanedData);
+        await CatalogService.categorias.create(cleanedData);
         addNotification({
           type: 'success',
           title: 'Categoría creada',
@@ -94,9 +94,9 @@ export default function Catalogo() {
       const cleanedData = {
         nombre: marcaForm.nombre.trim()
       };
-      
+
       if (editingMarca) {
-        await InventoryService.marcas.update(editingMarca.id, cleanedData);
+        await CatalogService.marcas.update(editingMarca.id, cleanedData);
         addNotification({
           type: 'success',
           title: 'Marca actualizada',
@@ -104,7 +104,7 @@ export default function Catalogo() {
           duration: 3000
         });
       } else {
-        await InventoryService.marcas.create(cleanedData);
+        await CatalogService.marcas.create(cleanedData);
         addNotification({
           type: 'success',
           title: 'Marca creada',
@@ -141,7 +141,7 @@ export default function Catalogo() {
 
     if (result.isConfirmed) {
       try {
-        await InventoryService.categories.delete(categoria.id);
+        await CatalogService.categorias.delete(categoria.id);
         addNotification({
           type: 'success',
           title: 'Categoría eliminada',
@@ -175,7 +175,7 @@ export default function Catalogo() {
 
     if (result.isConfirmed) {
       try {
-        await InventoryService.marcas.delete(marca.id);
+        await CatalogService.marcas.delete(marca.id);
         addNotification({
           type: 'success',
           title: 'Marca eliminada',

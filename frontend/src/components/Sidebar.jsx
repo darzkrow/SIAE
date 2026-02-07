@@ -35,9 +35,9 @@ export default function Sidebar({ children }) {
         {
             title: 'Inventario',
             items: [
-                { path: '/movimientos', label: 'Movimientos', icon: Package },
-                { path: '/stock', label: 'Stock', icon: Droplets },
                 { path: '/articulos', label: 'Artículos', icon: Activity },
+                { path: '/stock', label: 'Stock', icon: Droplets },
+                { path: '/movimientos', label: 'Movimientos', icon: Package },
             ],
         },
         {
@@ -120,9 +120,8 @@ export default function Sidebar({ children }) {
                                         <Link
                                             key={item.path}
                                             to={item.path}
-                                            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-                                                active ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-300 hover:bg-gray-800'
-                                            }`}
+                                            className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${active ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-300 hover:bg-gray-800'
+                                                }`}
                                             title={!isOpen ? item.label : ''}
                                         >
                                             <Icon size={18} />

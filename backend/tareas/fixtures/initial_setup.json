@@ -1,0 +1,99 @@
+[
+  {
+    "model": "tareas.categoriatarea",
+    "pk": 1,
+    "fields": {
+      "nombre": "Mantenimiento",
+      "codigo": "MANT",
+      "color": "#ffc107",
+      "icono": "tools",
+      "descripcion": "Tareas relacionadas con mantenimiento preventivo o correctivo",
+      "orden": 1,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "tareas.categoriatarea",
+    "pk": 2,
+    "fields": {
+      "nombre": "Administrativa",
+      "codigo": "ADMIN",
+      "color": "#17a2b8",
+      "icono": "briefcase",
+      "descripcion": "Tareas administrativas y de gestión",
+      "orden": 2,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "tareas.categoriatarea",
+    "pk": 3,
+    "fields": {
+      "nombre": "Operativa",
+      "codigo": "OPER",
+      "color": "#28a745",
+      "icono": "cogs",
+      "descripcion": "Tareas de operación diaria",
+      "orden": 3,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "tareas.columnakanban",
+    "pk": 1,
+    "fields": {
+      "nombre": "Por Hacer",
+      "tipo": "PENDIENTE",
+      "color": "#6c757d",
+      "orden": 1,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "tareas.columnakanban",
+    "pk": 2,
+    "fields": {
+      "nombre": "En Progreso",
+      "tipo": "PROGRESO",
+      "color": "#007bff",
+      "orden": 2,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "tareas.columnakanban",
+    "pk": 3,
+    "fields": {
+      "nombre": "En Revisión",
+      "tipo": "REVISION",
+      "color": "#ffc107",
+      "orden": 3,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "tareas.columnakanban",
+    "pk": 4,
+    "fields": {
+      "nombre": "Completado",
+      "tipo": "COMPLETADA",
+      "color": "#28a745",
+      "orden": 4,
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  }
+]

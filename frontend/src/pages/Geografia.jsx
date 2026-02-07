@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { InventoryService } from '../services/inventory.service';
+import { GeographyService } from '../services/geographyService';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { MapPin, Building, Globe, Navigation } from 'lucide-react';
 
@@ -16,10 +16,10 @@ export default function Geografia() {
     const load = async () => {
       try {
         const [sRes, mRes, pRes, uRes] = await Promise.all([
-          InventoryService.geography.states(),
-          InventoryService.geography.municipalities(),
-          InventoryService.geography.parishes(),
-          InventoryService.geography.ubicaciones(),
+          GeographyService.estados.getAll(),
+          GeographyService.municipios.getAll(),
+          GeographyService.parroquias.getAll(),
+          GeographyService.ubicaciones.getAll(),
         ]);
         const toArr = (d) => Array.isArray(d) ? d : (d?.results || []);
         setStates(toArr(sRes.data));
@@ -54,7 +54,7 @@ export default function Geografia() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
@@ -82,36 +82,36 @@ export default function Geografia() {
       {/* Statistics Row */}
       <div className="row mb-4">
         <div className="col-lg-3 col-6">
-          <AdminLTEWidget 
-            type="metric" 
-            title="Estados" 
+          <AdminLTEWidget
+            type="metric"
+            title="Estados"
             value={states.length}
             icon={Globe}
             color="info"
           />
         </div>
         <div className="col-lg-3 col-6">
-          <AdminLTEWidget 
-            type="metric" 
-            title="Municipios" 
+          <AdminLTEWidget
+            type="metric"
+            title="Municipios"
             value={municipalities.length}
             icon={Building}
             color="success"
           />
         </div>
         <div className="col-lg-3 col-6">
-          <AdminLTEWidget 
-            type="metric" 
-            title="Parroquias" 
+          <AdminLTEWidget
+            type="metric"
+            title="Parroquias"
             value={parishes.length}
             icon={Navigation}
             color="warning"
           />
         </div>
         <div className="col-lg-3 col-6">
-          <AdminLTEWidget 
-            type="metric" 
-            title="Ubicaciones" 
+          <AdminLTEWidget
+            type="metric"
+            title="Ubicaciones"
             value={ubicaciones.length}
             icon={MapPin}
             color="danger"

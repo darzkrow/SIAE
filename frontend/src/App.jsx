@@ -25,6 +25,11 @@ const Catalogo = lazy(() => import('./pages/Catalogo'))
 const Geografia = lazy(() => import('./pages/Geografia'))
 const Auditoria = lazy(() => import('./pages/Auditoria'))
 const NotificacionesList = lazy(() => import('./pages/NotificacionesList'))
+const Products = lazy(() => import('./pages/Products'))
+const Suppliers = lazy(() => import('./pages/Suppliers'))
+const Fleet = lazy(() => import('./pages/Fleet'))
+const Tasks = lazy(() => import('./pages/Tasks'))
+const Assets = lazy(() => import('./pages/Assets'))
 const EndpointTest = lazy(() => import('./pages/EndpointTest'))
 
 // Error pages
@@ -59,101 +64,122 @@ function App() {
                     <NotificationProvider>
                         <Suspense fallback={<LoadingFallback />}>
                             <Routes>
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/" element={
-                                <ProtectedRoute title="Dashboard">
-                                    <Dashboard />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/movimientos" element={
-                                <ProtectedRoute title="Movimientos de Inventario">
-                                    <Movimientos />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/stock" element={
-                                <ProtectedRoute title="Gestión de Stock">
-                                    <Stock />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/articulos" element={
-                                <ProtectedRoute title="Artículos">
-                                    <Articulos />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/alertas" element={
-                                <ProtectedRoute title="Alertas del Sistema">
-                                    <Alertas />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/reportes" element={
-                                <ProtectedRoute title="Reportes y Estadísticas">
-                                    <Reportes />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/usuarios" element={
-                                <ProtectedRoute title="Gestión de Usuarios">
-                                    <Usuarios />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/administracion" element={
-                                <ProtectedRoute title="Administración del Sistema">
-                                    <Administracion />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/compras" element={
-                                <ProtectedRoute title="Órdenes de Compra">
-                                    <Compras />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/compras/orden/:id" element={
-                                <ProtectedRoute title="Detalle de Orden">
-                                    <OrdenDetalle />
-                                </ProtectedRoute>
-                            } />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/" element={
+                                    <ProtectedRoute title="Dashboard">
+                                        <Dashboard />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/movimientos" element={
+                                    <ProtectedRoute title="Movimientos de Inventario">
+                                        <Movimientos />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/stock" element={
+                                    <ProtectedRoute title="Gestión de Stock">
+                                        <Stock />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/articulos" element={
+                                    <ProtectedRoute title="Artículos">
+                                        <Articulos />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/alertas" element={
+                                    <ProtectedRoute title="Alertas del Sistema">
+                                        <Alertas />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/reportes" element={
+                                    <ProtectedRoute title="Reportes y Estadísticas">
+                                        <Reportes />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/usuarios" element={
+                                    <ProtectedRoute title="Gestión de Usuarios">
+                                        <Usuarios />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/administracion" element={
+                                    <ProtectedRoute title="Administración del Sistema">
+                                        <Administracion />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/compras" element={
+                                    <ProtectedRoute title="Órdenes de Compra">
+                                        <Compras />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/compras/orden/:id" element={
+                                    <ProtectedRoute title="Detalle de Orden">
+                                        <OrdenDetalle />
+                                    </ProtectedRoute>
+                                } />
 
-                            {/* Nuevas secciones */}
-                            <Route path="/catalogo" element={
-                                <ProtectedRoute title="Catálogo de Productos">
-                                    <Catalogo />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/geografia" element={
-                                <ProtectedRoute title="Gestión Geográfica">
-                                    <Geografia />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/auditoria" element={
-                                <ProtectedRoute title="Auditoría del Sistema">
-                                    <Auditoria />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/notificaciones" element={
-                                <ProtectedRoute title="Centro de Notificaciones">
-                                    <NotificacionesList />
-                                </ProtectedRoute>
-                            } />
+                                {/* Nuevas secciones */}
+                                <Route path="/catalogo" element={
+                                    <ProtectedRoute title="Catálogo de Productos">
+                                        <Catalogo />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/productos" element={<Navigate to="/articulos" replace />} />
+                                <Route path="/proveedores" element={
+                                    <ProtectedRoute title="Gestión de Proveedores">
+                                        <Suppliers />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/flota" element={
+                                    <ProtectedRoute title="Gestión de Flota">
+                                        <Fleet />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/tareas" element={
+                                    <ProtectedRoute title="Gestión de Tareas">
+                                        <Tasks />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/activos" element={
+                                    <ProtectedRoute title="Gestión de Activos">
+                                        <Assets />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/geografia" element={
+                                    <ProtectedRoute title="Gestión Geográfica">
+                                        <Geografia />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/auditoria" element={
+                                    <ProtectedRoute title="Auditoría del Sistema">
+                                        <Auditoria />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/notificaciones" element={
+                                    <ProtectedRoute title="Centro de Notificaciones">
+                                        <NotificacionesList />
+                                    </ProtectedRoute>
+                                } />
 
-                            {/* Test Page - Solo para desarrollo */}
-                            <Route path="/test-endpoints" element={
-                                <ProtectedRoute title="Prueba de Endpoints">
-                                    <EndpointTest />
-                                </ProtectedRoute>
-                            } />
+                                {/* Test Page - Solo para desarrollo */}
+                                <Route path="/test-endpoints" element={
+                                    <ProtectedRoute title="Prueba de Endpoints">
+                                        <EndpointTest />
+                                    </ProtectedRoute>
+                                } />
 
-                            {/* Error Pages */}
-                            <Route path="/error/400" element={<Error400 />} />
-                            <Route path="/error/401" element={<Error401 />} />
-                            <Route path="/error/403" element={<Error403 />} />
-                            <Route path="/error/404" element={<Error404 />} />
-                            <Route path="/error/500" element={<Error500 />} />
+                                {/* Error Pages */}
+                                <Route path="/error/400" element={<Error400 />} />
+                                <Route path="/error/401" element={<Error401 />} />
+                                <Route path="/error/403" element={<Error403 />} />
+                                <Route path="/error/404" element={<Error404 />} />
+                                <Route path="/error/500" element={<Error500 />} />
 
-                            {/* Catch all - 404 */}
-                            <Route path="*" element={<Error404 />} />
-                        </Routes>
-                    </Suspense>
-                </NotificationProvider>
-            </AuthProvider>
-        </ThemeProvider>
+                                {/* Catch all - 404 */}
+                                <Route path="*" element={<Error404 />} />
+                            </Routes>
+                        </Suspense>
+                    </NotificationProvider>
+                </AuthProvider>
+            </ThemeProvider>
         </BrowserRouter>
     )
 }

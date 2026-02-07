@@ -1,9 +1,9 @@
 import api from './api';
 
 export const InventoryService = {
-    // === PRODUCTOS ===
+    // === PRODUCTOS (Inventario) ===
     chemicals: {
-        getAll: () => api.get('chemicals/'),
+        getAll: (params) => api.get('chemicals/', { params }),
         getById: (id) => api.get(`chemicals/${id}/`),
         create: (data) => api.post('chemicals/', data),
         update: (id, data) => api.put(`chemicals/${id}/`, data),
@@ -12,7 +12,7 @@ export const InventoryService = {
         getPeligrosos: () => api.get('chemicals/peligrosos/'),
     },
     pipes: {
-        getAll: () => api.get('pipes/'),
+        getAll: (params) => api.get('pipes/', { params }),
         getById: (id) => api.get(`pipes/${id}/`),
         create: (data) => api.post('pipes/', data),
         update: (id, data) => api.put(`pipes/${id}/`, data),
@@ -20,14 +20,14 @@ export const InventoryService = {
         getByDiameter: (d) => api.get(`pipes/by_diameter/?diametro=${d}`),
     },
     pumps: {
-        getAll: () => api.get('pumps/'),
+        getAll: (params) => api.get('pumps/', { params }),
         getById: (id) => api.get(`pumps/${id}/`),
         create: (data) => api.post('pumps/', data),
         update: (id, data) => api.put(`pumps/${id}/`, data),
         delete: (id) => api.delete(`pumps/${id}/`),
     },
     accessories: {
-        getAll: () => api.get('accessories/'),
+        getAll: (params) => api.get('accessories/', { params }),
         getById: (id) => api.get(`accessories/${id}/`),
         create: (data) => api.post('accessories/', data),
         update: (id, data) => api.put(`accessories/${id}/`, data),
@@ -36,7 +36,6 @@ export const InventoryService = {
 
     // === AUXILIARES ===
     categories: {
-        // Catalogo app
         getAll: () => api.get('catalog/categorias/'),
         create: (data) => api.post('catalog/categorias/', data),
         update: (id, data) => api.put(`catalog/categorias/${id}/`, data),
@@ -48,14 +47,24 @@ export const InventoryService = {
         update: (id, data) => api.put(`catalog/marcas/${id}/`, data),
         delete: (id) => api.delete(`catalog/marcas/${id}/`),
     },
+    tags: {
+        getAll: () => api.get('catalog/tags/'),
+    },
     units: {
         getAll: () => api.get('units/'),
+        create: (data) => api.post('units/', data),
+        update: (id, data) => api.put(`units/${id}/`, data),
+        delete: (id) => api.delete(`units/${id}/`),
     },
     suppliers: {
         getAll: () => api.get('suppliers/'),
+        create: (data) => api.post('suppliers/', data),
+        update: (id, data) => api.put(`suppliers/${id}/`, data),
+        delete: (id) => api.delete(`suppliers/${id}/`),
     },
     acueductos: {
         getAll: () => api.get('acueductos/'),
+        getById: (id) => api.get(`acueductos/${id}/`),
     },
     sucursales: {
         getAll: () => api.get('sucursales/'),
@@ -75,70 +84,61 @@ export const InventoryService = {
         update: (id, data) => api.put(`users/${id}/`, data),
         delete: (id) => api.delete(`users/${id}/`),
     },
-    stockPipes: {
-        getAll: () => api.get('stock-pipes/'),
-        create: (data) => api.post('stock-pipes/', data),
-        update: (id, data) => api.put(`stock-pipes/${id}/`, data),
-        delete: (id) => api.delete(`stock-pipes/${id}/`),
-    },
-    stockPumps: {
-        getAll: () => api.get('stock-pumps/'),
-        create: (data) => api.post('stock-pumps/', data),
-        update: (id, data) => api.put(`stock-pumps/${id}/`, data),
-        delete: (id) => api.delete(`stock-pumps/${id}/`),
-    },
-    stockAccessories: {
-        getAll: () => api.get('stock-accessories/'),
-    },
 
-    // === MOVIMIENTOS ===
+    // === STOCK Y MOVIMIENTOS ===
+    stock: {
+        getAll: (params) => api.get('stock/', { params }),
+        getResumen: () => api.get('stock/resumen/'),
+        getAlertas: () => api.get('stock/alertas/'),
+    },
     movimientos: {
         getAll: (params) => api.get('movimientos/', { params }),
+        getById: (id) => api.get(`movimientos/${id}/`),
         create: (data) => api.post('movimientos/', data),
     },
 
     // === REPORTES ===
     reports: {
         dashboardStats: () => api.get('reportes-v2/dashboard_stats/'),
-        getMovimientosRecientes: (dias) => api.get(`reportes-v2/movimientos_recientes/?dias=${dias}`),
+        getMovimientosRecientes: (dias = 7) => api.get(`reportes-v2/movimientos_recientes/?dias=${dias}`),
         getStockPorSucursal: () => api.get('reportes-v2/stock_por_sucursal/'),
-        getResumenMovimientos: (dias) => api.get(`reportes-v2/resumen_movimientos/?dias=${dias}`),
+        getResumenMovimientos: (dias = 30) => api.get(`reportes-v2/resumen_movimientos/?dias=${dias}`),
     },
-    // Alertas
+
+    // === ALERTAS Y NOTIFICACIONES ===
     alertas: {
-        // Notificaciones app
         getAll: () => api.get('notificaciones/alertas/'),
         create: (data) => api.post('notificaciones/alertas/', data),
         update: (id, data) => api.put(`notificaciones/alertas/${id}/`, data),
         delete: (id) => api.delete(`notificaciones/alertas/${id}/`),
     },
-
-    // Notificaciones
     notificaciones: {
         getAll: () => api.get('notificaciones/notificaciones/'),
+        getUnread: () => api.get('notificaciones/notificaciones/?leida=false'),
+        markAllRead: () => api.post('notificaciones/notificaciones/marcar_todas_leidas/'),
         markAsRead: (id) => api.patch(`notificaciones/notificaciones/${id}/`, { leida: true }),
     },
 
-    // === GEOGRAFÍA ===
+    // === GEOGRAFÍA (Rutas en Español) ===
     geography: {
-        states: () => api.get('geography/states/'),
-        municipalities: () => api.get('geography/municipalities/'),
-        parishes: () => api.get('geography/parishes/'),
-        ubicaciones: () => api.get('geography/ubicaciones/'),
+        estados: (params) => api.get('geografia/estados/', { params }),
+        municipios: (params) => api.get('geografia/municipios/', { params }),
+        parroquias: (params) => api.get('geografia/parroquias/', { params }),
+        ubicaciones: (params) => api.get('geografia/ubicaciones/', { params }),
     },
 
     // === COMPRAS ===
     compras: {
         ordenes: {
-            getAll: () => api.get('compras/ordenes/'),
+            getAll: (params) => api.get('compras/ordenes/', { params }),
             getById: (id) => api.get(`compras/ordenes/${id}/`),
             create: (data) => api.post('compras/ordenes/', data),
             update: (id, data) => api.put(`compras/ordenes/${id}/`, data),
             delete: (id) => api.delete(`compras/ordenes/${id}/`),
+            aprobar: (id, step) => api.post(`compras/ordenes/${id}/aprobar/`, { step }),
         },
         items: {
-            getAll: () => api.get('compras/items/'),
-            getById: (id) => api.get(`compras/items/${id}/`),
+            getAll: (params) => api.get('compras/items/', { params }),
             create: (data) => api.post('compras/items/', data),
             update: (id, data) => api.put(`compras/items/${id}/`, data),
             delete: (id) => api.delete(`compras/items/${id}/`),
@@ -147,6 +147,7 @@ export const InventoryService = {
 
     // === AUDITORÍA ===
     auditoria: {
-        logs: () => api.get('auditoria/logs/'),
+        logs: (params) => api.get('auditoria/logs/', { params }),
+        trashBin: (model) => api.get(`auditoria/trash_bin/?model=${model}`),
     },
 };

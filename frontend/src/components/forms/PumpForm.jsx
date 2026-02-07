@@ -59,80 +59,143 @@ export default function PumpForm({ categorias = [], units = [], suppliers = [], 
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium mb-1">Nombre *</label>
-          <input name="nombre" value={data.nombre} onChange={handleChange} className="w-full border p-2 rounded" required />
+    <form onSubmit={submit}>
+      <div className="row">
+        <div className="col-md-9">
+          <div className="form-group">
+            <label>Nombre *</label>
+            <input
+              name="nombre"
+              value={data.nombre}
+              onChange={handleChange}
+              className="form-control"
+              placeholder="Nombre de la bomba/equipo"
+              required
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Categoría *</label>
-          {pumpCategory ? (
-            <div>
-              <select name="categoria" value={pumpCategory.id} disabled className="w-full border p-2 rounded bg-gray-100 text-gray-600">
-                <option value={pumpCategory.id}>{pumpCategory.nombre}</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">Fijada por tipo: Bombas y Motores</p>
-            </div>
-          ) : (
-            <select name="categoria" value={data.categoria} disabled className="w-full border p-2 rounded bg-gray-100 text-gray-600">
-              <option value="">Cargando categoría...</option>
-            </select>
-          )}
-        </div>
-        {/* Unidad se selecciona automáticamente como 'UNIDAD'; se oculta en el formulario */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Proveedor *</label>
-          <select name="proveedor" value={data.proveedor} onChange={handleChange} className="w-full border p-2 rounded" required>
-            <option value="">Seleccionar...</option>
-            {suppliers.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Tipo de equipo *</label>
-          <select name="tipo_equipo" value={data.tipo_equipo} onChange={handleChange} className="w-full border p-2 rounded">
-            <option value="BOMBA_CENTRIFUGA">Bomba Centrífuga</option>
-            <option value="BOMBA_SUMERGIBLE">Bomba Sumergible</option>
-            <option value="BOMBA_PERIFERICA">Bomba Periférica</option>
-            <option value="BOMBA_TURBINA">Bomba de Turbina</option>
-            <option value="MOTOR_ELECTRICO">Motor Eléctrico</option>
-            <option value="VARIADOR">Variador de Frecuencia</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Marca *</label>
-          <select name="marca" value={data.marca} onChange={handleChange} className="w-full border p-2 rounded">
-            <option value="">Seleccionar...</option>
-            {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Modelo *</label>
-          <input name="modelo" value={data.modelo} onChange={handleChange} className="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Número de serie *</label>
-          <input name="numero_serie" value={data.numero_serie} onChange={handleChange} className="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Potencia (HP) *</label>
-          <input type="number" step="0.01" name="potencia_hp" value={data.potencia_hp} onChange={handleChange} className="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Voltaje *</label>
-          <input type="number" name="voltaje" value={data.voltaje} onChange={handleChange} className="w-full border p-2 rounded" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Fases *</label>
-          <select name="fases" value={data.fases} onChange={handleChange} className="w-full border p-2 rounded">
-            <option value="MONOFASICO">Monofásico</option>
-            <option value="TRIFASICO">Trifásico</option>
-          </select>
+        <div className="col-md-3">
+          <div className="form-group">
+            <label>Categoría *</label>
+            {pumpCategory ? (
+              <input
+                value={pumpCategory.nombre}
+                className="form-control"
+                disabled
+              />
+            ) : (
+              <input
+                value="Cargando..."
+                className="form-control"
+                disabled
+              />
+            )}
+            <input type="hidden" name="categoria" value={data.categoria} />
+          </div>
         </div>
       </div>
-      <div className="flex gap-2 justify-end">
-        <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancelar</button>
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+
+      <div className="row">
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Tipo de Equipo *</label>
+            <select name="tipo_equipo" value={data.tipo_equipo} onChange={handleChange} className="form-control">
+              <option value="BOMBA_CENTRIFUGA">Bomba Centrífuga</option>
+              <option value="BOMBA_SUMERGIBLE">Bomba Sumergible</option>
+              <option value="BOMBA_PERIFERICA">Bomba Periférica</option>
+              <option value="BOMBA_TURBINA">Bomba de Turbina</option>
+              <option value="MOTOR_ELECTRICO">Motor Eléctrico</option>
+              <option value="VARIADOR">Variador de Frecuencia</option>
+            </select>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Marca *</label>
+            <select name="marca" value={data.marca} onChange={handleChange} className="form-control">
+              <option value="">Seleccionar...</option>
+              {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Modelo *</label>
+            <input name="modelo" value={data.modelo} onChange={handleChange} className="form-control" placeholder="Modelo / Referencia" />
+          </div>
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Número de Serie *</label>
+            <input name="numero_serie" value={data.numero_serie} onChange={handleChange} className="form-control" placeholder="S/N" />
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Proveedor *</label>
+            <select name="proveedor" value={data.proveedor} onChange={handleChange} className="form-control" required>
+              <option value="">Seleccionar...</option>
+              {suppliers.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Precio Unitario Est.</label>
+            <div className="input-group">
+              <div className="input-group-prepend">
+                <span className="input-group-text">$</span>
+              </div>
+              <input type="number" step="0.01" name="precio_unitario" value={data.precio_unitario} onChange={handleChange} className="form-control" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Potencia (HP) *</label>
+            <input type="number" step="0.01" name="potencia_hp" value={data.potencia_hp} onChange={handleChange} className="form-control" />
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Voltaje (V) *</label>
+            <input type="number" name="voltaje" value={data.voltaje} onChange={handleChange} className="form-control" />
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>Fases *</label>
+            <select name="fases" value={data.fases} onChange={handleChange} className="form-control">
+              <option value="MONOFASICO">Monofásico</option>
+              <option value="TRIFASICO">Trifásico</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label>Descripción / Observaciones Técnicas</label>
+        <textarea
+          name="descripcion"
+          value={data.descripcion}
+          onChange={handleChange}
+          className="form-control"
+          rows="2"
+          placeholder="Especificaciones técnicas adicionales..."
+        ></textarea>
+      </div>
+
+      <div className="card-footer px-0 pb-0 bg-transparent text-right">
+        <button type="button" onClick={onCancel} className="btn btn-default mr-2">Cancelar</button>
+        <button type="submit" className="btn btn-primary">
+          {initialData?.id ? 'Actualizar Equipo' : 'Crear Equipo'}
+        </button>
       </div>
     </form>
   );

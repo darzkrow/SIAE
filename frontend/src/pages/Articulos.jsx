@@ -9,6 +9,11 @@ import { Plus, Search, Edit2, Trash2, Package, Droplets, Activity, Wrench } from
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
 
+// Modular Components
+import InventoryHeader from '../components/inventory/InventoryHeader';
+import InventoryTabs from '../components/inventory/InventoryTabs';
+import InventoryTable from '../components/inventory/InventoryTable';
+
 export default function Articulos() {
     const { user } = useAuth();
     const { addNotification } = useNotifications();
@@ -53,7 +58,7 @@ export default function Articulos() {
             setSuppliers(supRes.data.results || supRes.data);
             setMarcas(marRes.data.results || marRes.data);
         } catch (err) {
-            console.error("Error loading auxiliary data", err);
+            console.error("Error loading aux data", err);
             addNotification({
                 type: 'error',
                 title: 'Error de carga',
@@ -103,7 +108,7 @@ export default function Articulos() {
                 addNotification({
                     type: 'success',
                     title: 'Artículo actualizado',
-                    message: 'El artículo se actualizó correctamente',
+                    message: 'El artículo se guardó correctamente',
                     duration: 3000
                 });
             } else {
@@ -111,20 +116,19 @@ export default function Articulos() {
                 addNotification({
                     type: 'success',
                     title: 'Artículo creado',
-                    message: 'El artículo se creó correctamente',
+                    message: 'El artículo se registró correctamente',
                     duration: 3000
                 });
             }
-            setEditingId(null);
-            setShowForm(false);
+            resetForm();
             fetchItems();
         } catch (err) {
-            console.error("Error saving item", err);
+            console.error("Error saving product", err);
             const msg = err.response?.data?.detail || JSON.stringify(err.response?.data) || "Error al guardar";
             addNotification({
                 type: 'error',
                 title: 'Error',
-                message: msg,
+                message: 'No se pudo guardar el artículo',
                 duration: 5000
             });
         }
@@ -132,12 +136,12 @@ export default function Articulos() {
 
     const handleDelete = async (id) => {
         const result = await Swal.fire({
-            title: '¿Eliminar artículo?',
-            text: '¿Está seguro de eliminar este artículo?',
+            title: '¿Estás seguro?',
+            text: "Esta acción no se puede deshacer",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar'
         });
@@ -179,242 +183,127 @@ export default function Articulos() {
     const handleEdit = (item) => {
         setEditingId(item.id);
         setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const filteredItems = items.filter(item =>
-        (item.nombre && item.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const filteredItems = items.filter(item => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (item.nombre && item.nombre.toLowerCase().includes(term)) ||
+            (item.sku && item.sku.toLowerCase().includes(term)) ||
+            (item.descripcion && item.descripcion.toLowerCase().includes(term))
+        );
+    });
 
     const currentTab = tabs.find(t => t.id === activeTab);
 
     return (
         <div>
-            {/* Header */}
-            <div className="row mb-4">
-                <div className="col-sm-6">
-                    <h1 className="h3 mb-0">
-                        <Package className="mr-2" size={24} />
-                        Catálogo de Artículos
-                    </h1>
-                    <p className="text-muted mb-0">
-                        Gestión de productos del inventario
-                    </p>
-                </div>
-                <div className="col-sm-6">
-                    <div className="float-sm-right">
-                        {user?.is_admin && (
-                            <button
-                                onClick={() => setShowForm(!showForm)}
-                                className="btn btn-primary"
-                            >
-                                <Plus size={16} className="mr-2" /> 
-                                Nuevo {currentTab?.label.slice(0, -1)}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <InventoryHeader
+                showForm={showForm}
+                editingId={editingId}
+                onToggleForm={() => {
+                    if (showForm && !editingId) setShowForm(false);
+                    else { setEditingId(null); setShowForm(true); }
+                }}
+                currentTabLabel={currentTab?.label}
+                isAdmin={user?.is_admin}
+            />
 
-            {/* Tabs Navigation */}
-            <div className="row mb-4">
-                <div className="col-12">
-                    <div className="card">
-                        <div className="card-header p-2">
-                            <ul className="nav nav-pills">
-                                {tabs.map(tab => {
-                                    const Icon = tab.icon;
-                                    return (
-                                        <li key={tab.id} className="nav-item">
-                                            <button
-                                                onClick={() => { 
-                                                    setActiveTab(tab.id); 
-                                                    setShowForm(false); 
-                                                    setEditingId(null);
-                                                }}
-                                                className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
-                                            >
-                                                <Icon size={16} className="mr-2" />
-                                                {tab.label}
-                                            </button>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Form */}
-            {showForm && (
-                <div className="row mb-4">
-                    <div className="col-12">
-                        <AdminLTEWidget 
-                            type="card" 
-                            title={`${editingId ? 'Editar' : 'Crear'} ${currentTab?.label.slice(0, -1)}`}
-                            color="primary"
-                        >
-                            {activeTab === 'chemical' && (
-                              <ChemicalForm 
-                                categorias={categorias} 
-                                units={units} 
-                                suppliers={suppliers} 
-                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
-                                onSubmit={handleSubmitByType} 
-                                onCancel={resetForm} 
-                              />
-                            )}
-                            {activeTab === 'pipe' && (
-                              <PipeForm 
-                                categorias={categorias} 
-                                units={units} 
-                                suppliers={suppliers} 
-                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
-                                onSubmit={handleSubmitByType} 
-                                onCancel={resetForm} 
-                              />
-                            )}
-                            {activeTab === 'pump' && (
-                              <PumpForm 
-                                categorias={categorias} 
-                                units={units} 
-                                suppliers={suppliers} 
-                                marcas={marcas} 
-                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
-                                onSubmit={handleSubmitByType} 
-                                onCancel={resetForm} 
-                              />
-                            )}
-                            {activeTab === 'accessory' && (
-                              <AccessoryForm 
-                                categorias={categorias} 
-                                units={units} 
-                                suppliers={suppliers} 
-                                initialData={editingId ? items.find(i => i.id === editingId) : {}} 
-                                onSubmit={handleSubmitByType} 
-                                onCancel={resetForm} 
-                              />
-                            )}
-                        </AdminLTEWidget>
-                    </div>
-                </div>
-            )}
-
-            {/* Search and List */}
-            <AdminLTEWidget 
-                type="table" 
-                title={`Lista de ${currentTab?.label}`}
-                icon={currentTab?.icon}
-                color={currentTab?.color}
-                onRefresh={fetchItems}
-            >
-                <div className="row mb-3">
-                    <div className="col-md-6">
-                        <div className="input-group">
-                            <div className="input-group-prepend">
-                                <span className="input-group-text">
-                                    <Search size={16} />
-                                </span>
+            <section className="content">
+                <div className="container-fluid">
+                    {/* Form area remain in the main page for now for easier prop management */}
+                    {showForm && (
+                        <div className="row mb-4">
+                            <div className="col-12">
+                                <AdminLTEWidget
+                                    type="card"
+                                    title={`${editingId ? 'Editar' : 'Crear'} ${currentTab?.label.slice(0, -1)}`}
+                                    color={editingId ? 'info' : 'success'}
+                                    collapsible={false}
+                                    removable={true}
+                                    onRemove={resetForm}
+                                >
+                                    {activeTab === 'chemical' && (
+                                        <ChemicalForm
+                                            categorias={categorias}
+                                            units={units}
+                                            suppliers={suppliers}
+                                            initialData={editingId ? items.find(i => i.id === editingId) : {}}
+                                            onSubmit={handleSubmitByType}
+                                            onCancel={resetForm}
+                                        />
+                                    )}
+                                    {activeTab === 'pipe' && (
+                                        <PipeForm
+                                            categorias={categorias}
+                                            units={units}
+                                            suppliers={suppliers}
+                                            initialData={editingId ? items.find(i => i.id === editingId) : {}}
+                                            onSubmit={handleSubmitByType}
+                                            onCancel={resetForm}
+                                        />
+                                    )}
+                                    {activeTab === 'pump' && (
+                                        <PumpForm
+                                            categorias={categorias}
+                                            units={units}
+                                            suppliers={suppliers}
+                                            marcas={marcas}
+                                            initialData={editingId ? items.find(i => i.id === editingId) : {}}
+                                            onSubmit={handleSubmitByType}
+                                            onCancel={resetForm}
+                                        />
+                                    )}
+                                    {activeTab === 'accessory' && (
+                                        <AccessoryForm
+                                            categorias={categorias}
+                                            units={units}
+                                            suppliers={suppliers}
+                                            initialData={editingId ? items.find(i => i.id === editingId) : {}}
+                                            onSubmit={handleSubmitByType}
+                                            onCancel={resetForm}
+                                        />
+                                    )}
+                                </AdminLTEWidget>
                             </div>
-                            <input
-                                type="text"
-                                placeholder="Buscar artículos..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="form-control"
-                            />
                         </div>
-                    </div>
-                    <div className="col-md-6">
-                        <div className="float-right">
-                            <span className="badge badge-info">
-                                {filteredItems.length} artículos encontrados
-                            </span>
+                    )}
+
+                    <div className="row">
+                        <div className="col-12">
+                            <div className="card card-primary card-outline card-tabs">
+                                <InventoryTabs
+                                    tabs={tabs}
+                                    activeTab={activeTab}
+                                    onTabChange={(id) => {
+                                        setActiveTab(id);
+                                        setShowForm(false);
+                                        setEditingId(null);
+                                    }}
+                                />
+                                <InventoryTable
+                                    items={filteredItems}
+                                    loading={loading}
+                                    searchTerm={searchTerm}
+                                    onSearchChange={setSearchTerm}
+                                    onRefresh={fetchItems}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDelete}
+                                    isAdmin={user?.is_admin}
+                                />
+                                <div className="card-footer clearfix">
+                                    <ul className="pagination pagination-sm m-0 float-right">
+                                        <li className="page-item"><a className="page-link" href="#">&laquo;</a></li>
+                                        <li className="page-item active"><a className="page-link" href="#">1</a></li>
+                                        <li className="page-item"><a className="page-link" href="#">&raquo;</a></li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div className="table-responsive">
-                    <table className="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>SKU</th>
-                                <th>Nombre</th>
-                                <th>Categoría</th>
-                                <th>Stock</th>
-                                {user?.is_admin && <th>Acciones</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={user?.is_admin ? "5" : "4"} className="text-center py-4">
-                                        <div className="spinner-border text-primary" role="status">
-                                            <span className="sr-only">Cargando...</span>
-                                        </div>
-                                        <p className="mt-2 text-muted">Cargando artículos...</p>
-                                    </td>
-                                </tr>
-                            ) : filteredItems.length === 0 ? (
-                                <tr>
-                                    <td colSpan={user?.is_admin ? "5" : "4"} className="text-center py-4 text-muted">
-                                        <Package size={24} className="mb-2" />
-                                        <p>No se encontraron artículos</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredItems.map(item => (
-                                    <tr key={item.id}>
-                                        <td>
-                                            <code className="text-sm">{item.sku || '-'}</code>
-                                        </td>
-                                        <td className="font-weight-bold">{item.nombre}</td>
-                                        <td>
-                                            <span className="badge badge-secondary">
-                                                {item.categoria_nombre || item.categoria?.nombre || '-'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${(item.stock_actual || 0) > 10 ? 'badge-success' : (item.stock_actual || 0) > 0 ? 'badge-warning' : 'badge-danger'}`}>
-                                                {item.stock_actual || 0} {item.unidad_medida_nombre || ''}
-                                            </span>
-                                        </td>
-                                        {user?.is_admin && (
-                                            <td>
-                                                <div className="btn-group btn-group-sm">
-                                                    <button 
-                                                        onClick={() => handleEdit(item)} 
-                                                        className="btn btn-outline-info"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit2 size={14} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleDelete(item.id)} 
-                                                        className="btn btn-outline-danger"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {filteredItems.length > 0 && (
-                    <div className="card-footer">
-                        <small className="text-muted">
-                            Mostrando {filteredItems.length} de {items.length} artículos
-                        </small>
-                    </div>
-                )}
-            </AdminLTEWidget>
+            </section>
         </div>
     );
 }

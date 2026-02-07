@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { InventoryService } from '../services/inventory.service';
+import { PurchaseService } from '../services/purchaseService';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Plus, Eye, FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
@@ -26,16 +26,16 @@ export default function Compras() {
     setLoading(true);
     try {
       const [oRes, iRes] = await Promise.all([
-        InventoryService.compras.ordenes.getAll(),
-        InventoryService.compras.items.getAll(),
+        PurchaseService.ordenes.getAll(),
+        PurchaseService.items.getAll(),
       ]);
-      
+
       const ordenesData = oRes.data.results || oRes.data;
       const itemsData = iRes.data.results || iRes.data;
-      
+
       setOrdenes(ordenesData);
       setItems(itemsData);
-      
+
       // Calcular estadísticas
       const stats = {
         total: ordenesData.length,
@@ -44,7 +44,7 @@ export default function Compras() {
         rechazadas: ordenesData.filter(o => o.estado === 'RECHAZADA').length
       };
       setStats(stats);
-      
+
     } catch (e) {
       console.error(e);
       addNotification({
@@ -210,8 +210,8 @@ export default function Compras() {
                       {items.filter(item => item.orden === orden.id || item.orden_id === orden.id).length}
                     </td>
                     <td>
-                      <Link 
-                        to={`/compras/orden/${orden.id}`} 
+                      <Link
+                        to={`/compras/orden/${orden.id}`}
                         className="btn btn-sm btn-outline-primary"
                       >
                         <Eye size={14} className="mr-1" />
@@ -259,7 +259,7 @@ export default function Compras() {
                       #{item.id}
                     </td>
                     <td>
-                      <Link 
+                      <Link
                         to={`/compras/orden/${item.orden || item.orden_id}`}
                         className="text-primary"
                       >
@@ -283,7 +283,7 @@ export default function Compras() {
             </tbody>
           </table>
         </div>
-        
+
         {items.length > 10 && (
           <div className="card-footer">
             <small className="text-muted">

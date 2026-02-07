@@ -20,7 +20,10 @@ class OrdenCompraViewSet(AuditMixin, TrashBinMixin, SoftDeleteViewSet):
         """Optimize queryset with select_related and prefetch_related."""
         return super().get_queryset().select_related(
             'solicitante',
-            'aprobador',
+            'aprobado_comercializacion_por',
+            'aprobado_presupuesto_por',
+            'aprobado_finanzas_por',
+            'ejecutado_compras_por',
             'movimiento'
         ).prefetch_related('items__content_type')
 

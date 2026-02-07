@@ -1,0 +1,74 @@
+[
+  {
+    "model": "productos.unitofmeasure",
+    "pk": 1,
+    "fields": {
+      "nombre": "Unidad",
+      "simbolo": "UND",
+      "tipo": "UNIDAD",
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "productos.unitofmeasure",
+    "pk": 2,
+    "fields": {
+      "nombre": "Kilogramo",
+      "simbolo": "KG",
+      "tipo": "PESO",
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "productos.unitofmeasure",
+    "pk": 3,
+    "fields": {
+      "nombre": "Litro",
+      "simbolo": "L",
+      "tipo": "VOLUMEN",
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "productos.unitofmeasure",
+    "pk": 4,
+    "fields": {
+      "nombre": "Metro",
+      "simbolo": "M",
+      "tipo": "LONGITUD",
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "productos.unitofmeasure",
+    "pk": 5,
+    "fields": {
+      "nombre": "Pulgada",
+      "simbolo": "IN",
+      "tipo": "LONGITUD",
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  },
+  {
+    "model": "productos.unitofmeasure",
+    "pk": 6,
+    "fields": {
+      "nombre": "Saco 25kg",
+      "simbolo": "ACO25",
+      "tipo": "PESO",
+      "activo": true,
+      "created_at": "2026-02-07T03:28:18.473906",
+      "updated_at": "2026-02-07T03:28:18.473906"
+    }
+  }
+]
