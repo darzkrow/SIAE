@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AssetService } from '../services/assetService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { Box, Monitor, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -62,7 +62,7 @@ function GenericAssetTab({ type, title }) {
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await AssetService[type].getAll();
+            const res = await InventoryService.assets[type].getAll();
             setItems(res.data.results || res.data);
         } catch (e) {
             addNotification({ type: 'error', message: `Error cargando ${title}` });

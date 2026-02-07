@@ -150,4 +150,62 @@ export const InventoryService = {
         logs: (params) => api.get('auditoria/logs/', { params }),
         trashBin: (model) => api.get(`auditoria/trash_bin/?model=${model}`),
     },
+
+    // === ACTIVOS ===
+    assets: {
+        materiales: {
+            getAll: (params) => api.get('activos/materiales/', { params }),
+            create: (data) => api.post('activos/materiales/', data),
+            update: (id, data) => api.put(`activos/materiales/${id}/`, data),
+            delete: (id) => api.delete(`activos/materiales/${id}/`),
+        },
+        activosFijos: {
+            getAll: (params) => api.get('activos/activos-fijos/', { params }),
+            create: (data) => api.post('activos/activos-fijos/', data),
+            update: (id, data) => api.put(`activos/activos-fijos/${id}/`, data),
+            delete: (id) => api.delete(`activos/activos-fijos/${id}/`),
+        }
+    },
+
+    // === FLOTA ===
+    fleet: {
+        vehiculos: {
+            getAll: (params) => api.get('flota/vehiculos/', { params }),
+            getById: (id) => api.get(`flota/vehiculos/${id}/`),
+            create: (data) => api.post('flota/vehiculos/', data),
+            update: (id, data) => api.put(`flota/vehiculos/${id}/`, data),
+            delete: (id) => api.delete(`flota/vehiculos/${id}/`),
+        },
+        tipos: {
+            getAll: (params) => api.get('flota/tipos-vehiculos/', { params }),
+        },
+        mantenimiento: {
+            getAll: (params) => api.get('flota/mantenimiento/', { params }),
+            create: (data) => api.post('flota/mantenimiento/', data),
+        },
+        asignaciones: {
+            getAll: (params) => api.get('flota/asignaciones/', { params }),
+            create: (data) => api.post('flota/asignaciones/', data),
+            devolver: (id, data) => api.post(`flota/asignaciones/${id}/finalizar/`, data),
+        }
+    },
+
+    // === TAREAS ===
+    tasks: {
+        tareas: {
+            getAll: (params) => api.get('tareas/tareas/', { params }),
+            getById: (id) => api.get(`tareas/tareas/${id}/`),
+            create: (data) => api.post('tareas/tareas/', data),
+            update: (id, data) => api.put(`tareas/tareas/${id}/`, data),
+            patch: (id, data) => api.patch(`tareas/tareas/${id}/`, data),
+            delete: (id) => api.delete(`tareas/tareas/${id}/`),
+            addComment: (tareaId, data) => api.post(`tareas/tareas/${tareaId}/comentarios/`, data),
+        },
+        categorias: {
+            getAll: () => api.get('tareas/categorias-tareas/'),
+        },
+        columnas: {
+            getAll: () => api.get('tareas/columnas-kanban/'),
+        }
+    }
 };

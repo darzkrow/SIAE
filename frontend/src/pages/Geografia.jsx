@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GeographyService } from '../services/geographyService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { MapPin, Building, Globe, Navigation } from 'lucide-react';
 
@@ -16,10 +16,10 @@ export default function Geografia() {
     const load = async () => {
       try {
         const [sRes, mRes, pRes, uRes] = await Promise.all([
-          GeographyService.estados.getAll(),
-          GeographyService.municipios.getAll(),
-          GeographyService.parroquias.getAll(),
-          GeographyService.ubicaciones.getAll(),
+          InventoryService.geography.estados(),
+          InventoryService.geography.municipios(),
+          InventoryService.geography.parroquias(),
+          InventoryService.geography.ubicaciones(),
         ]);
         const toArr = (d) => Array.isArray(d) ? d : (d?.results || []);
         setStates(toArr(sRes.data));

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NotificationService } from '../services/notificationService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { Bell, CheckCircle, AlertCircle, Info, AlertTriangle, Trash2 } from 'lucide-react';
 
@@ -16,7 +16,7 @@ export default function NotificacionesList() {
 
     const fetchNotifications = async () => {
         try {
-            const res = await NotificationService.notificaciones.getAll();
+            const res = await InventoryService.notificaciones.getAll();
             setNotifications(res.data.results || res.data);
         } catch (error) {
             console.error(error);
@@ -28,7 +28,7 @@ export default function NotificacionesList() {
 
     const handleMarkAsRead = async (id) => {
         try {
-            await NotificationService.notificaciones.markAsRead(id);
+            await InventoryService.notificaciones.markAsRead(id);
             fetchNotifications(); // Reload
         } catch (error) {
             console.error(error);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FleetService } from '../services/fleetService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { Truck, Wrench, UserCheck, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -64,7 +64,7 @@ function VehiclesTab() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await FleetService.vehiculos.getAll();
+            const res = await InventoryService.fleet.vehiculos.getAll();
             setItems(res.data.results || res.data);
         } catch (e) {
             addNotification({ type: 'error', message: 'Error cargando vehículos' });
@@ -132,7 +132,7 @@ function MaintenanceTab() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await FleetService.mantenimiento.getAll();
+            const res = await InventoryService.fleet.mantenimiento.getAll();
             setItems(res.data.results || res.data);
         } catch (e) {
             addNotification({ type: 'error', message: 'Error cargando mantenimientos' });
@@ -180,7 +180,7 @@ function AssignmentsTab() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await FleetService.asignaciones.getAll();
+            const res = await InventoryService.fleet.asignaciones.getAll();
             setItems(res.data.results || res.data);
         } catch (e) {
             addNotification({ type: 'error', message: 'Error cargando asignaciones' });

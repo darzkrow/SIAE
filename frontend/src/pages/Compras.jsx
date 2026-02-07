@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PurchaseService } from '../services/purchaseService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Plus, Eye, FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
@@ -26,8 +26,8 @@ export default function Compras() {
     setLoading(true);
     try {
       const [oRes, iRes] = await Promise.all([
-        PurchaseService.ordenes.getAll(),
-        PurchaseService.items.getAll(),
+        InventoryService.compras.ordenes.getAll(),
+        InventoryService.compras.items.getAll(),
       ]);
 
       const ordenesData = oRes.data.results || oRes.data;

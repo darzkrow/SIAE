@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TaskService } from '../services/taskService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { ClipboardList, Plus, MoreHorizontal, Calendar, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -20,8 +20,8 @@ export default function Tasks() {
         setLoading(true);
         try {
             const [tasksRes, colsRes] = await Promise.all([
-                TaskService.tareas.getAll(),
-                TaskService.columnas.getAll()
+                InventoryService.tasks.tareas.getAll(),
+                InventoryService.tasks.columnas.getAll()
             ]);
             setTasks(tasksRes.data.results || tasksRes.data);
             setColumns(colsRes.data.results || colsRes.data);

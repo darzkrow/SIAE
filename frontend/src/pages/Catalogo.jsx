@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CatalogService } from '../services/catalogService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { BookOpen, Tag, Package, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -28,8 +28,8 @@ export default function Catalogo() {
     setLoading(true);
     try {
       const [catRes, marRes] = await Promise.all([
-        CatalogService.categorias.getAll(),
-        CatalogService.marcas.getAll(),
+        InventoryService.categories.getAll(),
+        InventoryService.marcas.getAll(),
       ]);
       setCategorias(Array.isArray(catRes.data) ? catRes.data : (catRes.data?.results || []));
       setMarcas(Array.isArray(marRes.data) ? marRes.data : (marRes.data?.results || []));
@@ -56,7 +56,7 @@ export default function Catalogo() {
       };
 
       if (editingCategoria) {
-        await CatalogService.categorias.update(editingCategoria.id, cleanedData);
+        await InventoryService.categories.update(editingCategoria.id, cleanedData);
         addNotification({
           type: 'success',
           title: 'Categoría actualizada',
@@ -64,7 +64,7 @@ export default function Catalogo() {
           duration: 3000
         });
       } else {
-        await CatalogService.categorias.create(cleanedData);
+        await InventoryService.categories.create(cleanedData);
         addNotification({
           type: 'success',
           title: 'Categoría creada',
@@ -96,7 +96,7 @@ export default function Catalogo() {
       };
 
       if (editingMarca) {
-        await CatalogService.marcas.update(editingMarca.id, cleanedData);
+        await InventoryService.marcas.update(editingMarca.id, cleanedData);
         addNotification({
           type: 'success',
           title: 'Marca actualizada',
@@ -104,7 +104,7 @@ export default function Catalogo() {
           duration: 3000
         });
       } else {
-        await CatalogService.marcas.create(cleanedData);
+        await InventoryService.marcas.create(cleanedData);
         addNotification({
           type: 'success',
           title: 'Marca creada',
@@ -141,7 +141,7 @@ export default function Catalogo() {
 
     if (result.isConfirmed) {
       try {
-        await CatalogService.categorias.delete(categoria.id);
+        await InventoryService.categories.delete(categoria.id);
         addNotification({
           type: 'success',
           title: 'Categoría eliminada',
@@ -175,7 +175,7 @@ export default function Catalogo() {
 
     if (result.isConfirmed) {
       try {
-        await CatalogService.marcas.delete(marca.id);
+        await InventoryService.marcas.delete(marca.id);
         addNotification({
           type: 'success',
           title: 'Marca eliminada',

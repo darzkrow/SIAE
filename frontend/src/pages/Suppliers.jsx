@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SupplierService } from '../services/supplierService';
+import { InventoryService } from '../services/inventory.service';
 import { AdminLTEWidget, useNotifications } from '../components/adminlte';
 import { Truck, Plus, Edit2, Trash2, Search, Phone, Mail, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -28,7 +28,7 @@ export default function Suppliers() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await SupplierService.getAll();
+            const res = await InventoryService.suppliers.getAll();
             setSuppliers(res.data.results || res.data);
         } catch (e) {
             addNotification({ type: 'error', message: 'Error cargando proveedores' });
@@ -41,10 +41,10 @@ export default function Suppliers() {
         e.preventDefault();
         try {
             if (editingSupplier) {
-                await SupplierService.update(editingSupplier.id, formData);
+                await InventoryService.suppliers.update(editingSupplier.id, formData);
                 addNotification({ type: 'success', message: 'Proveedor actualizado' });
             } else {
-                await SupplierService.create(formData);
+                await InventoryService.suppliers.create(formData);
                 addNotification({ type: 'success', message: 'Proveedor creado' });
             }
             setShowForm(false);
@@ -79,7 +79,7 @@ export default function Suppliers() {
 
         if (result.isConfirmed) {
             try {
-                await SupplierService.delete(id);
+                await InventoryService.suppliers.delete(id);
                 loadData();
                 addNotification({ type: 'success', message: 'Proveedor eliminado' });
             } catch (e) {

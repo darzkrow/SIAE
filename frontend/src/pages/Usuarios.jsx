@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserService } from '../services/userService';
-import { InventoryService } from '../services/inventory.service'; // Keep for sucursales
+import { InventoryService } from '../services/inventory.service';
 
 export default function Usuarios() {
     const { user } = useAuth();
@@ -36,7 +35,7 @@ export default function Usuarios() {
     const fetchData = async () => {
         try {
             const [usersRes, sucRes] = await Promise.all([
-                UserService.getAll(),
+                InventoryService.users.getAll(),
                 InventoryService.sucursales.getAll()
             ]);
 
@@ -75,14 +74,14 @@ export default function Usuarios() {
             }
 
             if (editingId) {
-                await UserService.update(editingId, payload);
+                await InventoryService.users.update(editingId, payload);
                 setSuccess("Usuario actualizado exitosamente");
             } else {
                 if (!formData.password) {
                     setError("La contraseña es requerida para nuevos usuarios");
                     return;
                 }
-                await UserService.create(payload);
+                await InventoryService.users.create(payload);
                 setSuccess("Usuario creado exitosamente");
             }
 
@@ -98,7 +97,7 @@ export default function Usuarios() {
         if (!window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) return;
 
         try {
-            await UserService.delete(id);
+            await InventoryService.users.delete(id);
             setSuccess("Usuario eliminado exitosamente");
             fetchData();
         } catch (err) {

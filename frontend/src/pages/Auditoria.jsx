@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AuditService } from '../services/auditService';
+import { InventoryService } from '../services/inventory.service';
 
 export default function Auditoria() {
   const [logs, setLogs] = useState([]);
@@ -9,7 +9,7 @@ export default function Auditoria() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await AuditService.logs.getAll();
+        const res = await InventoryService.auditoria.logs();
         const arr = Array.isArray(res.data) ? res.data : (res.data?.results || []);
         setLogs(arr);
       } catch (e) {
